@@ -2,95 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Rukisha Wallet Design System - Glassmorphic & 3D Mobile Finance App */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core Brand Colors - Inspired by Kenyan landscapes and modern fintech */
+    --primary: 210 85% 45%;           /* Deep blue - trust & stability */
+    --primary-light: 210 85% 65%;     /* Lighter blue accent */
+    --primary-dark: 210 85% 25%;      /* Darker blue for depth */
+    --primary-foreground: 0 0% 100%;  /* White text on primary */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Glassmorphic Background System */
+    --background: 220 25% 8%;         /* Dark blue-grey base */
+    --background-secondary: 220 20% 12%; /* Slightly lighter for layers */
+    --foreground: 210 20% 98%;        /* Near white text */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Glass Surface Colors */
+    --glass-primary: 210 50% 45%;     /* Primary glass tint */
+    --glass-secondary: 180 40% 35%;   /* Teal glass accent */
+    --glass-surface: 220 25% 15%;     /* Glass card background */
+    --glass-border: 210 50% 60%;      /* Glass borders */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Success & Status Colors - Kenyan inspired */
+    --success: 140 75% 45%;           /* Kenyan green */
+    --success-light: 140 75% 65%;
+    --success-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --warning: 40 95% 55%;            /* Golden yellow */
+    --warning-foreground: 220 25% 8%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --error: 0 75% 55%;               /* Clean red */
+    --error-foreground: 0 0% 100%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Sub-wallet Category Colors */
+    --education: 260 75% 65%;         /* Purple for education */
+    --medical: 0 75% 65%;            /* Red for medical */
+    --holiday: 290 75% 65%;          /* Magenta for holiday */
+    --retirement: 35 75% 65%;        /* Orange for retirement */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* 3D Button & Card Effects */
+    --shadow-soft: 220 25% 5%;       /* Soft shadow color */
+    --shadow-hard: 220 25% 3%;       /* Hard shadow for depth */
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Utility Colors */
+    --muted: 220 15% 25%;
+    --muted-foreground: 220 10% 65%;
+    --border: 220 25% 20%;
+    --input: 220 25% 18%;
+    --ring: 210 85% 45%;
 
-    --radius: 0.5rem;
+    --card: 220 25% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 210 20% 98%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --accent: 220 20% 18%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --sidebar-background: 0 0% 98%;
+    /* Design System Variables */
+    --radius: 1rem;                  /* Rounded corners */
+    --radius-lg: 1.5rem;            /* Large radius for cards */
+    --radius-xl: 2rem;              /* XL radius for main elements */
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Glassmorphic Effects */
+    --glass-blur: blur(16px);
+    --glass-opacity: 0.15;
+    --glass-border-opacity: 0.2;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* 3D Button Effects */
+    --button-shadow: 0 8px 32px hsl(var(--shadow-soft) / 0.3);
+    --button-shadow-hover: 0 12px 48px hsl(var(--shadow-soft) / 0.4);
+    --button-shadow-active: 0 4px 16px hsl(var(--shadow-soft) / 0.2);
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Animation Variables */
+    --animation-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --animation-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 220 25% 10%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 210 85% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 20% 18%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 220 25% 20%;
+    --sidebar-ring: 210 85% 45%;
   }
 }
 
@@ -100,6 +98,65 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-secondary)) 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Glassmorphic Card Component */
+  .glass-card {
+    @apply backdrop-blur-md bg-opacity-15 border border-opacity-20;
+    background: hsl(var(--glass-surface) / var(--glass-opacity));
+    border-color: hsl(var(--glass-border) / var(--glass-border-opacity));
+    backdrop-filter: var(--glass-blur);
+  }
+
+  /* 3D Button Base */
+  .button-3d {
+    @apply relative overflow-hidden transition-all duration-300;
+    box-shadow: var(--button-shadow);
+    transform: translateY(0);
+  }
+
+  .button-3d:hover {
+    box-shadow: var(--button-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .button-3d:active {
+    box-shadow: var(--button-shadow-active);
+    transform: translateY(1px);
+  }
+
+  /* Sub-wallet Category Styles */
+  .wallet-education {
+    background: linear-gradient(135deg, hsl(var(--education) / 0.2), hsl(var(--education) / 0.1));
+    border-color: hsl(var(--education) / 0.3);
+  }
+
+  .wallet-medical {
+    background: linear-gradient(135deg, hsl(var(--medical) / 0.2), hsl(var(--medical) / 0.1));
+    border-color: hsl(var(--medical) / 0.3);
+  }
+
+  .wallet-holiday {
+    background: linear-gradient(135deg, hsl(var(--holiday) / 0.2), hsl(var(--holiday) / 0.1));
+    border-color: hsl(var(--holiday) / 0.3);
+  }
+
+  .wallet-retirement {
+    background: linear-gradient(135deg, hsl(var(--retirement) / 0.2), hsl(var(--retirement) / 0.1));
+    border-color: hsl(var(--retirement) / 0.3);
+  }
+
+  /* Smooth Animations */
+  .animate-smooth {
+    animation-timing-function: var(--animation-smooth);
+  }
+
+  .animate-bounce-in {
+    animation-timing-function: var(--animation-bounce);
   }
 }

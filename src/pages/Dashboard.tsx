@@ -1,7 +1,7 @@
 import { RukishaDashboard } from "@/components/wallet/RukishaDashboard";
 
-const Index = () => {
+const Dashboard = () => {
   return <RukishaDashboard />;
 };
 
-export default Index;
+export default Dashboard;
