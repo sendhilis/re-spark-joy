@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      flagged_transactions: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          reason: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string
+          status: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          status?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          status?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flagged_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_applications: {
+        Row: {
+          amount: number
+          created_at: string
+          duration_months: number
+          id: string
+          interest_rate: number
+          loan_type: string
+          monthly_payment: number | null
+          notes: string | null
+          purpose: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          duration_months: number
+          id?: string
+          interest_rate?: number
+          loan_type: string
+          monthly_payment?: number | null
+          notes?: string | null
+          purpose?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          duration_months?: number
+          id?: string
+          interest_rate?: number
+          loan_type?: string
+          monthly_payment?: number | null
+          notes?: string | null
+          purpose?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -77,6 +175,27 @@ export type Database = {
           type?: Database["public"]["Enums"]["transaction_type"]
           user_id?: string
           wallet_type?: Database["public"]["Enums"]["wallet_type"]
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -157,9 +276,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       transaction_status: "completed" | "pending" | "failed"
       transaction_type:
         | "sent"
@@ -306,6 +432,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       transaction_status: ["completed", "pending", "failed"],
       transaction_type: [
         "sent",
