@@ -20,7 +20,7 @@ export default function Landing() {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
               Rukisha
             </h1>
-            <p className="text-xs text-muted-foreground">by CPF Group</p>
+            <p className="text-xs text-muted-foreground">Equity Bank - Diaspora Connect</p>
           </div>
         </div>
         <Button variant="outline" className="glass-card">
