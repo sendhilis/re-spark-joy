@@ -58,7 +58,7 @@ export function WalletHeader() {
             <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
               Rukisha
             </h2>
-            <p className="text-sm text-muted-foreground font-medium">CPF Group • Kenya's Smart Wallet</p>
+            <p className="text-sm text-muted-foreground font-medium">Equity Bank - Diaspora Connect</p>
           </div>
         </div>
       </div>

@@ -87,7 +87,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       type: 'received',
       amount: 15000,
       description: 'Salary Payment',
-      recipient: 'CPF Group',
+      recipient: 'Equity Bank',
       timestamp: new Date(2025, 0, 20, 9, 0),
       status: 'completed',
       walletType: 'main'
