@@ -151,8 +151,8 @@ export default function Landing() {
         <div className="mt-16 text-center">
           <p className="text-sm text-muted-foreground mb-4">Proudly powered by</p>
           <div className="flex items-center justify-center space-x-2">
-            <div className="text-2xl font-bold text-primary">CPF Group</div>
-            <div className="text-sm text-muted-foreground">| Financial Services Excellence</div>
+            <div className="text-2xl font-bold text-primary">Equity Bank</div>
+            <div className="text-sm text-muted-foreground">| Diaspora Connect</div>
           </div>
         </div>
       </div>
