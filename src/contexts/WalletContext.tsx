@@ -50,8 +50,8 @@ interface WalletContextType {
   transactions: Transaction[];
   pensionRedemptions: PensionRedemption[];
   loading: boolean;
-  updateBalance: (walletType: keyof WalletBalances, amount: number) => void;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => void;
+  updateBalance: (walletType: keyof WalletBalances, amount: number) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => Promise<void>;
   addPensionRedemption: (redemption: Omit<PensionRedemption, 'id' | 'requestDate'>) => void;
   getPensionBalance: () => number;
   getPensionEligibility: () => { eligible: boolean; monthsAccumulated: number; minMonthsRequired: number };
@@ -109,10 +109,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  // Initial data fetch
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     Promise.all([fetchWallets(), fetchTransactions()]).finally(() => setLoading(false));
+  }, [user, fetchWallets, fetchTransactions]);
+
+  // Realtime subscriptions for live sync
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('wallet-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` },
+        () => { fetchWallets(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        () => { fetchTransactions(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user, fetchWallets, fetchTransactions]);
 
   const updateBalance = useCallback(async (walletType: keyof WalletBalances, amount: number) => {
@@ -153,7 +175,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     if (!inserted) return;
 
-    // Update the wallet balance
+    // Update the wallet balance and wait for it
     await updateBalance(walletType, transaction.amount);
 
     // Save-As-You-Spend logic for outgoing non-save transactions
@@ -197,7 +219,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await updateBalance('education', educationAmount);
     }
 
-    // Refresh from DB to stay in sync
+    // Final refresh to ensure full sync
     await Promise.all([fetchWallets(), fetchTransactions()]);
   }, [user, updateBalance, fetchWallets, fetchTransactions]);
 
