@@ -1,1 +1,4 @@
 project_id = "ejrttghgscfhbezvobhv"
+
+[functions.rukisha-ai]
+verify_jwt = false
