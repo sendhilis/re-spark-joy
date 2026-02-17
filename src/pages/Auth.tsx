@@ -58,10 +58,8 @@ export default function Auth() {
     if (error) {
       toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
     } else {
-      toast({
-        title: "Check your email!",
-        description: "We've sent you a confirmation link. Please verify your email to sign in.",
-      });
+      toast({ title: "Account Created!", description: "Welcome to Rukisha!" });
+      navigate("/dashboard");
     }
   };
 
