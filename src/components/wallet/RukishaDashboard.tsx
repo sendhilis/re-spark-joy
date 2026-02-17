@@ -4,10 +4,12 @@ import { WalletCard } from "./WalletCard";
 import { QuickActions } from "./QuickActions";
 import { SubWallets } from "./SubWallets";
 import { TransactionHistory } from "./TransactionHistory";
+import { SaveAsYouSpendFlow } from "./flows/SaveAsYouSpendFlow";
 import { useWallet } from "@/contexts/WalletContext";
 
 export function RukishaDashboard() {
   const [showVirtualCard, setShowVirtualCard] = useState(false);
+  const [saveFlowOpen, setSaveFlowOpen] = useState(false);
   const { balances, transactions } = useWallet();
 
   const thisMonthSavings = transactions
@@ -19,18 +21,9 @@ export function RukishaDashboard() {
   return (
     <div className="min-h-screen bg-background p-4 space-y-6">
       <WalletHeader />
-
-      <WalletCard
-        balance={balances.main}
-        title="Main Wallet"
-        type="main"
-        hideBalance={false}
-      />
-
+      <WalletCard balance={balances.main} title="Main Wallet" type="main" hideBalance={false} />
       <QuickActions onVirtualCardClick={() => setShowVirtualCard(!showVirtualCard)} />
-
       <SubWallets />
-
       <TransactionHistory />
 
       {/* Save-As-You-Spend Banner */}
@@ -46,12 +39,15 @@ export function RukishaDashboard() {
             </p>
           </div>
           <button
+            onClick={() => setSaveFlowOpen(true)}
             className="glass-card button-3d px-6 py-3 rounded-2xl border border-success/30 bg-success/20 text-success font-semibold hover:bg-success/30 transition-all"
           >
             Configure
           </button>
         </div>
       </div>
+
+      <SaveAsYouSpendFlow open={saveFlowOpen} onOpenChange={setSaveFlowOpen} />
     </div>
   );
 }
