@@ -14,7 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          pension_metadata: Json | null
+          recipient: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+          wallet_type: Database["public"]["Enums"]["wallet_type"]
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          pension_metadata?: Json | null
+          recipient?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+          wallet_type?: Database["public"]["Enums"]["wallet_type"]
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          pension_metadata?: Json | null
+          recipient?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string
+          wallet_type?: Database["public"]["Enums"]["wallet_type"]
+        }
+        Relationships: []
+      }
+      virtual_cards: {
+        Row: {
+          card_holder: string
+          card_number: string
+          created_at: string
+          current_spent: number
+          cvv: string
+          expiry_month: number
+          expiry_year: number
+          id: string
+          is_frozen: boolean
+          spending_limit: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_holder: string
+          card_number: string
+          created_at?: string
+          current_spent?: number
+          cvv: string
+          expiry_month: number
+          expiry_year: number
+          id?: string
+          is_frozen?: boolean
+          spending_limit?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_holder?: string
+          card_number?: string
+          created_at?: string
+          current_spent?: number
+          cvv?: string
+          expiry_month?: number
+          expiry_year?: number
+          id?: string
+          is_frozen?: boolean
+          spending_limit?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          type: Database["public"]["Enums"]["wallet_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          type: Database["public"]["Enums"]["wallet_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          type?: Database["public"]["Enums"]["wallet_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +160,25 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      transaction_status: "completed" | "pending" | "failed"
+      transaction_type:
+        | "sent"
+        | "received"
+        | "bill"
+        | "school"
+        | "save"
+        | "qr_payment"
+        | "virtual_card"
+        | "card_linking"
+        | "mpesa"
+        | "pension_contribution"
+      wallet_type:
+        | "main"
+        | "education"
+        | "medical"
+        | "holiday"
+        | "retirement"
+        | "pension"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +305,28 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      transaction_status: ["completed", "pending", "failed"],
+      transaction_type: [
+        "sent",
+        "received",
+        "bill",
+        "school",
+        "save",
+        "qr_payment",
+        "virtual_card",
+        "card_linking",
+        "mpesa",
+        "pension_contribution",
+      ],
+      wallet_type: [
+        "main",
+        "education",
+        "medical",
+        "holiday",
+        "retirement",
+        "pension",
+      ],
+    },
   },
 } as const
