@@ -1,12 +1,10 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Shield, Smartphone, TrendingUp, Users, Banknote } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function Landing() {
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const { toast } = useToast();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -79,7 +77,7 @@ export default function Landing() {
                 </div>
 
                 <Button
-                  onClick={() => window.location.href = "/auth"}
+                  onClick={() => navigate("/auth")}
                   className="w-full h-12 button-3d"
                 >
                   Get Started
