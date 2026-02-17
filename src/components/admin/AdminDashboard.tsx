@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Users, DollarSign, Settings, Shield, AlertTriangle, TrendingUp, LogOut } from "lucide-react";
+import { BarChart3, Users, DollarSign, Settings, Shield, AlertTriangle, TrendingUp, LogOut, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { TransactionMonitoring } from "./TransactionMonitoring";
 import { LoanPortfolio } from "./LoanPortfolio";
 import { ComplianceCenter } from "./ComplianceCenter";
 import { AnalyticsDashboard } from "./AnalyticsDashboard";
+import { DiasporaDashboard } from "./DiasporaDashboard";
 
 export function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -121,8 +122,9 @@ export function AdminDashboard() {
         </div>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 glass-card">
+        <Tabs defaultValue="diaspora" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6 glass-card">
+            <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">Diaspora</span></TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2"><Users className="h-4 w-4" /><span className="hidden md:inline">Users</span></TabsTrigger>
             <TabsTrigger value="transactions" className="flex items-center gap-2"><BarChart3 className="h-4 w-4" /><span className="hidden md:inline">Transactions</span></TabsTrigger>
             <TabsTrigger value="loans" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /><span className="hidden md:inline">Loans</span></TabsTrigger>
@@ -130,6 +132,7 @@ export function AdminDashboard() {
             <TabsTrigger value="analytics" className="flex items-center gap-2"><TrendingUp className="h-4 w-4" /><span className="hidden md:inline">Analytics</span></TabsTrigger>
           </TabsList>
 
+          <TabsContent value="diaspora"><DiasporaDashboard /></TabsContent>
           <TabsContent value="users"><UserManagement /></TabsContent>
           <TabsContent value="transactions"><TransactionMonitoring /></TabsContent>
           <TabsContent value="loans"><LoanPortfolio /></TabsContent>
