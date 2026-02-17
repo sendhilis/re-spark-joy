@@ -1,14 +1,21 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
+import type { Database } from '@/integrations/supabase/types';
+
+type DbWalletType = Database['public']['Enums']['wallet_type'];
+type DbTransactionType = Database['public']['Enums']['transaction_type'];
+type DbTransactionStatus = Database['public']['Enums']['transaction_status'];
 
 export interface Transaction {
   id: string;
-  type: 'sent' | 'received' | 'bill' | 'school' | 'save' | 'qr_payment' | 'virtual_card' | 'card_linking' | 'mpesa' | 'pension_contribution';
+  type: DbTransactionType;
   amount: number;
   description: string;
   recipient?: string;
   timestamp: Date;
-  status: 'completed' | 'pending' | 'failed';
-  walletType?: 'main' | 'education' | 'medical' | 'holiday' | 'retirement' | 'pension';
+  status: DbTransactionStatus;
+  walletType?: DbWalletType;
   pensionMetadata?: {
     triggerType: 'user' | 'cpf';
     originalTransaction?: string;
@@ -42,6 +49,7 @@ interface WalletContextType {
   balances: WalletBalances;
   transactions: Transaction[];
   pensionRedemptions: PensionRedemption[];
+  loading: boolean;
   updateBalance: (walletType: keyof WalletBalances, amount: number) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => void;
   addPensionRedemption: (redemption: Omit<PensionRedemption, 'id' | 'requestDate'>) => void;
@@ -59,87 +67,96 @@ export function useWallet() {
   return context;
 }
 
+const defaultBalances: WalletBalances = { main: 0, education: 0, medical: 0, holiday: 0, retirement: 0, pension: 0 };
+
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [balances, setBalances] = useState<WalletBalances>({
-    main: 187500,
-    education: 45000,
-    medical: 18500,
-    holiday: 32000,
-    retirement: 125000,
-    pension: 8750,
-  });
-
+  const { user } = useAuth();
+  const [balances, setBalances] = useState<WalletBalances>(defaultBalances);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pensionRedemptions, setPensionRedemptions] = useState<PensionRedemption[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      type: 'sent',
-      amount: -2500,
-      description: 'Money Transfer',
-      recipient: 'John Mwangi',
-      timestamp: new Date(2025, 0, 20, 14, 30),
-      status: 'completed',
-      walletType: 'main'
-    },
-    {
-      id: '2',
-      type: 'received',
-      amount: 15000,
-      description: 'Salary Payment',
-      recipient: 'Equity Bank',
-      timestamp: new Date(2025, 0, 20, 9, 0),
-      status: 'completed',
-      walletType: 'main'
-    },
-    {
-      id: '3',
-      type: 'bill',
-      amount: -1200,
-      description: 'KPLC Electricity',
-      timestamp: new Date(2025, 0, 19, 16, 45),
-      status: 'completed',
-      walletType: 'main'
-    },
-    {
-      id: '4',
-      type: 'school',
-      amount: -25000,
-      description: "School Fees - St. Mary's",
-      timestamp: new Date(2025, 0, 18, 11, 20),
-      status: 'completed',
-      walletType: 'education'
-    },
-    {
-      id: '5',
-      type: 'sent',
-      amount: -500,
-      description: 'M-Pesa Top Up',
-      timestamp: new Date(2025, 0, 17, 8, 15),
-      status: 'pending',
-      walletType: 'main'
+  const fetchWallets = useCallback(async () => {
+    if (!user) { setBalances(defaultBalances); return; }
+    const { data } = await supabase.from('wallets').select('type, balance').eq('user_id', user.id);
+    if (data) {
+      const b = { ...defaultBalances };
+      data.forEach(w => { b[w.type as keyof WalletBalances] = Number(w.balance); });
+      setBalances(b);
     }
-  ]);
+  }, [user]);
 
-  const updateBalance = (walletType: keyof WalletBalances, amount: number) => {
-    setBalances(prev => ({
-      ...prev,
-      [walletType]: prev[walletType] + amount
-    }));
-  };
+  const fetchTransactions = useCallback(async () => {
+    if (!user) { setTransactions([]); return; }
+    const { data } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (data) {
+      setTransactions(data.map(t => ({
+        id: t.id,
+        type: t.type,
+        amount: Number(t.amount),
+        description: t.description,
+        recipient: t.recipient ?? undefined,
+        timestamp: new Date(t.created_at),
+        status: t.status,
+        walletType: t.wallet_type,
+        pensionMetadata: t.pension_metadata as Transaction['pensionMetadata'],
+      })));
+    }
+  }, [user]);
 
-  const addTransaction = (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-    };
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    setLoading(true);
+    Promise.all([fetchWallets(), fetchTransactions()]).finally(() => setLoading(false));
+  }, [user, fetchWallets, fetchTransactions]);
 
-    setTransactions(prev => [newTransaction, ...prev]);
+  const updateBalance = useCallback(async (walletType: keyof WalletBalances, amount: number) => {
+    if (!user) return;
+    // Optimistic update
+    setBalances(prev => ({ ...prev, [walletType]: prev[walletType] + amount }));
+    // Get current balance then update
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('id, balance')
+      .eq('user_id', user.id)
+      .eq('type', walletType)
+      .maybeSingle();
+    if (wallet) {
+      await supabase
+        .from('wallets')
+        .update({ balance: Number(wallet.balance) + amount })
+        .eq('id', wallet.id);
+    }
+  }, [user]);
+
+  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
+    if (!user) return;
 
     const walletType = transaction.walletType || 'main';
-    updateBalance(walletType, transaction.amount);
 
+    // Insert the main transaction
+    const { data: inserted } = await supabase.from('transactions').insert({
+      user_id: user.id,
+      type: transaction.type,
+      amount: transaction.amount,
+      description: transaction.description,
+      recipient: transaction.recipient ?? null,
+      status: transaction.status,
+      wallet_type: walletType,
+      pension_metadata: transaction.pensionMetadata as any ?? null,
+    }).select().single();
+
+    if (!inserted) return;
+
+    // Update the wallet balance
+    await updateBalance(walletType, transaction.amount);
+
+    // Save-As-You-Spend logic for outgoing non-save transactions
     if (transaction.amount < 0 && transaction.type !== 'save' && transaction.type !== 'pension_contribution') {
       const saveAmount = Math.abs(transaction.amount) * 0.05;
       const mpesaFee = Math.abs(transaction.amount) * 0.03;
@@ -149,63 +166,40 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const retirementAmount = saveAmount * 0.5;
       const educationAmount = saveAmount * 0.2;
 
-      updateBalance('pension', feeSaved);
-      setTransactions(prev => [{
-        id: (Date.now() + 1).toString(),
-        type: 'pension_contribution',
-        amount: feeSaved,
-        description: 'Taifa Pension - CPF Fee Savings',
-        timestamp: new Date(),
-        status: 'completed',
-        walletType: 'pension',
-        pensionMetadata: {
-          triggerType: 'cpf',
-          originalTransaction: newTransaction.id,
-          mpesaFee,
-          rukishaFee,
-          feeSaved,
-        }
-      }, ...prev]);
+      // CPF fee savings → pension
+      await supabase.from('transactions').insert({
+        user_id: user.id, type: 'pension_contribution', amount: feeSaved,
+        description: 'Taifa Pension - CPF Fee Savings', status: 'completed', wallet_type: 'pension',
+        pension_metadata: { triggerType: 'cpf', originalTransaction: inserted.id, mpesaFee, rukishaFee, feeSaved },
+      });
+      await updateBalance('pension', feeSaved);
 
-      updateBalance('pension', userPensionAmount);
-      setTransactions(prev => [{
-        id: (Date.now() + 2).toString(),
-        type: 'pension_contribution',
-        amount: userPensionAmount,
-        description: 'Taifa Pension - User Savings',
-        timestamp: new Date(),
-        status: 'completed',
-        walletType: 'pension',
-        pensionMetadata: {
-          triggerType: 'user',
-          originalTransaction: newTransaction.id,
-          userSavePercent: 5,
-        }
-      }, ...prev]);
+      // User savings → pension
+      await supabase.from('transactions').insert({
+        user_id: user.id, type: 'pension_contribution', amount: userPensionAmount,
+        description: 'Taifa Pension - User Savings', status: 'completed', wallet_type: 'pension',
+        pension_metadata: { triggerType: 'user', originalTransaction: inserted.id, userSavePercent: 5 },
+      });
+      await updateBalance('pension', userPensionAmount);
 
-      updateBalance('retirement', retirementAmount);
-      setTransactions(prev => [{
-        id: (Date.now() + 3).toString(),
-        type: 'save',
-        amount: retirementAmount,
-        description: 'Save-As-You-Spend (Retirement)',
-        timestamp: new Date(),
-        status: 'completed',
-        walletType: 'retirement'
-      }, ...prev]);
+      // Retirement savings
+      await supabase.from('transactions').insert({
+        user_id: user.id, type: 'save', amount: retirementAmount,
+        description: 'Save-As-You-Spend (Retirement)', status: 'completed', wallet_type: 'retirement',
+      });
+      await updateBalance('retirement', retirementAmount);
 
-      updateBalance('education', educationAmount);
-      setTransactions(prev => [{
-        id: (Date.now() + 4).toString(),
-        type: 'save',
-        amount: educationAmount,
-        description: 'Save-As-You-Spend (Education)',
-        timestamp: new Date(),
-        status: 'completed',
-        walletType: 'education'
-      }, ...prev]);
+      // Education savings
+      await supabase.from('transactions').insert({
+        user_id: user.id, type: 'save', amount: educationAmount,
+        description: 'Save-As-You-Spend (Education)', status: 'completed', wallet_type: 'education',
+      });
+      await updateBalance('education', educationAmount);
     }
-  };
+
+    // Refresh from DB to stay in sync
+    await Promise.all([fetchWallets(), fetchTransactions()]);
+  }, [user, updateBalance, fetchWallets, fetchTransactions]);
 
   const addPensionRedemption = (redemption: Omit<PensionRedemption, 'id' | 'requestDate'>) => {
     const newRedemption: PensionRedemption = {
@@ -243,6 +237,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       balances,
       transactions,
       pensionRedemptions,
+      loading,
       updateBalance,
       addTransaction,
       addPensionRedemption,
