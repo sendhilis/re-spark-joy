@@ -16,14 +16,18 @@ import { LoanDiscovery } from "./LoanDiscovery";
 
 interface QuickActionsProps {
   onVirtualCardClick?: () => void;
+  virtualCardOpen?: boolean;
+  onVirtualCardOpenChange?: (open: boolean) => void;
 }
 
-export function QuickActions({ onVirtualCardClick }: QuickActionsProps) {
+export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirtualCardOpen, onVirtualCardOpenChange }: QuickActionsProps) {
   const [transferOpen, setTransferOpen] = useState(false);
   const [payBillsOpen, setPayBillsOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [qrPaymentOpen, setQRPaymentOpen] = useState(false);
-  const [virtualCardOpen, setVirtualCardOpen] = useState(false);
+  const [internalVirtualCardOpen, setInternalVirtualCardOpen] = useState(false);
+  const virtualCardOpen = externalVirtualCardOpen !== undefined ? externalVirtualCardOpen : internalVirtualCardOpen;
+  const setVirtualCardOpen = onVirtualCardOpenChange ?? setInternalVirtualCardOpen;
   const [linkCardOpen, setLinkCardOpen] = useState(false);
   const [walletTransferOpen, setWalletTransferOpen] = useState(false);
   const [loanDiscoveryOpen, setLoanDiscoveryOpen] = useState(false);
@@ -39,7 +43,7 @@ export function QuickActions({ onVirtualCardClick }: QuickActionsProps) {
     { id: 'pay-bills', title: 'Pay Bills', icon: Receipt, description: 'Utilities & services', onClick: () => setPayBillsOpen(true) },
     { id: 'qr-payment', title: 'QR Pay', icon: QrCode, description: 'Scan & pay', onClick: () => setQRPaymentOpen(true) },
     { id: 'save', title: 'Save', icon: PiggyBank, description: 'Add to savings', onClick: () => setSaveOpen(true) },
-    { id: 'virtual-card', title: 'Virtual Card', icon: CreditCard, description: 'Manage cards', onClick: () => onVirtualCardClick ? onVirtualCardClick() : setVirtualCardOpen(true) },
+    { id: 'virtual-card', title: 'Virtual Card', icon: CreditCard, description: 'Manage cards', onClick: () => { if (onVirtualCardClick) onVirtualCardClick(); else setVirtualCardOpen(true); } },
     { id: 'link-card', title: 'Link Card', icon: Globe, description: 'Diaspora cards', onClick: () => setLinkCardOpen(true) },
     { id: 'mobile-money', title: 'M-Pesa', icon: Smartphone, description: 'Top up mobile money', onClick: () => setMpesaOpen(true) },
     { id: 'bank', title: 'Bank Transfer', icon: Building, description: 'Send to bank account', onClick: () => setBankTransferOpen(true) },
