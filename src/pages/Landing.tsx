@@ -18,7 +18,12 @@ export default function Landing() {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
               Rukisha
             </h1>
-            <p className="text-xs text-muted-foreground">Equity Bank - Diaspora Connect</p>
+            <p className="text-xs text-muted-foreground">
+              Equity Bank — <span className="relative inline-block text-primary font-semibold">
+                Diaspora Connect
+                <span className="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-primary-light rounded-full" />
+              </span>
+            </p>
           </div>
         </div>
         <Button variant="outline" className="glass-card">
@@ -148,9 +153,13 @@ export default function Landing() {
         {/* Bottom Section - Partnership */}
         <div className="mt-16 text-center">
           <p className="text-sm text-muted-foreground mb-4">Proudly powered by</p>
-          <div className="flex items-center justify-center space-x-2">
+          <div className="flex items-center justify-center space-x-3">
             <div className="text-2xl font-bold text-primary">Equity Bank</div>
-            <div className="text-sm text-muted-foreground">| Diaspora Connect</div>
+            <div className="w-px h-5 bg-border" />
+            <div className="relative inline-block text-sm font-semibold text-primary">
+              Diaspora Connect
+              <span className="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-primary-light rounded-full" />
+            </div>
           </div>
         </div>
       </div>
