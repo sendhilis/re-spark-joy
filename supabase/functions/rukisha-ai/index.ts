@@ -46,9 +46,27 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, action } = await req.json();
+    const body = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Support two payload shapes:
+    // 1. { messages: [{role, content}] }  — streaming chat widget
+    // 2. { message: string, conversationHistory: [] } — one-shot guide calls
+    let incomingMessages: { role: string; content: string }[];
+    if (Array.isArray(body.messages)) {
+      incomingMessages = body.messages;
+    } else if (typeof body.message === "string") {
+      const history = Array.isArray(body.conversationHistory) ? body.conversationHistory : [];
+      incomingMessages = [...history, { role: "user", content: body.message }];
+    } else {
+      return new Response(JSON.stringify({ error: "Invalid request: provide messages array or message string" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { action } = body;
 
     // Build messages based on action type (quick actions inject context)
     const systemMessages = [{ role: "system", content: SYSTEM_PROMPT }];
@@ -68,6 +86,9 @@ serve(async (req) => {
       }
     }
 
+    // For one-shot calls (message string), return a simple JSON reply instead of streaming
+    const isOneShot = typeof body.message === "string";
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,8 +97,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        messages: [...systemMessages, ...messages],
-        stream: true,
+        messages: [...systemMessages, ...incomingMessages],
+        stream: !isOneShot,
       }),
     });
 
@@ -102,6 +123,16 @@ serve(async (req) => {
       });
     }
 
+    // One-shot: parse and return { reply: string }
+    if (isOneShot) {
+      const json = await response.json();
+      const reply = json.choices?.[0]?.message?.content ?? "";
+      return new Response(JSON.stringify({ reply }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Streaming: pipe SSE directly to client
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
