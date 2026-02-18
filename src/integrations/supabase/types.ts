@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_transactions: {
+        Row: {
+          agent_id: string
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          transaction_code: string | null
+          transaction_type: string
+          user_id: string | null
+        }
+        Insert: {
+          agent_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          transaction_code?: string | null
+          transaction_type: string
+          user_id?: string | null
+        }
+        Update: {
+          agent_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          transaction_code?: string | null
+          transaction_type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_transactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "bank_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_agents: {
+        Row: {
+          agent_code: string
+          agent_name: string
+          bank_partner: string
+          county: string
+          created_at: string
+          daily_transaction_limit: number
+          float_balance: number
+          id: string
+          latitude: number | null
+          location: string
+          longitude: number | null
+          max_float: number
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_code: string
+          agent_name: string
+          bank_partner?: string
+          county?: string
+          created_at?: string
+          daily_transaction_limit?: number
+          float_balance?: number
+          id?: string
+          latitude?: number | null
+          location: string
+          longitude?: number | null
+          max_float?: number
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_code?: string
+          agent_name?: string
+          bank_partner?: string
+          county?: string
+          created_at?: string
+          daily_transaction_limit?: number
+          float_balance?: number
+          id?: string
+          latitude?: number | null
+          location?: string
+          longitude?: number | null
+          max_float?: number
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flagged_transactions: {
         Row: {
           created_at: string
