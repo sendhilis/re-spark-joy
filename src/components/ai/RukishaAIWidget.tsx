@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/WalletContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -43,38 +45,65 @@ export function RukishaAIWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [showNudge, setShowNudge] = useState(false);
   const [currentNudge, setCurrentNudge] = useState(0);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Safely try to use wallet context (may not be available on all pages)
-  let walletData: ReturnType<typeof useWallet> | null = null;
-  try {
-    walletData = useWallet();
-  } catch {
-    // Not within WalletProvider, wallet context unavailable
-  }
+  // Auth context for persistence
+  let authData: ReturnType<typeof useAuth> | null = null;
+  try { authData = useAuth(); } catch { /* not in AuthProvider */ }
+  const userId = authData?.user?.id;
 
-  // Build wallet context payload for the AI
+  // Safely try to use wallet context
+  let walletData: ReturnType<typeof useWallet> | null = null;
+  try { walletData = useWallet(); } catch { /* not in WalletProvider */ }
+
   const walletContext = useMemo(() => {
     if (!walletData) return undefined;
-
     const { balances, transactions } = walletData;
-
     const salaryTransfers = transactions
       .filter(t => t.description?.toLowerCase().includes('salary transfer'))
       .map(t => ({ amount: t.amount, description: t.description, timestamp: t.timestamp, status: t.status }));
-
     const loanRepayments = transactions
       .filter(t => t.description?.toLowerCase().includes('loan repayment'))
       .map(t => ({ amount: t.amount, description: t.description, timestamp: t.timestamp, status: t.status }));
-
     const recentTransactions = transactions.slice(0, 15).map(t => ({
       type: t.type, amount: t.amount, description: t.description,
       timestamp: t.timestamp, status: t.status,
     }));
-
     return { balances, salaryTransfers, loanRepayments, recentTransactions };
   }, [walletData?.balances, walletData?.transactions]);
+
+  // Load chat history when widget opens (only once per session)
+  useEffect(() => {
+    if (!isOpen || historyLoaded || !userId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('role, content')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(50);
+      if (data && data.length > 0) {
+        setMessages(data.map(d => ({ role: d.role as Msg["role"], content: d.content })));
+      }
+      setHistoryLoaded(true);
+    })();
+  }, [isOpen, historyLoaded, userId]);
+
+  // Persist a single message to DB
+  const persistMessage = useCallback(async (msg: Msg) => {
+    if (!userId) return;
+    await supabase.from('chat_messages').insert({ user_id: userId, role: msg.role, content: msg.content });
+  }, [userId]);
+
+  // Clear chat history
+  const clearHistory = useCallback(async () => {
+    if (!userId) return;
+    await supabase.from('chat_messages').delete().eq('user_id', userId);
+    setMessages([]);
+    toast({ title: "Chat cleared", description: "Your conversation history has been removed." });
+  }, [userId, toast]);
 
   // Proactive nudge timer
   useEffect(() => {
@@ -156,8 +185,14 @@ export function RukishaAIWidget() {
       console.error("Rukisha AI error:", e);
       toast({ title: "Rukisha AI", description: "Connection error. Please try again.", variant: "destructive" });
     }
+
+    // Persist the completed assistant message
+    if (assistantSoFar) {
+      await persistMessage({ role: "assistant", content: assistantSoFar });
+    }
+
     setIsLoading(false);
-  }, [toast, walletContext]);
+  }, [toast, walletContext, persistMessage]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -165,6 +200,7 @@ export function RukishaAIWidget() {
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+    await persistMessage(userMsg);
     await streamChat(newMessages);
   };
 
@@ -172,6 +208,7 @@ export function RukishaAIWidget() {
     const userMsg: Msg = { role: "user", content: action.description };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
+    await persistMessage(userMsg);
     await streamChat(newMessages, action.id);
   };
 
@@ -181,6 +218,7 @@ export function RukishaAIWidget() {
     const nudgeText = proactiveNudges[currentNudge].replace(/^[^\s]+\s/, "");
     const userMsg: Msg = { role: "user", content: nudgeText };
     setMessages([userMsg]);
+    persistMessage(userMsg);
     streamChat([userMsg]);
   };
 
@@ -224,16 +262,22 @@ export function RukishaAIWidget() {
                 <p className="text-xs text-muted-foreground">Diaspora Financial Assistant</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-xl">
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <Button variant="ghost" size="icon" onClick={clearHistory} className="rounded-xl" title="Clear chat history">
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-xl">
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto scroll-native no-scrollbar px-4 py-4 space-y-4">
             {messages.length === 0 && (
               <div className="space-y-6">
-                {/* Welcome */}
                 <div className="text-center space-y-2 pt-4">
                   <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-primary-light/20 flex items-center justify-center">
                     <Sparkles className="h-8 w-8 text-primary" />
@@ -244,7 +288,6 @@ export function RukishaAIWidget() {
                   </p>
                 </div>
 
-                {/* Quick Actions Grid */}
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Quick Actions</p>
                   <div className="grid grid-cols-2 gap-2">
