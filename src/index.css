@@ -225,3 +225,37 @@
     scrollbar-width: none;
   }
 }
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+  h1, h2, h3 {
+    break-after: avoid;
+  }
+  table, pre, blockquote {
+    break-inside: avoid;
+  }
+  pre {
+    white-space: pre-wrap !important;
+    word-break: break-word;
+    border: 1px solid #ccc !important;
+    padding: 8px !important;
+    background: #f5f5f5 !important;
+  }
+  code {
+    color: #333 !important;
+  }
+  a {
+    color: #1a56db !important;
+    text-decoration: underline;
+  }
+}
