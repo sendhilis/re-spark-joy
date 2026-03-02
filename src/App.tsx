@@ -16,6 +16,7 @@ import Showcase from "./pages/Showcase";
 import ChamaMerchant from "./pages/ChamaMerchant";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import DownloadDoc from "./pages/DownloadDoc";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => {
                 <Route path="/wallet" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/showcase" element={<Showcase />} />
                 <Route path="/chama-merchant" element={<ChamaMerchant />} />
+                <Route path="/download-doc" element={<DownloadDoc />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </WalletProvider>
