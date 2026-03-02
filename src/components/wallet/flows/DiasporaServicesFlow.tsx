@@ -58,23 +58,25 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
     toast({ title: "Card Linked Successfully! 🎉", description: "Your UAE salary card is now connected to your Rukisha wallet" });
   };
 
-  const handleSalaryTransfer = () => {
+  const handleSalaryTransfer = (): boolean => {
     const amount = parseFloat(formData.transferAmount);
-    if (!amount || amount <= 0) { toast({ title: "Invalid Amount", description: "Please enter a valid transfer amount", variant: "destructive" }); return; }
+    if (!amount || amount <= 0) { toast({ title: "Invalid Amount", description: "Please enter a valid transfer amount", variant: "destructive" }); return false; }
     updateBalance('main', amount);
     addTransaction({ type: 'received', amount, description: 'Salary transfer from UAE card', status: 'completed' });
     toast({ title: "Transfer Successful! 💰", description: `KES ${amount.toLocaleString()} transferred from your salary card to your Rukisha wallet` });
     setFormData({ ...formData, transferAmount: "" });
+    return true;
   };
 
-  const handleLoanRepayment = () => {
+  const handleLoanRepayment = (): boolean => {
     const amount = parseFloat(formData.loanRepaymentAmount);
-    if (!amount || amount <= 0) { toast({ title: "Invalid Amount", description: "Please enter a valid repayment amount", variant: "destructive" }); return; }
-    if (balances.main < amount) { toast({ title: "Insufficient Balance", description: "Please transfer salary to your wallet first", variant: "destructive" }); return; }
+    if (!amount || amount <= 0) { toast({ title: "Invalid Amount", description: "Please enter a valid repayment amount", variant: "destructive" }); return false; }
+    if (balances.main < amount) { toast({ title: "Insufficient Balance", description: "Please transfer salary to your wallet first", variant: "destructive" }); return false; }
     updateBalance('main', -amount);
     addTransaction({ type: 'sent', amount, description: 'Loan repayment to Rukisha', status: 'completed' });
     toast({ title: "Repayment Successful! ✅", description: `KES ${amount.toLocaleString()} paid towards your loan` });
     setFormData({ ...formData, loanRepaymentAmount: "" });
+    return true;
   };
 
   const handleSetupAutoDebit = () => {
@@ -213,7 +215,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                             </div>
                             <div><Label>Transfer Amount (KES)</Label><Input type="number" placeholder="Enter amount to transfer" value={formData.transferAmount}
                               onChange={(e) => setFormData({...formData, transferAmount: e.target.value})} /></div>
-                            <Button onClick={() => { handleSalaryTransfer(); if (parseFloat(formData.transferAmount) > 0) setQuickRepayStep(2); }} className="w-full">
+                            <Button onClick={() => { if (handleSalaryTransfer()) setQuickRepayStep(2); }} className="w-full">
                               <ArrowRightLeft className="h-4 w-4 mr-2" />Transfer to Wallet & Continue
                             </Button>
                           </div>
@@ -228,7 +230,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                               onChange={(e) => setFormData({...formData, loanRepaymentAmount: e.target.value})} /></div>
                             <div className="flex gap-2">
                               <Button variant="outline" onClick={() => setQuickRepayStep(1)} className="flex-1">Back</Button>
-                              <Button onClick={() => { handleLoanRepayment(); if (parseFloat(formData.loanRepaymentAmount) > 0 && balances.main >= parseFloat(formData.loanRepaymentAmount)) setQuickRepayStep(3); }} className="flex-1">
+                              <Button onClick={() => { if (handleLoanRepayment()) setQuickRepayStep(3); }} className="flex-1">
                                 <DollarSign className="h-4 w-4 mr-2" />Pay Loan & Continue
                               </Button>
                             </div>
