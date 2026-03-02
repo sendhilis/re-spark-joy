@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@/contexts/WalletContext";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -15,6 +16,7 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
+  { id: "salary_repay_history", label: "Repay History", icon: <History className="h-4 w-4" />, description: "View salary loan repayment history" },
   { id: "loan_health", label: "Loan Health Check", icon: <Heart className="h-4 w-4" />, description: "Review your diaspora loan status" },
   { id: "repay_reminder", label: "Repay Reminders", icon: <Bell className="h-4 w-4" />, description: "Set up payment reminders" },
   { id: "repay_monitor", label: "Repay Monitor", icon: <TrendingUp className="h-4 w-4" />, description: "Track repayment progress" },
@@ -29,6 +31,7 @@ const proactiveNudges = [
   "💰 Your remittance fees could be lower with Rukisha. Let me show you how much you'd save.",
   "📊 I can monitor your loan repayments and alert you to any concerns. Interested?",
   "🎯 Your sub-wallets could be working harder for you. Let me suggest an optimal allocation.",
+  "💳 I can show you your salary loan repayment history. Want to see your progress?",
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rukisha-ai`;
@@ -42,6 +45,36 @@ export function RukishaAIWidget() {
   const [currentNudge, setCurrentNudge] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Safely try to use wallet context (may not be available on all pages)
+  let walletData: ReturnType<typeof useWallet> | null = null;
+  try {
+    walletData = useWallet();
+  } catch {
+    // Not within WalletProvider, wallet context unavailable
+  }
+
+  // Build wallet context payload for the AI
+  const walletContext = useMemo(() => {
+    if (!walletData) return undefined;
+
+    const { balances, transactions } = walletData;
+
+    const salaryTransfers = transactions
+      .filter(t => t.description?.toLowerCase().includes('salary transfer'))
+      .map(t => ({ amount: t.amount, description: t.description, timestamp: t.timestamp, status: t.status }));
+
+    const loanRepayments = transactions
+      .filter(t => t.description?.toLowerCase().includes('loan repayment'))
+      .map(t => ({ amount: t.amount, description: t.description, timestamp: t.timestamp, status: t.status }));
+
+    const recentTransactions = transactions.slice(0, 15).map(t => ({
+      type: t.type, amount: t.amount, description: t.description,
+      timestamp: t.timestamp, status: t.status,
+    }));
+
+    return { balances, salaryTransfers, loanRepayments, recentTransactions };
+  }, [walletData?.balances, walletData?.transactions]);
 
   // Proactive nudge timer
   useEffect(() => {
@@ -79,7 +112,7 @@ export function RukishaAIWidget() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: msgs, action }),
+        body: JSON.stringify({ messages: msgs, action, walletContext }),
       });
 
       if (!resp.ok) {
@@ -124,7 +157,7 @@ export function RukishaAIWidget() {
       toast({ title: "Rukisha AI", description: "Connection error. Please try again.", variant: "destructive" });
     }
     setIsLoading(false);
-  }, [toast]);
+  }, [toast, walletContext]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -207,7 +240,7 @@ export function RukishaAIWidget() {
                   </div>
                   <h4 className="text-xl font-bold text-foreground">Habari! 👋</h4>
                   <p className="text-sm text-muted-foreground max-w-[280px] mx-auto">
-                    I'm your diaspora financial assistant. How can I help you manage your money across borders today?
+                    I'm your diaspora financial assistant. I can see your wallet activity and loan repayment history in real-time.
                   </p>
                 </div>
 
@@ -292,7 +325,7 @@ export function RukishaAIWidget() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Rukisha AI anything..."
+                placeholder="Ask about your loan repayments..."
                 className="flex-1 glass-card rounded-2xl border-border/30 h-11 text-sm"
                 disabled={isLoading}
               />
@@ -316,7 +349,6 @@ export function RukishaAIWidget() {
           className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-light shadow-lg shadow-primary/30 flex items-center justify-center touch-feedback animate-in zoom-in duration-300"
         >
           <MessageCircle className="h-6 w-6 text-white" />
-          {/* Pulse indicator */}
           <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-success border-2 border-background animate-pulse" />
         </button>
       )}
