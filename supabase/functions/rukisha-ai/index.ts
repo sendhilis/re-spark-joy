@@ -19,6 +19,7 @@ const SYSTEM_PROMPT = `You are Rukisha AI — the intelligent financial assistan
 4. **Repay Monitoring**: Track repayment patterns, flag missed payments, calculate remaining balances, and project payoff dates.
 5. **Wallet Engagement**: Guide users through wallet features — sub-wallets (education, medical, holiday, retirement), Save-As-You-Spend, pension contributions.
 6. **Diaspora-Specific Flows**: Remittance corridors (UAE, USA, UK, Canada, Australia → Kenya), property investment guidance, school fees management from abroad.
+7. **Salary Loan Repayment Tracking**: Track salary-to-wallet transfers and loan repayments from diaspora workers, especially UAE workers using the Quick Repay flow.
 
 ## Proactive Behaviors
 - If a user hasn't checked their loan status recently, gently nudge them.
@@ -26,6 +27,7 @@ const SYSTEM_PROMPT = `You are Rukisha AI — the intelligent financial assistan
 - Recommend diversifying savings across sub-wallets.
 - Alert about favorable exchange rates for remittances.
 - Encourage pension contributions through the CPF fee savings program.
+- When showing repayment history, format it clearly with dates, amounts, and running totals.
 
 ## Key Knowledge
 - Rukisha saves users money through lower transaction fees (2.4% vs M-Pesa's 3%)
@@ -33,6 +35,7 @@ const SYSTEM_PROMPT = `You are Rukisha AI — the intelligent financial assistan
 - Save-As-You-Spend automatically allocates 5% of spending: 50% retirement, 30% pension, 20% education
 - Supported remittance corridors: UAE, USA, UK, Canada, Australia, Germany, South Africa
 - Loan types: Diaspora Mortgage, Business Loan, Education Loan, Emergency Loan, Chama Loan
+- Quick Repay Flow: Link salary card → Transfer salary to wallet → Repay loan from wallet → Optional auto-debit setup
 
 ## Response Guidelines
 - Keep responses concise (2-4 paragraphs max)
@@ -40,7 +43,8 @@ const SYSTEM_PROMPT = `You are Rukisha AI — the intelligent financial assistan
 - Include specific numbers/calculations when discussing finances
 - Always end with a helpful follow-up question or actionable suggestion
 - Format currency as KES with thousands separators
-- When discussing loans, always mention the interest rate and monthly payment`;
+- When discussing loans, always mention the interest rate and monthly payment
+- When showing salary repayment history, use a clear table or list format with dates and amounts`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -50,9 +54,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Support two payload shapes:
-    // 1. { messages: [{role, content}] }  — streaming chat widget
-    // 2. { message: string, conversationHistory: [] } — one-shot guide calls
     let incomingMessages: { role: string; content: string }[];
     if (Array.isArray(body.messages)) {
       incomingMessages = body.messages;
@@ -66,18 +67,62 @@ serve(async (req) => {
       });
     }
 
-    const { action } = body;
+    const { action, walletContext } = body;
 
-    // Build messages based on action type (quick actions inject context)
+    // Build system messages
     const systemMessages = [{ role: "system", content: SYSTEM_PROMPT }];
+
+    // Inject live wallet & transaction context if provided
+    if (walletContext) {
+      let contextParts: string[] = [];
+
+      if (walletContext.balances) {
+        const b = walletContext.balances;
+        contextParts.push(`## Current Wallet Balances
+- Main Wallet: KES ${Number(b.main || 0).toLocaleString()}
+- Education: KES ${Number(b.education || 0).toLocaleString()}
+- Medical: KES ${Number(b.medical || 0).toLocaleString()}
+- Holiday: KES ${Number(b.holiday || 0).toLocaleString()}
+- Retirement: KES ${Number(b.retirement || 0).toLocaleString()}
+- Pension: KES ${Number(b.pension || 0).toLocaleString()}`);
+      }
+
+      if (walletContext.salaryTransfers && walletContext.salaryTransfers.length > 0) {
+        const transfers = walletContext.salaryTransfers;
+        const totalTransferred = transfers.reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+        contextParts.push(`## Salary Transfer History (${transfers.length} transfers, Total: KES ${totalTransferred.toLocaleString()})
+${transfers.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}: KES ${Math.abs(t.amount).toLocaleString()} — ${t.description}`).join('\n')}`);
+      }
+
+      if (walletContext.loanRepayments && walletContext.loanRepayments.length > 0) {
+        const repayments = walletContext.loanRepayments;
+        const totalRepaid = repayments.reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+        contextParts.push(`## Loan Repayment History (${repayments.length} payments, Total Repaid: KES ${totalRepaid.toLocaleString()})
+${repayments.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}: KES ${Math.abs(t.amount).toLocaleString()} — ${t.description}`).join('\n')}`);
+      }
+
+      if (walletContext.recentTransactions && walletContext.recentTransactions.length > 0) {
+        const recent = walletContext.recentTransactions.slice(0, 10);
+        contextParts.push(`## Recent Transactions (last ${recent.length})
+${recent.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}: ${t.type} KES ${Math.abs(t.amount).toLocaleString()} — ${t.description} [${t.status}]`).join('\n')}`);
+      }
+
+      if (contextParts.length > 0) {
+        systemMessages.push({
+          role: "system",
+          content: `## LIVE USER FINANCIAL DATA (use this to give personalized, accurate responses)\n\n${contextParts.join('\n\n')}`,
+        });
+      }
+    }
     
     if (action) {
       const actionPrompts: Record<string, string> = {
-        "loan_health": "The user wants a diaspora loan health check. Ask them which loan they'd like to review, then provide analysis of their repayment status, remaining balance, and optimization tips.",
-        "repay_reminder": "The user wants to set up repayment reminders. Walk them through setting up reminders for their active loans. Ask about preferred reminder frequency and channels.",
-        "repay_monitor": "The user wants to monitor their loan repayments. Provide an overview of their repayment history, flag any concerns, and project their payoff timeline.",
+        "loan_health": "The user wants a diaspora loan health check. Use their actual wallet balances and loan repayment history to provide analysis. Show their repayment pattern, total repaid, and any concerns.",
+        "repay_reminder": "The user wants to set up repayment reminders. Reference their actual repayment history and suggest optimal timing based on their salary transfer pattern.",
+        "repay_monitor": "The user wants to monitor their loan repayments. Show their ACTUAL salary transfer and loan repayment history from the data provided. Calculate total transferred, total repaid, and highlight the repayment pattern. Project their payoff timeline if possible.",
+        "salary_repay_history": "The user wants to see their salary loan repayment history. Show a clear summary of ALL salary transfers and loan repayments from the data. Include dates, amounts, and running totals. Highlight the Quick Repay flow steps they've completed.",
         "remittance": "The user wants help with a diaspora remittance. Ask about the corridor (which country they're sending from), amount, and preferred method. Compare fees and rates.",
-        "wallet_setup": "The user wants help optimizing their wallet setup. Guide them through the sub-wallet system, Save-As-You-Spend configuration, and pension contributions.",
+        "wallet_setup": "The user wants help optimizing their wallet setup. Use their actual balances to guide them through the sub-wallet system and suggest improvements.",
         "exchange_rates": "The user wants current exchange rate information for KES. Provide guidance on the best times and methods to send money to Kenya.",
       };
       
@@ -86,7 +131,6 @@ serve(async (req) => {
       }
     }
 
-    // For one-shot calls (message string), return a simple JSON reply instead of streaming
     const isOneShot = typeof body.message === "string";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -123,7 +167,6 @@ serve(async (req) => {
       });
     }
 
-    // One-shot: parse and return { reply: string }
     if (isOneShot) {
       const json = await response.json();
       const reply = json.choices?.[0]?.message?.content ?? "";
@@ -132,7 +175,6 @@ serve(async (req) => {
       });
     }
 
-    // Streaming: pipe SSE directly to client
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
