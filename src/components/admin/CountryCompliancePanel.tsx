@@ -30,7 +30,7 @@ export function CountryCompliancePanel() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="p-3 rounded-lg bg-muted/10">
-              <div className="text-xs text-muted-foreground mb-1">Governing Rule</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('compliance.governingRule')}</div>
               <div className="text-sm font-medium text-foreground">{compliance.rule}</div>
             </div>
             <div className="p-3 rounded-lg bg-muted/10">
