@@ -24,6 +24,7 @@ export function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, transactions: 0, loans: 0, flagged: 0 });
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { config } = useTenant();
 
   useEffect(() => {
     checkAdmin();
