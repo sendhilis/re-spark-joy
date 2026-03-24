@@ -5,6 +5,7 @@ import { QuickActions } from "./QuickActions";
 import { SubWallets } from "./SubWallets";
 import { TransactionHistory } from "./TransactionHistory";
 import { SaveAsYouSpendFlow } from "./flows/SaveAsYouSpendFlow";
+import { FXRateWidget } from "./FXRateWidget";
 import { useWallet } from "@/contexts/WalletContext";
 
 export function RukishaDashboard() {
