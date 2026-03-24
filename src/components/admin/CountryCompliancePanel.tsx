@@ -86,9 +86,9 @@ export function CountryCompliancePanel() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tax Type</TableHead>
-                <TableHead>Rate</TableHead>
-                <TableHead>Status</TableHead>
+                 <TableHead>{t('compliance.taxType')}</TableHead>
+                 <TableHead>{t('compliance.rate')}</TableHead>
+                 <TableHead>{t('common.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
