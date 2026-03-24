@@ -13,6 +13,7 @@ import { ComplianceCenter } from "./ComplianceCenter";
 import { AnalyticsDashboard } from "./AnalyticsDashboard";
 import { DiasporaDashboard } from "./DiasporaDashboard";
 import { AgentNetworkDashboard } from "./AgentNetworkDashboard";
+import { AccountingManagement } from "./accounting/AccountingManagement";
 
 export function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
