@@ -16,7 +16,7 @@ export function CountryCompliancePanel() {
       <div className="flex items-center gap-3">
         <span className="text-4xl">{config.flag}</span>
         <div>
-          <h3 className="text-xl font-bold text-foreground">{config.nameLocal} — Compliance & Regulatory</h3>
+          <h3 className="text-xl font-bold text-foreground">{config.nameLocal} — {t('admin.compliance')} & {t('admin.regulatory')}</h3>
           <p className="text-sm text-muted-foreground">{compliance.regulator} • {config.financialIntelligenceUnit}</p>
         </div>
       </div>
