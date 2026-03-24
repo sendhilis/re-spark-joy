@@ -24,6 +24,7 @@ export function RukishaDashboard() {
       <WalletHeader />
       <WalletCard balance={balances.main} title="Main Wallet" type="main" hideBalance={false} />
       <QuickActions onVirtualCardClick={() => setShowVirtualCard(true)} virtualCardOpen={showVirtualCard} onVirtualCardOpenChange={setShowVirtualCard} />
+      <FXRateWidget />
       <SubWallets />
       <TransactionHistory />
 

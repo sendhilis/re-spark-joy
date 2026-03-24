@@ -96,6 +96,9 @@ export function AdminDashboard() {
           </div>
         </div>
 
+        {/* Tenant Selector */}
+        <TenantSelector />
+
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="glass-card">
@@ -130,7 +133,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="agents" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 glass-card">
+          <TabsList className="grid w-full grid-cols-10 glass-card">
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">Agents</span></TabsTrigger>
             <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">Diaspora</span></TabsTrigger>
             <TabsTrigger value="accounting" className="flex items-center gap-2"><Calculator className="h-4 w-4" /><span className="hidden md:inline">Accounting</span></TabsTrigger>
@@ -139,6 +142,8 @@ export function AdminDashboard() {
             <TabsTrigger value="loans" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /><span className="hidden md:inline">Loans</span></TabsTrigger>
             <TabsTrigger value="compliance" className="flex items-center gap-2"><Shield className="h-4 w-4" /><span className="hidden md:inline">Compliance</span></TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2"><TrendingUp className="h-4 w-4" /><span className="hidden md:inline">Analytics</span></TabsTrigger>
+            <TabsTrigger value="country-compliance" className="flex items-center gap-2"><FileCheck className="h-4 w-4" /><span className="hidden md:inline">{config.flag} Regulatory</span></TabsTrigger>
+            <TabsTrigger value="country-fees" className="flex items-center gap-2"><Banknote className="h-4 w-4" /><span className="hidden md:inline">{config.flag} Fees</span></TabsTrigger>
           </TabsList>
 
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
@@ -149,6 +154,8 @@ export function AdminDashboard() {
           <TabsContent value="loans"><LoanPortfolio /></TabsContent>
           <TabsContent value="compliance"><ComplianceCenter /></TabsContent>
           <TabsContent value="analytics"><AnalyticsDashboard /></TabsContent>
+          <TabsContent value="country-compliance"><CountryCompliancePanel /></TabsContent>
+          <TabsContent value="country-fees"><CountryFeePanel /></TabsContent>
         </Tabs>
       </div>
     </div>
