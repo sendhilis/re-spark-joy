@@ -133,10 +133,10 @@ export function CountryCompliancePanel() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Provider</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>USSD</TableHead>
-                <TableHead>Settlement Bank</TableHead>
+                 <TableHead>{t('compliance.provider')}</TableHead>
+                 <TableHead>{t('compliance.code')}</TableHead>
+                 <TableHead>{t('compliance.ussd')}</TableHead>
+                 <TableHead>{t('compliance.settlementBank')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
