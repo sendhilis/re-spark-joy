@@ -38,7 +38,7 @@ export function CountryCompliancePanel() {
               <div className="text-sm font-medium text-foreground">{compliance.sanctionsBody}</div>
             </div>
             <div className="p-3 rounded-lg bg-muted/10">
-              <div className="text-xs text-muted-foreground mb-1">Reporting Frequency</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('compliance.reportingFrequency')}</div>
               <div className="text-sm font-medium text-foreground">{compliance.reportingFrequency}</div>
             </div>
           </div>
