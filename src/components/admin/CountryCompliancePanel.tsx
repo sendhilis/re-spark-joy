@@ -102,7 +102,7 @@ export function CountryCompliancePanel() {
                 <TableCell className="font-mono">{taxes.exciseDutyRate}%</TableCell>
                 <TableCell>
                   {taxes.exciseDutyApplicable
-                    ? <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">Applicable</Badge>
+                    ? <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">{t('compliance.applicable')}</Badge>
                     : <Badge variant="outline" className="border-muted text-muted-foreground">N/A</Badge>}
                 </TableCell>
               </TableRow>
