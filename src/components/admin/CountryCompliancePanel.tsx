@@ -24,7 +24,7 @@ export function CountryCompliancePanel() {
       {/* Regulatory Framework */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4 text-primary" />Regulatory Framework</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4 text-primary" />{t('compliance.regulatoryFramework')}</CardTitle>
           <CardDescription>{compliance.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
