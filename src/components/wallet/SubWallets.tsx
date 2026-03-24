@@ -2,10 +2,11 @@ import { Card } from "@/components/ui/card";
 import { GraduationCap, Heart, Plane, Banknote, Plus, Target } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useWallet } from "@/contexts/WalletContext";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface SubWallet {
   id: string;
-  name: string;
+  nameKey: string;
   type: 'education' | 'medical' | 'holiday' | 'retirement';
   balance: number;
   goal?: number;
@@ -14,21 +15,19 @@ interface SubWallet {
 
 export function SubWallets() {
   const { balances } = useWallet();
+  const { t } = useI18n();
 
   const subWallets: SubWallet[] = [
-    { id: '1', name: 'Education', type: 'education', balance: balances.education, goal: 100000, icon: GraduationCap },
-    { id: '2', name: 'Medical', type: 'medical', balance: balances.medical, goal: 50000, icon: Heart },
-    { id: '3', name: 'Holiday', type: 'holiday', balance: balances.holiday, goal: 80000, icon: Plane },
-    { id: '4', name: 'Retirement', type: 'retirement', balance: balances.retirement, icon: Banknote },
+    { id: '1', nameKey: 'subWallets.education', type: 'education', balance: balances.education, goal: 100000, icon: GraduationCap },
+    { id: '2', nameKey: 'subWallets.medical', type: 'medical', balance: balances.medical, goal: 50000, icon: Heart },
+    { id: '3', nameKey: 'subWallets.holiday', type: 'holiday', balance: balances.holiday, goal: 80000, icon: Plane },
+    { id: '4', nameKey: 'subWallets.retirement', type: 'retirement', balance: balances.retirement, icon: Banknote },
   ];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      currencyDisplay: 'code',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      style: 'currency', currency: 'KES', currencyDisplay: 'code',
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -51,10 +50,10 @@ export function SubWallets() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg text-foreground">Sub-Wallets</h3>
+        <h3 className="font-semibold text-lg text-foreground">{t('subWallets.title')}</h3>
         <button className="flex items-center space-x-2 text-primary text-sm font-medium hover:text-primary-light transition-colors">
           <Plus className="h-4 w-4" />
-          <span>Add Wallet</span>
+          <span>{t('subWallets.addWallet')}</span>
         </button>
       </div>
 
@@ -70,7 +69,7 @@ export function SubWallets() {
                   <div className="p-2 rounded-full bg-white/20">
                     <IconComponent className="h-5 w-5 text-white" />
                   </div>
-                  <h4 className="font-semibold text-white">{wallet.name}</h4>
+                  <h4 className="font-semibold text-white">{t(wallet.nameKey)}</h4>
                 </div>
                 <button className="p-1 rounded-full hover:bg-white/10 transition-colors">
                   <Target className="h-4 w-4 text-white/70" />
@@ -84,7 +83,7 @@ export function SubWallets() {
                   </p>
                   {wallet.goal && (
                     <p className="text-sm text-white/70">
-                      Goal: {formatCurrency(wallet.goal)}
+                      {t('subWallets.goal')}: {formatCurrency(wallet.goal)}
                     </p>
                   )}
                 </div>
@@ -93,7 +92,7 @@ export function SubWallets() {
                   <div className="space-y-1">
                     <Progress value={progress} className="h-2 bg-white/20" />
                     <p className="text-xs text-white/70">
-                      {Math.round(progress)}% of goal reached
+                      {Math.round(progress)}% {t('subWallets.goalReached')}
                     </p>
                   </div>
                 )}

@@ -1,9 +1,11 @@
 import { useTenant } from "@/contexts/TenantContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRightLeft, TrendingUp } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
 
 export function FXRateWidget() {
-  const { config, formatCurrency, convertToUSD } = useTenant();
+  const { config, convertToUSD } = useTenant();
+  const { t } = useI18n();
 
   const xofUsd = config.fxRates.find(r => r.pair === 'XOF/USD');
   const xofEur = config.fxRates.find(r => r.pair === 'XOF/EUR');
@@ -16,7 +18,7 @@ export function FXRateWidget() {
             <TrendingUp className="h-4 w-4 text-white" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-foreground">FX Rates</h4>
+            <h4 className="text-sm font-bold text-foreground">{t('fx.title')}</h4>
             <p className="text-[10px] text-muted-foreground">{config.flag} {config.nameLocal} • {config.currencySymbol}</p>
           </div>
         </div>
@@ -31,7 +33,7 @@ export function FXRateWidget() {
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold text-foreground">1 USD = {xofUsd.rate.toFixed(2)} FCFA</div>
-                <div className="text-[10px] text-muted-foreground">Spread: {xofUsd.spread}%</div>
+                <div className="text-[10px] text-muted-foreground">{t('fx.spread')}: {xofUsd.spread}%</div>
               </div>
             </div>
           )}
@@ -45,12 +47,11 @@ export function FXRateWidget() {
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold text-foreground">1 EUR = {xofEur.rate.toFixed(3)} FCFA</div>
-                <div className="text-[10px] text-emerald-400">Fixed Peg</div>
+                <div className="text-[10px] text-emerald-400">{t('fx.fixedPeg')}</div>
               </div>
             </div>
           )}
 
-          {/* Quick converter preview */}
           <div className="mt-2 p-2 rounded-lg bg-primary/5 border border-primary/10 text-center">
             <div className="text-xs text-muted-foreground">10,000 FCFA ≈ {convertToUSD(10000).toFixed(2)} USD</div>
           </div>

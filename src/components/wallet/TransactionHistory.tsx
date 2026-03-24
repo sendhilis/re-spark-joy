@@ -2,18 +2,17 @@ import { Card } from "@/components/ui/card";
 import { ArrowUpRight, ArrowDownRight, Receipt, GraduationCap, PiggyBank } from "lucide-react";
 import { format } from "date-fns";
 import { useWallet } from "@/contexts/WalletContext";
+import { useI18n } from "@/contexts/I18nContext";
 
 export function TransactionHistory() {
   const { transactions } = useWallet();
+  const { t } = useI18n();
 
   const formatCurrency = (amount: number) => {
     const absolute = Math.abs(amount);
     return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      currencyDisplay: 'code',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      style: 'currency', currency: 'KES', currencyDisplay: 'code',
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
     }).format(absolute);
   };
 
@@ -34,12 +33,16 @@ export function TransactionHistory() {
     return 'text-error';
   };
 
+  const getStatusLabel = (status: string) => {
+    return t(`common.${status}`) || status;
+  };
+
   return (
     <Card className="glass-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-lg text-foreground">Recent Transactions</h3>
+        <h3 className="font-semibold text-lg text-foreground">{t('transactions.title')}</h3>
         <button className="text-primary text-sm font-medium hover:text-primary-light transition-colors">
-          View All
+          {t('common.viewAll')}
         </button>
       </div>
 
@@ -89,7 +92,7 @@ export function TransactionHistory() {
                     transaction.status === 'completed' ? 'text-success' :
                     transaction.status === 'pending' ? 'text-warning' : 'text-error'
                   }`}>
-                    {transaction.status}
+                    {getStatusLabel(transaction.status)}
                   </p>
                 </div>
               </div>
