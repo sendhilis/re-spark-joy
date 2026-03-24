@@ -95,7 +95,7 @@ export function CountryCompliancePanel() {
               <TableRow>
                 <TableCell className="font-medium">{taxes.vatName}</TableCell>
                 <TableCell className="font-mono">{taxes.vatRate}%</TableCell>
-                <TableCell><Badge variant="outline" className="border-emerald-500/30 text-emerald-400">Active</Badge></TableCell>
+                <TableCell><Badge variant="outline" className="border-emerald-500/30 text-emerald-400">{t('common.active')}</Badge></TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">Excise Duty (Financial Services)</TableCell>
