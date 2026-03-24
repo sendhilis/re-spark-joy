@@ -156,7 +156,7 @@ export function CountryCompliancePanel() {
       {/* Settlement Banks */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Landmark className="h-4 w-4 text-primary" />Settlement Banks</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Landmark className="h-4 w-4 text-primary" />{t('compliance.settlementBanks')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
