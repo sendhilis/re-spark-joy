@@ -48,15 +48,15 @@ export function CountryCompliancePanel() {
       {/* KYC Tiers */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4 text-primary" />KYC Tier Limits</CardTitle>
-          <CardDescription>Transaction limits per KYC verification level ({config.currencySymbol})</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4 text-primary" />{t('compliance.kycTierLimits')}</CardTitle>
+          <CardDescription>{t('compliance.kycTierDesc')} ({config.currencySymbol})</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { tier: 'Tier 1 (Basic)', limit: compliance.kycTier1Limit, desc: 'Phone number only', color: 'text-yellow-400' },
-              { tier: 'Tier 2 (Standard)', limit: compliance.kycTier2Limit, desc: `${config.nationalIdName}`, color: 'text-blue-400' },
-              { tier: 'Tier 3 (Enhanced)', limit: compliance.kycTier3Limit, desc: 'Full ID + address proof', color: 'text-emerald-400' },
+              { tier: t('compliance.tier1'), limit: compliance.kycTier1Limit, desc: t('compliance.tier1Desc'), color: 'text-yellow-400' },
+              { tier: t('compliance.tier2'), limit: compliance.kycTier2Limit, desc: config.nationalIdName, color: 'text-blue-400' },
+              { tier: t('compliance.tier3'), limit: compliance.kycTier3Limit, desc: t('compliance.tier3Desc'), color: 'text-emerald-400' },
             ].map(t => (
               <Card key={t.tier} className="glass-card">
                 <CardContent className="p-4 text-center">
