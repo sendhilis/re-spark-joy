@@ -126,8 +126,8 @@ export function CountryCompliancePanel() {
       {/* Mobile Money Providers */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Smartphone className="h-4 w-4 text-primary" />Mobile Money Providers</CardTitle>
-          <CardDescription>Licensed mobile money operators in {config.nameLocal}</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Smartphone className="h-4 w-4 text-primary" />{t('compliance.mobileMoneyProviders')}</CardTitle>
+          <CardDescription>{t('compliance.licensedOperators')} {config.nameLocal}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
