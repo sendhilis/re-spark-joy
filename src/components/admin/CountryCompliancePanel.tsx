@@ -115,7 +115,7 @@ export function CountryCompliancePanel() {
                 <TableRow>
                   <TableCell className="font-medium">Stamp Duty</TableCell>
                   <TableCell className="font-mono">{taxes.stampDuty}%</TableCell>
-                  <TableCell><Badge variant="outline" className="border-emerald-500/30 text-emerald-400">Active</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="border-emerald-500/30 text-emerald-400">{t('common.active')}</Badge></TableCell>
                 </TableRow>
               )}
             </TableBody>
