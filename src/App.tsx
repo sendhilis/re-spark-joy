@@ -28,6 +28,7 @@ const App = () => {
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
+            <I18nProvider>
             <TenantProvider>
             <WalletProvider>
               <Toaster />
