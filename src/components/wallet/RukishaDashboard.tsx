@@ -13,6 +13,7 @@ export function RukishaDashboard() {
   const [showVirtualCard, setShowVirtualCard] = useState(false);
   const [saveFlowOpen, setSaveFlowOpen] = useState(false);
   const { balances, transactions } = useWallet();
+  const { t } = useI18n();
 
   const thisMonthSavings = transactions
     .filter(t => t.type === 'save' &&
