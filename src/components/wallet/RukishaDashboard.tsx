@@ -24,7 +24,7 @@ export function RukishaDashboard() {
   return (
     <div className="min-h-screen bg-background p-4 space-y-6">
       <WalletHeader />
-      <WalletCard balance={balances.main} title="Main Wallet" type="main" hideBalance={false} />
+      <WalletCard balance={balances.main} title={t('wallet.mainWallet')} type="main" hideBalance={false} />
       <QuickActions onVirtualCardClick={() => setShowVirtualCard(true)} virtualCardOpen={showVirtualCard} onVirtualCardOpenChange={setShowVirtualCard} />
       <FXRateWidget />
       <SubWallets />
