@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Plus } from "lucide-react";
 import { useState } from "react";
 import { QuickDepositFlow } from "./flows/QuickDepositFlow";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface WalletCardProps {
   balance: number;
@@ -14,6 +15,7 @@ interface WalletCardProps {
 export function WalletCard({ balance, title, type = 'main', hideBalance = false }: WalletCardProps) {
   const [showBalance, setShowBalance] = useState(!hideBalance);
   const [depositOpen, setDepositOpen] = useState(false);
+  const { t } = useI18n();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
@@ -42,7 +44,7 @@ export function WalletCard({ balance, title, type = 'main', hideBalance = false 
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">Available Balance</p>
+        <p className="text-sm text-muted-foreground">{t('wallet.availableBalance')}</p>
         <p className="text-3xl font-bold text-foreground">{showBalance ? formatCurrency(balance) : "••••••"}</p>
       </div>
 
@@ -50,7 +52,7 @@ export function WalletCard({ balance, title, type = 'main', hideBalance = false 
         <div className="mt-4">
           <Button onClick={() => setDepositOpen(true)} className="w-full glass-card button-3d border border-primary/30 hover:border-primary/50 transition-all duration-300" variant="outline">
             <Plus className="h-4 w-4 mr-2" />
-            Quick Deposit
+            {t('wallet.quickDeposit')}
           </Button>
           <QuickDepositFlow open={depositOpen} onOpenChange={setDepositOpen} />
         </div>

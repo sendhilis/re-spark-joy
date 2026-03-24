@@ -16,6 +16,7 @@ import { AgentDiscoveryFlow } from "./flows/AgentDiscoveryFlow";
 import { DebitCardWithdrawalFlow } from "./flows/DebitCardWithdrawalFlow";
 import { BankDebitCardLinkFlow } from "./flows/BankDebitCardLinkFlow";
 import { LoanDiscovery } from "./LoanDiscovery";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface QuickActionsProps {
   onVirtualCardClick?: () => void;
@@ -42,29 +43,30 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
   const [agentCashOutOpen, setAgentCashOutOpen] = useState(false);
   const [debitWithdrawalOpen, setDebitWithdrawalOpen] = useState(false);
   const [bankDebitLinkOpen, setBankDebitLinkOpen] = useState(false);
+  const { t } = useI18n();
 
   const actions = [
-    { id: 'loan-discovery', title: 'Get Loan', icon: Banknote, description: 'Apply for loans', onClick: () => setLoanDiscoveryOpen(true) },
-    { id: 'wallet-transfer', title: 'Move Money', icon: ArrowRightLeft, description: 'Between wallets', onClick: () => setWalletTransferOpen(true) },
-    { id: 'transfer', title: 'Send Money', icon: Send, description: 'To others', onClick: () => setTransferOpen(true) },
-    { id: 'cash-in', title: 'Cash In', icon: ArrowDownToLine, description: 'Deposit at agent', onClick: () => setAgentCashInOpen(true), highlight: 'success' },
-    { id: 'cash-out', title: 'Cash Out', icon: ArrowUpFromLine, description: 'ATM or agent', onClick: () => setAgentCashOutOpen(true), highlight: 'warning' },
-    { id: 'pay-bills', title: 'Pay Bills', icon: Receipt, description: 'Utilities & services', onClick: () => setPayBillsOpen(true) },
-    { id: 'qr-payment', title: 'QR Pay', icon: QrCode, description: 'Scan & pay', onClick: () => setQRPaymentOpen(true) },
-    { id: 'save', title: 'Save', icon: PiggyBank, description: 'Add to savings', onClick: () => setSaveOpen(true) },
-    { id: 'virtual-card', title: 'Virtual Card', icon: CreditCard, description: 'Manage cards', onClick: () => { if (onVirtualCardClick) onVirtualCardClick(); else setVirtualCardOpen(true); } },
-    { id: 'link-debit', title: 'Link Debit Card', icon: Building, description: 'ATM & agent access', onClick: () => setBankDebitLinkOpen(true) },
-    { id: 'link-card', title: 'Intl Card', icon: Globe, description: 'Diaspora cards', onClick: () => setLinkCardOpen(true) },
-    { id: 'mobile-money', title: 'M-Pesa', icon: Smartphone, description: 'Top up mobile money', onClick: () => setMpesaOpen(true) },
-    { id: 'bank', title: 'Bank Transfer', icon: Building, description: 'Send to bank account', onClick: () => setBankTransferOpen(true) },
-    { id: 'school-fees', title: 'School Fees', icon: GraduationCap, description: 'Pay tuition fees', onClick: () => setSchoolFeesOpen(true) },
-    { id: 'agents', title: 'Find Agents', icon: MapPin, description: 'Locate nearby agents', onClick: () => setAgentCashInOpen(true) },
-    { id: 'diaspora-services', title: 'Diaspora', icon: Plane, description: 'UAE Worker Services', onClick: () => setDiasporaServicesOpen(true) },
+    { id: 'loan-discovery', title: t('quickActions.getLoan'), icon: Banknote, description: t('quickActions.getLoanDesc'), onClick: () => setLoanDiscoveryOpen(true) },
+    { id: 'wallet-transfer', title: t('quickActions.moveMoney'), icon: ArrowRightLeft, description: t('quickActions.moveMoneyDesc'), onClick: () => setWalletTransferOpen(true) },
+    { id: 'transfer', title: t('quickActions.sendMoney'), icon: Send, description: t('quickActions.sendMoneyDesc'), onClick: () => setTransferOpen(true) },
+    { id: 'cash-in', title: t('quickActions.cashIn'), icon: ArrowDownToLine, description: t('quickActions.cashInDesc'), onClick: () => setAgentCashInOpen(true), highlight: 'success' },
+    { id: 'cash-out', title: t('quickActions.cashOut'), icon: ArrowUpFromLine, description: t('quickActions.cashOutDesc'), onClick: () => setAgentCashOutOpen(true), highlight: 'warning' },
+    { id: 'pay-bills', title: t('quickActions.payBills'), icon: Receipt, description: t('quickActions.payBillsDesc'), onClick: () => setPayBillsOpen(true) },
+    { id: 'qr-payment', title: t('quickActions.qrPay'), icon: QrCode, description: t('quickActions.qrPayDesc'), onClick: () => setQRPaymentOpen(true) },
+    { id: 'save', title: t('quickActions.save'), icon: PiggyBank, description: t('quickActions.saveDesc'), onClick: () => setSaveOpen(true) },
+    { id: 'virtual-card', title: t('quickActions.virtualCard'), icon: CreditCard, description: t('quickActions.virtualCardDesc'), onClick: () => { if (onVirtualCardClick) onVirtualCardClick(); else setVirtualCardOpen(true); } },
+    { id: 'link-debit', title: t('quickActions.linkDebit'), icon: Building, description: t('quickActions.linkDebitDesc'), onClick: () => setBankDebitLinkOpen(true) },
+    { id: 'link-card', title: t('quickActions.intlCard'), icon: Globe, description: t('quickActions.intlCardDesc'), onClick: () => setLinkCardOpen(true) },
+    { id: 'mobile-money', title: t('quickActions.mobileMoney'), icon: Smartphone, description: t('quickActions.mobileMoneyDesc'), onClick: () => setMpesaOpen(true) },
+    { id: 'bank', title: t('quickActions.bankTransfer'), icon: Building, description: t('quickActions.bankTransferDesc'), onClick: () => setBankTransferOpen(true) },
+    { id: 'school-fees', title: t('quickActions.schoolFees'), icon: GraduationCap, description: t('quickActions.schoolFeesDesc'), onClick: () => setSchoolFeesOpen(true) },
+    { id: 'agents', title: t('quickActions.findAgents'), icon: MapPin, description: t('quickActions.findAgentsDesc'), onClick: () => setAgentCashInOpen(true) },
+    { id: 'diaspora-services', title: t('quickActions.diaspora'), icon: Plane, description: t('quickActions.diasporaDesc'), onClick: () => setDiasporaServicesOpen(true) },
   ];
 
   return (
     <Card className="glass-card p-6">
-      <h3 className="font-semibold text-lg text-foreground mb-4">Quick Actions</h3>
+      <h3 className="font-semibold text-lg text-foreground mb-4">{t('quickActions.title')}</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {actions.map((action) => {
           const IconComponent = action.icon;
@@ -129,7 +131,7 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
           <div className="min-h-screen p-4">
             <div className="max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold text-foreground">Loan Products</h1>
+                <h1 className="text-2xl font-bold text-foreground">{t('quickActions.loanProducts')}</h1>
                 <button onClick={() => setLoanDiscoveryOpen(false)} className="glass-card p-2 rounded-lg hover:bg-muted/20 transition-colors">✕</button>
               </div>
               <LoanDiscovery />
