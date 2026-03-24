@@ -80,7 +80,7 @@ export function CountryCompliancePanel() {
       {/* Tax Configuration */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><FileText className="h-4 w-4 text-primary" />Tax Configuration</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><FileText className="h-4 w-4 text-primary" />{t('compliance.taxConfig')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
