@@ -7,6 +7,7 @@ import { TransactionHistory } from "./TransactionHistory";
 import { SaveAsYouSpendFlow } from "./flows/SaveAsYouSpendFlow";
 import { FXRateWidget } from "./FXRateWidget";
 import { useWallet } from "@/contexts/WalletContext";
+import { useI18n } from "@/contexts/I18nContext";
 
 export function RukishaDashboard() {
   const [showVirtualCard, setShowVirtualCard] = useState(false);
