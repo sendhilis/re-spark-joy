@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Shield, AlertTriangle, FileText, Users, Landmark, Smartphone } from "lucide-react";
+import { useI18n } from "@/contexts/I18nContext";
 
 export function CountryCompliancePanel() {
   const { config, formatCurrency } = useTenant();
