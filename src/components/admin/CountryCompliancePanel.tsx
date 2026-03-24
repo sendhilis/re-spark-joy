@@ -70,9 +70,9 @@ export function CountryCompliancePanel() {
           <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium text-destructive">AML Reporting Threshold: {formatCurrency(compliance.amlThreshold)}</span>
+              <span className="text-sm font-medium text-destructive">{t('compliance.amlThreshold')}: {formatCurrency(compliance.amlThreshold)}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">All transactions exceeding this amount trigger automatic STR (Suspicious Transaction Report) to {config.financialIntelligenceUnit}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('compliance.amlDesc')} {config.financialIntelligenceUnit}</p>
           </div>
         </CardContent>
       </Card>
