@@ -34,19 +34,17 @@ export function RukishaDashboard() {
       <div className="glass-card p-6 rounded-3xl border-2 border-success/30 bg-gradient-to-r from-success/10 to-success/5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-lg text-foreground mb-2">Save-As-You-Spend</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              Automatically save 5% of every transaction to your retirement and education wallets
-            </p>
+            <h3 className="font-bold text-lg text-foreground mb-2">{t('says.title')}</h3>
+            <p className="text-sm text-muted-foreground mb-3">{t('says.description')}</p>
             <p className="text-xs text-success font-medium">
-              You've saved KES {new Intl.NumberFormat('en-KE').format(Math.round(thisMonthSavings))} this month! 🎉
+              {t('says.saved')} KES {new Intl.NumberFormat('en-KE').format(Math.round(thisMonthSavings))} {t('says.thisMonth')} 🎉
             </p>
           </div>
           <button
             onClick={() => setSaveFlowOpen(true)}
             className="glass-card button-3d px-6 py-3 rounded-2xl border border-success/30 bg-success/20 text-success font-semibold hover:bg-success/30 transition-all"
           >
-            Configure
+            {t('common.configure')}
           </button>
         </div>
       </div>
