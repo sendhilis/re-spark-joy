@@ -7,6 +7,7 @@ import { useI18n } from "@/contexts/I18nContext";
 
 export function CountryCompliancePanel() {
   const { config, formatCurrency } = useTenant();
+  const { t } = useI18n();
   const { compliance, taxes, mobileMoneyProviders, settlementBanks } = config;
 
   return (
