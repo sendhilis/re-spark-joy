@@ -5,6 +5,7 @@ import { QuickActions } from "./QuickActions";
 import { SubWallets } from "./SubWallets";
 import { TransactionHistory } from "./TransactionHistory";
 import { SaveAsYouSpendFlow } from "./flows/SaveAsYouSpendFlow";
+import { FXRateWidget } from "./FXRateWidget";
 import { useWallet } from "@/contexts/WalletContext";
 
 export function RukishaDashboard() {
@@ -23,6 +24,7 @@ export function RukishaDashboard() {
       <WalletHeader />
       <WalletCard balance={balances.main} title="Main Wallet" type="main" hideBalance={false} />
       <QuickActions onVirtualCardClick={() => setShowVirtualCard(true)} virtualCardOpen={showVirtualCard} onVirtualCardOpenChange={setShowVirtualCard} />
+      <FXRateWidget />
       <SubWallets />
       <TransactionHistory />
 
