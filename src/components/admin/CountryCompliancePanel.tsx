@@ -107,9 +107,9 @@ export function CountryCompliancePanel() {
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium">Withholding Tax</TableCell>
+                <TableCell className="font-medium">{t('countryFees.withholdingTax')}</TableCell>
                 <TableCell className="font-mono">{taxes.withholdingTaxRate}%</TableCell>
-                <TableCell><Badge variant="outline" className="border-emerald-500/30 text-emerald-400">Active</Badge></TableCell>
+                <TableCell><Badge variant="outline" className="border-emerald-500/30 text-emerald-400">{t('common.active')}</Badge></TableCell>
               </TableRow>
               {taxes.stampDuty > 0 && (
                 <TableRow>
