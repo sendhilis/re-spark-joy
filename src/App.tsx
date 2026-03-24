@@ -48,6 +48,7 @@ const App = () => {
               </Routes>
             </WalletProvider>
             </TenantProvider>
+            </I18nProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
