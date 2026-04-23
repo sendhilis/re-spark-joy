@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: "Lipafo Wallet",
         short_name: "Lipafo",
-        description: "Kenya's Smart Digital Wallet - Save, Spend & Grow",
+        description: "AI powered wallet designed by Kenyans for Kenyans - Save, Spend & Grow",
         theme_color: "#0f172a",
         background_color: "#0f172a",
         display: "standalone",

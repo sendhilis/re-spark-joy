@@ -38,7 +38,7 @@ const en: TranslationDict = {
   // Wallet Header
   'wallet.welcomeBack': 'Welcome back',
   'wallet.manageFinances': 'Manage your finances smartly',
-  'wallet.equityDiaspora': 'Equity Bank - Diaspora Connect',
+  'wallet.equityDiaspora': 'AI powered wallet designed by Kenyans for Kenyans',
 
   // Wallet Card
   'wallet.mainWallet': 'Main Wallet',
@@ -223,7 +223,7 @@ const fr: TranslationDict = {
   // Wallet Header
   'wallet.welcomeBack': 'Bon retour',
   'wallet.manageFinances': 'Gérez vos finances intelligemment',
-  'wallet.equityDiaspora': 'Equity Bank - Connexion Diaspora',
+  'wallet.equityDiaspora': 'Portefeuille IA conçu par des Kenyans pour des Kenyans',
 
   // Wallet Card
   'wallet.mainWallet': 'Portefeuille Principal',

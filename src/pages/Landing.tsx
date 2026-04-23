@@ -19,8 +19,8 @@ export default function Landing() {
               Lipafo
             </h1>
             <p className="text-xs text-muted-foreground">
-              Equity Bank — <span className="relative inline-block text-primary font-semibold">
-                Diaspora Connect
+              <span className="relative inline-block text-primary font-semibold">
+                AI powered wallet designed by Kenyans for Kenyans
                 <span className="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-primary-light rounded-full" />
               </span>
             </p>
@@ -121,7 +121,7 @@ export default function Landing() {
                   <Banknote className="h-12 w-12 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-2">Lipafo Wallet</h3>
-                <p className="text-muted-foreground">Kenya's Smart Digital Wallet</p>
+                <p className="text-muted-foreground">AI powered wallet designed by Kenyans for Kenyans</p>
               </div>
             </div>
 
@@ -150,16 +150,12 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Bottom Section - Partnership */}
+        {/* Bottom Section - Tagline */}
         <div className="mt-16 text-center">
-          <p className="text-sm text-muted-foreground mb-4">Proudly powered by</p>
-          <div className="flex items-center justify-center space-x-3">
-            <div className="text-2xl font-bold text-primary">Equity Bank</div>
-            <div className="w-px h-5 bg-border" />
-            <div className="relative inline-block text-sm font-semibold text-primary">
-              Diaspora Connect
-              <span className="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-primary-light rounded-full" />
-            </div>
+          <p className="text-sm text-muted-foreground mb-2">Proudly Kenyan</p>
+          <div className="relative inline-block text-base font-semibold text-primary">
+            AI powered wallet designed by Kenyans for Kenyans
+            <span className="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-primary-light rounded-full" />
           </div>
         </div>
       </div>
