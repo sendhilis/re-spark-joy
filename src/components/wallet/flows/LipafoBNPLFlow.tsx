@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,33 +108,50 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
     setOutstanding(Number(localStorage.getItem(storageKey) || 0));
   }, [storageKey, open]);
 
+  // Initialize lastSeen on mount so pre-existing inflows don't trigger repayment
+  const initializedRef = useRef(false);
+  const processingRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || initializedRef.current) return;
+    if (transactions.length === 0) return;
+    const seenKey = `${storageKey}.lastSeen`;
+    if (!localStorage.getItem(seenKey)) {
+      // Mark the most recent inflow (or any tx) as already seen
+      const mostRecentInflow = transactions.find((t) => t.amount > 0);
+      if (mostRecentInflow) localStorage.setItem(seenKey, mostRecentInflow.id);
+    }
+    initializedRef.current = true;
+  }, [transactions, storageKey]);
+
   // Auto-deduct on next inflow (mock: when a positive non-BNPL tx arrives, settle it)
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!initializedRef.current || processingRef.current) return;
     const current = Number(localStorage.getItem(storageKey) || 0);
     if (current <= 0) return;
 
-    const lastSeenId = localStorage.getItem(`${storageKey}.lastSeen`) || "";
-    const newInflow = transactions.find(
-      (t) =>
-        t.amount > 0 &&
-        t.id !== lastSeenId &&
-        !t.description.toLowerCase().includes("bnpl") &&
-        t.type !== "pension_contribution",
-    );
-    if (!newInflow) return;
-    localStorage.setItem(`${storageKey}.lastSeen`, newInflow.id);
+    const seenKey = `${storageKey}.lastSeen`;
+    const lastSeenId = localStorage.getItem(seenKey) || "";
+
+    // Find newest inflow that hasn't been processed (transactions are ordered desc)
+    const lastSeenIdx = transactions.findIndex((t) => t.id === lastSeenId);
+    const candidates = lastSeenIdx === -1 ? transactions : transactions.slice(0, lastSeenIdx);
+    const newInflow = candidates
+      .reverse()
+      .find(
+        (t) =>
+          t.amount > 0 &&
+          !t.description.toLowerCase().includes("bnpl") &&
+          t.type !== "pension_contribution",
+      );
+    if (!newInflow || newInflow.amount <= 0) return;
 
     const settle = Math.min(current, newInflow.amount);
     if (settle <= 0) return;
 
-    addTransaction({
-      type: "sent",
-      amount: -settle,
-      description: `Lipafo BNPL auto-repayment from inflow`,
-      status: "completed",
-      walletType: "main",
-    });
+    // Lock to prevent re-entry while addTransaction triggers refetch
+    processingRef.current = true;
+    localStorage.setItem(seenKey, newInflow.id);
 
     const remaining = current - settle;
     localStorage.setItem(storageKey, String(remaining));
@@ -148,6 +165,16 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
       );
       localStorage.setItem(historyKey, JSON.stringify(updated));
     }
+
+    addTransaction({
+      type: "sent",
+      amount: -settle,
+      description: `Lipafo BNPL auto-repayment from inflow`,
+      status: "completed",
+      walletType: "main",
+    }).finally(() => {
+      processingRef.current = false;
+    });
 
     toast({
       title: "BNPL Repayment Processed",
