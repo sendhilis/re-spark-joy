@@ -100,7 +100,7 @@ export default function Showcase() {
             Lipafo
           </span>
         </div>
-        <p className="text-muted-foreground">Equity Bank - Diaspora Connect • Kenya's Smart Digital Wallet</p>
+        <p className="text-muted-foreground">AI powered wallet designed by Kenyans for Kenyans</p>
       </footer>
     </div>
   );
