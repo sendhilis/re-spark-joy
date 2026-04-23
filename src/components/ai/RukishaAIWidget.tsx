@@ -259,7 +259,7 @@ export function RukishaAIWidget() {
               </div>
               <div>
                 <h3 className="font-bold text-foreground text-lg">Lipafo AI</h3>
-                <p className="text-xs text-muted-foreground">Diaspora Financial Assistant</p>
+                <p className="text-xs text-muted-foreground">AI powered wallet designed by Kenyans for Kenyans</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -284,7 +284,7 @@ export function RukishaAIWidget() {
                   </div>
                   <h4 className="text-xl font-bold text-foreground">Habari! 👋</h4>
                   <p className="text-sm text-muted-foreground max-w-[280px] mx-auto">
-                    I'm your diaspora financial assistant. I can see your wallet activity and loan repayment history in real-time.
+                    I'm <span className="font-semibold text-foreground">Lipafo AI</span> — your AI powered wallet assistant, designed by Kenyans for Kenyans. I can see your wallet activity and loan repayments in real-time.
                   </p>
                 </div>
 
