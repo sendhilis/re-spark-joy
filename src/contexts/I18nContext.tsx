@@ -38,7 +38,7 @@ const en: TranslationDict = {
   // Wallet Header
   'wallet.welcomeBack': 'Welcome back',
   'wallet.manageFinances': 'Manage your finances smartly',
-  'wallet.equityDiaspora': 'Equity Bank - Diaspora Connect',
+  'wallet.equityDiaspora': 'AI powered wallet designed by Kenyans for Kenyans',
 
   // Wallet Card
   'wallet.mainWallet': 'Main Wallet',
@@ -112,7 +112,7 @@ const en: TranslationDict = {
 
   // Admin
   'admin.title': 'Admin Dashboard',
-  'admin.subtitle': 'Rukisha Wallet Administration',
+  'admin.subtitle': 'Lipafo Wallet Administration',
   'admin.backToWallet': 'Back to Wallet',
   'admin.checkingAccess': 'Checking admin access...',
   'admin.accessDenied': 'Access Denied',
@@ -223,7 +223,7 @@ const fr: TranslationDict = {
   // Wallet Header
   'wallet.welcomeBack': 'Bon retour',
   'wallet.manageFinances': 'Gérez vos finances intelligemment',
-  'wallet.equityDiaspora': 'Equity Bank - Connexion Diaspora',
+  'wallet.equityDiaspora': 'Portefeuille IA conçu par des Kenyans pour des Kenyans',
 
   // Wallet Card
   'wallet.mainWallet': 'Portefeuille Principal',
@@ -297,7 +297,7 @@ const fr: TranslationDict = {
 
   // Admin
   'admin.title': 'Tableau de Bord Admin',
-  'admin.subtitle': 'Administration du Portefeuille Rukisha',
+  'admin.subtitle': 'Administration du Portefeuille Lipafo',
   'admin.backToWallet': 'Retour au Portefeuille',
   'admin.checkingAccess': 'Vérification de l\'accès admin...',
   'admin.accessDenied': 'Accès Refusé',

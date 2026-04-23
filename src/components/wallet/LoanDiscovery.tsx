@@ -26,7 +26,7 @@ interface LoanProduct {
 const loanProducts: LoanProduct[] = [
   { id: 'instant-cash', name: 'Instant Cash', icon: Zap, minAmount: 100, maxAmount: 10000, interestRate: 8.5, maxTerm: 30, processingTime: '5 minutes',
     features: ['No collateral required', 'Instant approval', 'Flexible repayment'], description: 'Quick cash for emergencies and short-term needs',
-    category: 'instant', eligibility: ['Active Rukisha user', 'Credit score ≥ 600'], color: 'bg-gradient-to-br from-green-500 to-emerald-600' },
+    category: 'instant', eligibility: ['Active Lipafo user', 'Credit score ≥ 600'], color: 'bg-gradient-to-br from-green-500 to-emerald-600' },
   { id: 'salary-advance', name: 'Salary Advance', icon: Banknote, minAmount: 1000, maxAmount: 50000, interestRate: 12, maxTerm: 30, processingTime: '1 hour',
     features: ['Salary-backed', 'Auto-deduction', 'No guarantor needed'], description: 'Get your salary early when you need it most',
     category: 'instant', eligibility: ['Employed with payslip', 'Bank statement'], color: 'bg-gradient-to-br from-blue-500 to-cyan-600' },

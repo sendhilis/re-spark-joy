@@ -167,7 +167,7 @@ export function VirtualCardFlow({ open, onOpenChange }: VirtualCardFlowProps) {
             <Card className={`p-5 bg-gradient-to-br border ${managingCard.is_frozen ? "from-muted/30 to-muted/10 border-muted/30" : "from-primary/20 to-primary/5 border-primary/20"}`}>
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
-                  <div className="text-xs font-semibold text-primary">RUKISHA VIRTUAL</div>
+                  <div className="text-xs font-semibold text-primary">LIPAFO VIRTUAL</div>
                   <div className="text-xs text-muted-foreground">MASTERCARD</div>
                 </div>
                 <div className="py-2">

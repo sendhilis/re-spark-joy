@@ -74,14 +74,14 @@ export function BankDebitCardLinkFlow({ open, onOpenChange }: BankDebitCardLinkF
   const fetchAIGuide = async (bank: string) => {
     setLoadingAI(true);
     try {
-      const prompt = `You are Rukisha AI. In 2 friendly sentences, tell a user that linking their ${bank} debit card enables ATM withdrawals and agent cash outs from their Rukisha wallet. Mention it's secure and requires their PIN each time. Under 40 words.`;
+      const prompt = `You are Lipafo AI. In 2 friendly sentences, tell a user that linking their ${bank} debit card enables ATM withdrawals and agent cash outs from their Lipafo wallet. Mention it's secure and requires their PIN each time. Under 40 words.`;
       const { data, error } = await supabase.functions.invoke("rukisha-ai", {
         body: { message: prompt, conversationHistory: [] },
       });
       setAiGuide(
         !error && data?.reply
           ? data.reply
-          : `Linking your ${bank} debit card lets you withdraw cash at ATMs and bank agents directly from your Rukisha wallet. Every transaction is PIN-secured for your safety.`
+          : `Linking your ${bank} debit card lets you withdraw cash at ATMs and bank agents directly from your Lipafo wallet. Every transaction is PIN-secured for your safety.`
       );
     } catch {
       setAiGuide(
@@ -127,7 +127,7 @@ export function BankDebitCardLinkFlow({ open, onOpenChange }: BankDebitCardLinkF
     await new Promise((r) => setTimeout(r, 2000));
     setProcessing(false);
     setStep(5);
-    toast({ title: "Card Linked!", description: `Your ${cardData.bank} debit card is now linked to Rukisha wallet` });
+    toast({ title: "Card Linked!", description: `Your ${cardData.bank} debit card is now linked to Lipafo wallet` });
   };
 
   return (
@@ -282,7 +282,7 @@ export function BankDebitCardLinkFlow({ open, onOpenChange }: BankDebitCardLinkF
             <Card className="p-5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-2xl">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <p className="text-xs font-semibold text-primary uppercase tracking-wider">Rukisha · {cardData.bank}</p>
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wider">Lipafo · {cardData.bank}</p>
                   <Building className="h-5 w-5 text-primary/60" />
                 </div>
                 <p className="text-lg font-mono tracking-widest text-foreground">
@@ -306,7 +306,7 @@ export function BankDebitCardLinkFlow({ open, onOpenChange }: BankDebitCardLinkF
               <div className="flex items-start gap-2">
                 <Bot className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-primary mb-1">Rukisha AI</p>
+                  <p className="text-xs font-semibold text-primary mb-1">Lipafo AI</p>
                   {loadingAI ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Loader2 className="h-3 w-3 animate-spin" /> Getting personalised info...
@@ -389,7 +389,7 @@ export function BankDebitCardLinkFlow({ open, onOpenChange }: BankDebitCardLinkF
             <div>
               <p className="text-xl font-bold text-foreground">Card Linked!</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Your {cardData.bank} debit card ending in {cardData.number.replace(/\s/g, "").slice(-4)} is now linked to your Rukisha wallet.
+                Your {cardData.bank} debit card ending in {cardData.number.replace(/\s/g, "").slice(-4)} is now linked to your Lipafo wallet.
               </p>
             </div>
 

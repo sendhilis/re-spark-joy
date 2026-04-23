@@ -27,7 +27,7 @@ export default function Showcase() {
           </span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Rukisha combines cutting-edge fintech with deep understanding of Kenya's financial landscape to deliver a wallet that truly works for you.
+          Lipafo combines cutting-edge fintech with deep understanding of Kenya's financial landscape to deliver a wallet that truly works for you.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" className="button-3d" onClick={() => window.location.href = '/auth'}>
@@ -97,10 +97,10 @@ export default function Showcase() {
             <Banknote className="h-6 w-6 text-white" />
           </div>
           <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-            Rukisha
+            Lipafo
           </span>
         </div>
-        <p className="text-muted-foreground">Equity Bank - Diaspora Connect • Kenya's Smart Digital Wallet</p>
+        <p className="text-muted-foreground">AI powered wallet designed by Kenyans for Kenyans</p>
       </footer>
     </div>
   );

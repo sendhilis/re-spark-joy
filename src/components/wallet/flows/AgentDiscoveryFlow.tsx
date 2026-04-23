@@ -111,8 +111,8 @@ export function AgentDiscoveryFlow({ open, onOpenChange, mode = "discover" }: Ag
     setLoadingAI(true);
     try {
       const prompt = txAmount
-        ? `You are Rukisha AI assistant. Give a short, friendly 2-sentence guide for a user who wants to ${txMode === "cash_in" ? "deposit cash" : "withdraw cash"} of KES ${txAmount} at "${agentName}" agent. Mention they should carry their national ID and the transaction code. Keep it under 40 words.`
-        : `You are Rukisha AI assistant. In 2 sentences, tell a user what to expect when visiting "${agentName}" bank agent for ${txMode === "cash_in" ? "a cash deposit" : "a cash withdrawal"}. Be friendly and mention they need their ID. Under 35 words.`;
+        ? `You are Lipafo AI assistant. Give a short, friendly 2-sentence guide for a user who wants to ${txMode === "cash_in" ? "deposit cash" : "withdraw cash"} of KES ${txAmount} at "${agentName}" agent. Mention they should carry their national ID and the transaction code. Keep it under 40 words.`
+        : `You are Lipafo AI assistant. In 2 sentences, tell a user what to expect when visiting "${agentName}" bank agent for ${txMode === "cash_in" ? "a cash deposit" : "a cash withdrawal"}. Be friendly and mention they need their ID. Under 35 words.`;
 
       const { data, error } = await supabase.functions.invoke("rukisha-ai", {
         body: { message: prompt, conversationHistory: [] },
@@ -123,7 +123,7 @@ export function AgentDiscoveryFlow({ open, onOpenChange, mode = "discover" }: Ag
       } else {
         setAiGuide(
           txMode === "cash_in"
-            ? `Head to ${agentName} with your national ID and cash. Tell the agent you want to deposit to your Rukisha wallet and share your transaction code.`
+            ? `Head to ${agentName} with your national ID and cash. Tell the agent you want to deposit to your Lipafo wallet and share your transaction code.`
             : `Visit ${agentName} with your national ID and PIN. The agent will verify your identity before dispensing cash.`
         );
       }
@@ -242,7 +242,7 @@ export function AgentDiscoveryFlow({ open, onOpenChange, mode = "discover" }: Ag
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             {currentMode === "discover" ? (
-              <><MapPin className="h-5 w-5 text-primary" />Find Rukisha Agents</>
+              <><MapPin className="h-5 w-5 text-primary" />Find Lipafo Agents</>
             ) : isCashIn ? (
               <><ArrowDownToLine className="h-5 w-5 text-success" />Cash In – Agent</>
             ) : (
@@ -333,7 +333,7 @@ export function AgentDiscoveryFlow({ open, onOpenChange, mode = "discover" }: Ag
               <div className="flex items-start gap-2">
                 <Bot className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-primary mb-1">Rukisha AI Guide</p>
+                  <p className="text-xs font-semibold text-primary mb-1">Lipafo AI Guide</p>
                   {loadingAI ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Loader2 className="h-3 w-3 animate-spin" /> Getting personalised advice...
@@ -482,7 +482,7 @@ export function AgentDiscoveryFlow({ open, onOpenChange, mode = "discover" }: Ag
             <div>
               <p className="text-2xl font-bold text-foreground">KES {parseFloat(amount).toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {isCashIn ? "deposited to your Rukisha wallet" : "authorised for cash withdrawal"}
+                {isCashIn ? "deposited to your Lipafo wallet" : "authorised for cash withdrawal"}
               </p>
             </div>
 

@@ -24,7 +24,7 @@ export default function DownloadDoc() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Rukisha-AI-Technical-Architecture.md";
+    a.download = "Lipafo-AI-Technical-Architecture.md";
     a.click();
     URL.revokeObjectURL(url);
   };

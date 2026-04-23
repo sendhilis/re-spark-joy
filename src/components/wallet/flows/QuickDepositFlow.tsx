@@ -17,7 +17,7 @@ const depositMethods = [
   { id: "mpesa", name: "M-Pesa", icon: Smartphone, description: "Deposit via M-Pesa STK Push", color: "text-success" },
   { id: "bank", name: "Bank Transfer", icon: Building, description: "Direct bank deposit", color: "text-primary" },
   { id: "card", name: "Debit/Credit Card", icon: CreditCard, description: "Visa or Mastercard", color: "text-warning" },
-  { id: "agent", name: "Rukisha Agent", icon: QrCode, description: "Visit nearest agent", color: "text-muted-foreground" },
+  { id: "agent", name: "Lipafo Agent", icon: QrCode, description: "Visit nearest agent", color: "text-muted-foreground" },
 ];
 
 const quickAmounts = [500, 1000, 2500, 5000, 10000, 25000];
@@ -136,7 +136,7 @@ export function QuickDepositFlow({ open, onOpenChange }: QuickDepositFlowProps) 
                 <div className="space-y-1">
                   <p className="text-sm text-foreground"><span className="text-muted-foreground">Bank:</span> Equity Bank</p>
                   <p className="text-sm text-foreground"><span className="text-muted-foreground">Account:</span> 0180297456321</p>
-                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Name:</span> RUKISHA WALLET LTD</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Name:</span> LIPAFO WALLET LTD</p>
                   <p className="text-sm text-foreground"><span className="text-muted-foreground">Ref:</span> RUK-{Math.random().toString(36).substr(2, 8).toUpperCase()}</p>
                 </div>
               </Card>
@@ -145,7 +145,7 @@ export function QuickDepositFlow({ open, onOpenChange }: QuickDepositFlowProps) 
             {method === "agent" && (
               <Card className="glass-card p-4 space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Find an agent near you</p>
-                <p className="text-sm text-foreground">Visit any Rukisha agent with your ID and deposit cash. Quote code:</p>
+                <p className="text-sm text-foreground">Visit any Lipafo agent with your ID and deposit cash. Quote code:</p>
                 <p className="text-2xl font-bold text-primary text-center py-2">AGT-{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
               </Card>
             )}

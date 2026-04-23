@@ -20,7 +20,7 @@ export interface Transaction {
     triggerType: 'user' | 'cpf';
     originalTransaction?: string;
     mpesaFee?: number;
-    rukishaFee?: number;
+    lipafoFee?: number;
     feeSaved?: number;
     userSavePercent?: number;
   };
@@ -182,8 +182,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (transaction.amount < 0 && transaction.type !== 'save' && transaction.type !== 'pension_contribution') {
       const saveAmount = Math.abs(transaction.amount) * 0.05;
       const mpesaFee = Math.abs(transaction.amount) * 0.03;
-      const rukishaFee = Math.abs(transaction.amount) * 0.024;
-      const feeSaved = mpesaFee - rukishaFee;
+      const lipafoFee = Math.abs(transaction.amount) * 0.024;
+      const feeSaved = mpesaFee - lipafoFee;
       const userPensionAmount = saveAmount * 0.3;
       const retirementAmount = saveAmount * 0.5;
       const educationAmount = saveAmount * 0.2;
@@ -192,7 +192,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await supabase.from('transactions').insert({
         user_id: user.id, type: 'pension_contribution', amount: feeSaved,
         description: 'Taifa Pension - CPF Fee Savings', status: 'completed', wallet_type: 'pension',
-        pension_metadata: { triggerType: 'cpf', originalTransaction: inserted.id, mpesaFee, rukishaFee, feeSaved },
+        pension_metadata: { triggerType: 'cpf', originalTransaction: inserted.id, mpesaFee, lipafoFee, feeSaved },
       });
       await updateBalance('pension', feeSaved);
 

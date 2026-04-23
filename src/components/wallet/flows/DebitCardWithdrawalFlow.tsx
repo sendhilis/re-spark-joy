@@ -44,7 +44,7 @@ const WITHDRAWAL_CHANNELS = [
 ];
 
 const ATM_INSTRUCTIONS = [
-  "Insert or tap your linked Rukisha debit card",
+  "Insert or tap your linked Lipafo debit card",
   "Select 'Withdrawal' and enter amount",
   "Enter your 4-digit ATM PIN",
   "Collect cash and take your card",
@@ -80,8 +80,8 @@ export function DebitCardWithdrawalFlow({ open, onOpenChange }: DebitCardWithdra
     try {
       const prompt =
         selectedChannel === "atm"
-          ? `You are Rukisha AI. In 2 friendly sentences, guide a user who is about to withdraw KES ${amt} from an ATM using their linked Rukisha debit card. Mention they should check ATM fees and keep their PIN private. Under 40 words.`
-          : `You are Rukisha AI. In 2 sentences, guide a user withdrawing KES ${amt} at a bank agent using their Rukisha wallet. Remind them to bring their ID and only use authorised agents. Under 40 words.`;
+          ? `You are Lipafo AI. In 2 friendly sentences, guide a user who is about to withdraw KES ${amt} from an ATM using their linked Lipafo debit card. Mention they should check ATM fees and keep their PIN private. Under 40 words.`
+          : `You are Lipafo AI. In 2 sentences, guide a user withdrawing KES ${amt} at a bank agent using their Lipafo wallet. Remind them to bring their ID and only use authorised agents. Under 40 words.`;
 
       const { data, error } = await supabase.functions.invoke("rukisha-ai", {
         body: { message: prompt, conversationHistory: [] },
@@ -91,14 +91,14 @@ export function DebitCardWithdrawalFlow({ open, onOpenChange }: DebitCardWithdra
         !error && data?.reply
           ? data.reply
           : selectedChannel === "atm"
-          ? "Insert your Rukisha debit card at any Visa ATM, enter your PIN and select withdrawal. Always cover the keypad when entering your PIN for safety."
-          : "Visit an authorised Rukisha bank agent with your national ID. The agent will verify your identity before processing your cash withdrawal."
+          ? "Insert your Lipafo debit card at any Visa ATM, enter your PIN and select withdrawal. Always cover the keypad when entering your PIN for safety."
+          : "Visit an authorised Lipafo bank agent with your national ID. The agent will verify your identity before processing your cash withdrawal."
       );
     } catch {
       setAiGuide(
         selectedChannel === "atm"
-          ? "Insert your Rukisha debit card, enter your PIN, and collect your cash. Keep your PIN private and never share it."
-          : "Visit a nearby Rukisha bank agent with your national ID to collect your cash safely."
+          ? "Insert your Lipafo debit card, enter your PIN, and collect your cash. Keep your PIN private and never share it."
+          : "Visit a nearby Lipafo bank agent with your national ID to collect your cash safely."
       );
     } finally {
       setLoadingAI(false);
@@ -208,7 +208,7 @@ export function DebitCardWithdrawalFlow({ open, onOpenChange }: DebitCardWithdra
               <div className="flex items-start gap-2">
                 <CreditCard className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <p className="text-xs text-muted-foreground">
-                  Your Rukisha virtual debit card is linked to your main wallet. Withdrawals are deducted instantly.
+                  Your Lipafo virtual debit card is linked to your main wallet. Withdrawals are deducted instantly.
                 </p>
               </div>
             </Card>
@@ -286,7 +286,7 @@ export function DebitCardWithdrawalFlow({ open, onOpenChange }: DebitCardWithdra
               <div className="flex items-start gap-2">
                 <Bot className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-primary mb-1">Rukisha AI Guide</p>
+                  <p className="text-xs font-semibold text-primary mb-1">Lipafo AI Guide</p>
                   {loadingAI ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Loader2 className="h-3 w-3 animate-spin" /> Loading advice...
@@ -368,7 +368,7 @@ export function DebitCardWithdrawalFlow({ open, onOpenChange }: DebitCardWithdra
                 <div className="flex items-start gap-2 text-left">
                   <CreditCard className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Use your Rukisha debit card</p>
+                    <p className="text-sm font-semibold text-foreground">Use your Lipafo debit card</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Your wallet has been debited. Insert your card at any Visa ATM and enter your ATM PIN to collect cash.
                     </p>
