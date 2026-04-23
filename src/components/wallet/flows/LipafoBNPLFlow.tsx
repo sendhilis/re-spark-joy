@@ -175,11 +175,6 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
     }).finally(() => {
       processingRef.current = false;
     });
-
-    toast({
-      title: "BNPL Repayment Processed",
-      description: `KSh ${settle.toLocaleString()} auto-deducted from inflow. Remaining: KSh ${remaining.toLocaleString()}`,
-    });
   }, [transactions, storageKey, historyKey, addTransaction, toast]);
 
   const reset = () => {
