@@ -30,7 +30,7 @@ const quickActions: QuickAction[] = [
 const proactiveNudges = [
   "🏠 Have you checked your diaspora mortgage health recently? I can run a quick review.",
   "⏰ Setting up automatic repay reminders can help you never miss a payment. Want me to help?",
-  "💰 Your remittance fees could be lower with Rukisha. Let me show you how much you'd save.",
+  "💰 Your remittance fees could be lower with Lipafo. Let me show you how much you'd save.",
   "📊 I can monitor your loan repayments and alert you to any concerns. Interested?",
   "🎯 Your sub-wallets could be working harder for you. Let me suggest an optimal allocation.",
   "💳 I can show you your salary loan repayment history. Want to see your progress?",
@@ -146,7 +146,7 @@ export function RukishaAIWidget() {
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
-        toast({ title: "Rukisha AI", description: err.error || "Something went wrong", variant: "destructive" });
+        toast({ title: "Lipafo AI", description: err.error || "Something went wrong", variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -182,8 +182,8 @@ export function RukishaAIWidget() {
         }
       }
     } catch (e) {
-      console.error("Rukisha AI error:", e);
-      toast({ title: "Rukisha AI", description: "Connection error. Please try again.", variant: "destructive" });
+      console.error("Lipafo AI error:", e);
+      toast({ title: "Lipafo AI", description: "Connection error. Please try again.", variant: "destructive" });
     }
 
     // Persist the completed assistant message
@@ -258,7 +258,7 @@ export function RukishaAIWidget() {
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground text-lg">Rukisha AI</h3>
+                <h3 className="font-bold text-foreground text-lg">Lipafo AI</h3>
                 <p className="text-xs text-muted-foreground">Diaspora Financial Assistant</p>
               </div>
             </div>

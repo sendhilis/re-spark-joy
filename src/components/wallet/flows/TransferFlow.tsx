@@ -62,7 +62,7 @@ export function TransferFlow({ open, onOpenChange }: TransferFlowProps) {
                 <SelectContent>
                   <SelectItem value="mpesa">M-Pesa</SelectItem>
                   <SelectItem value="bank">Bank Transfer</SelectItem>
-                  <SelectItem value="wallet">Rukisha Wallet</SelectItem>
+                  <SelectItem value="wallet">Lipafo Wallet</SelectItem>
                   <SelectItem value="virtual-card">Virtual Card</SelectItem>
                 </SelectContent>
               </Select>

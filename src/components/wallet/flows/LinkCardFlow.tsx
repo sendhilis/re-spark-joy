@@ -22,7 +22,7 @@ export function LinkCardFlow({ open, onOpenChange }: LinkCardFlowProps) {
   const handleBack = () => { if (step > 1) setStep(step - 1); };
 
   const handleComplete = () => {
-    toast({ title: "Card Linked Successfully", description: "Your international card is now linked to your Rukisha wallet" });
+    toast({ title: "Card Linked Successfully", description: "Your international card is now linked to your Lipafo wallet" });
     onOpenChange(false);
     setStep(1);
     setCardData({ number: "", expiry: "", cvv: "", name: "", type: "", country: "" });

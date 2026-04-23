@@ -123,7 +123,7 @@ export function BankTransferFlow({ open, onOpenChange }: BankTransferFlowProps) 
                 <div className="flex justify-between"><span className="text-muted-foreground">Amount:</span><span className="text-foreground font-semibold text-lg">KES {transferData.amount}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Payment Method:</span>
                   <span className="text-foreground flex items-center gap-1">
-                    {transferData.paymentMethod === 'virtual-card' ? <><CreditCard className="h-3 w-3" />Virtual Card</> : 'Rukisha Wallet'}
+                    {transferData.paymentMethod === 'virtual-card' ? <><CreditCard className="h-3 w-3" />Virtual Card</> : 'Lipafo Wallet'}
                   </span>
                 </div>
               </div>

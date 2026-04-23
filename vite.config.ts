@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "Rukisha Wallet",
-        short_name: "Rukisha",
+        name: "Lipafo Wallet",
+        short_name: "Lipafo",
         description: "Kenya's Smart Digital Wallet - Save, Spend & Grow",
         theme_color: "#0f172a",
         background_color: "#0f172a",

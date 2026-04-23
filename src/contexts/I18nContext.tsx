@@ -112,7 +112,7 @@ const en: TranslationDict = {
 
   // Admin
   'admin.title': 'Admin Dashboard',
-  'admin.subtitle': 'Rukisha Wallet Administration',
+  'admin.subtitle': 'Lipafo Wallet Administration',
   'admin.backToWallet': 'Back to Wallet',
   'admin.checkingAccess': 'Checking admin access...',
   'admin.accessDenied': 'Access Denied',
@@ -297,7 +297,7 @@ const fr: TranslationDict = {
 
   // Admin
   'admin.title': 'Tableau de Bord Admin',
-  'admin.subtitle': 'Administration du Portefeuille Rukisha',
+  'admin.subtitle': 'Administration du Portefeuille Lipafo',
   'admin.backToWallet': 'Retour au Portefeuille',
   'admin.checkingAccess': 'Vérification de l\'accès admin...',
   'admin.accessDenied': 'Accès Refusé',

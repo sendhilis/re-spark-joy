@@ -110,7 +110,7 @@ export function MPESAFlow({ open, onOpenChange }: MPESAFlowProps) {
                 <div className="flex justify-between"><span className="text-muted-foreground">Provider:</span><span className="text-foreground font-medium">{selectedProvider?.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Phone Number:</span><span className="text-foreground">{mpesaData.phoneNumber}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Amount:</span><span className="text-foreground font-semibold text-lg">KES {mpesaData.amount}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Payment Method:</span><span className="text-foreground">{mpesaData.paymentMethod === 'virtual-card' ? 'Virtual Card' : 'Rukisha Wallet'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Payment Method:</span><span className="text-foreground">{mpesaData.paymentMethod === 'virtual-card' ? 'Virtual Card' : 'Lipafo Wallet'}</span></div>
               </div>
             </div>
             <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">

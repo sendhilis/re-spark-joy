@@ -186,7 +186,7 @@ export function ChartOfAccounts() {
       {/* COA Table */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FolderTree className="h-5 w-5 text-primary" />Chart of Accounts — Rukisha Wallet Banking</CardTitle>
+          <CardTitle className="flex items-center gap-2"><FolderTree className="h-5 w-5 text-primary" />Chart of Accounts — Lipafo Wallet Banking</CardTitle>
           <CardDescription>Complete GL structure for wallet operations, lending, and settlement</CardDescription>
         </CardHeader>
         <CardContent>

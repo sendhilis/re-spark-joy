@@ -34,7 +34,7 @@ export default function Auth() {
     if (error) {
       toast({ title: "Login Failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Welcome back!", description: "Successfully logged in to Rukisha" });
+      toast({ title: "Welcome back!", description: "Successfully logged in to Lipafo" });
       navigate("/dashboard");
     }
   };
@@ -58,7 +58,7 @@ export default function Auth() {
     if (error) {
       toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Account Created!", description: "Welcome to Rukisha!" });
+      toast({ title: "Account Created!", description: "Welcome to Lipafo!" });
       navigate("/dashboard");
     }
   };
@@ -124,7 +124,7 @@ export default function Auth() {
             </div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                Rukisha
+                Lipafo
               </h1>
               <p className="text-xs text-muted-foreground">Equity Bank - Diaspora Connect</p>
             </div>
@@ -231,7 +231,7 @@ export default function Auth() {
 
           <div className="mt-6 text-center">
             <p className="text-xs text-muted-foreground">
-              By continuing, you agree to Rukisha's Terms of Service and Privacy Policy
+              By continuing, you agree to Lipafo's Terms of Service and Privacy Policy
             </p>
           </div>
         </Card>
