@@ -1,9 +1,9 @@
-# Rukisha AI — Technical Architecture & Flow Implementation Document
+# Lipafo AI — Technical Architecture & Flow Implementation Document
 
 **Version:** 1.0  
 **Date:** March 2, 2026  
-**System:** Rukisha Wallet by Equity Bank  
-**Component:** Rukisha AI — Diaspora Financial Assistant  
+**System:** Lipafo — AI powered wallet designed by Kenyans for Kenyans  
+**Component:** Lipafo AI — Diaspora Financial Assistant  
 
 ---
 
@@ -49,7 +49,7 @@
 
 ## 1. System Overview
 
-Rukisha AI is a conversational financial assistant embedded as a floating widget in the Rukisha Wallet application. It provides personalized diaspora financial guidance using real-time wallet data, streaming AI responses, and persistent conversation history.
+Lipafo AI is a conversational financial assistant embedded as a floating widget in the Lipafo Wallet application. It provides personalized diaspora financial guidance using real-time wallet data, streaming AI responses, and persistent conversation history.
 
 ### Key Characteristics
 
@@ -278,7 +278,7 @@ A timer-based system that displays contextual financial tips to inactive users.
 |---|---|---|
 | 0 | 🏠 | Have you checked your diaspora mortgage health recently? I can run a quick review. |
 | 1 | ⏰ | Setting up automatic repay reminders can help you never miss a payment. Want me to help? |
-| 2 | 💰 | Your remittance fees could be lower with Rukisha. Let me show you how much you'd save. |
+| 2 | 💰 | Your remittance fees could be lower with Lipafo. Let me show you how much you'd save. |
 | 3 | 📊 | I can monitor your loan repayments and alert you to any concerns. Interested? |
 | 4 | 🎯 | Your sub-wallets could be working harder for you. Let me suggest an optimal allocation. |
 | 5 | 💳 | I can show you your salary loan repayment history. Want to see your progress? |
@@ -468,7 +468,7 @@ systemMessages = [
 **Base System Prompt (~1,500 tokens):**
 
 Defines 7 sections:
-1. **Identity** — Name (Rukisha AI), personality (warm, knowledgeable), tone (professional, occasional Swahili)
+1. **Identity** — Name (Lipafo AI), personality (warm, knowledgeable), tone (professional, occasional Swahili)
 2. **Core Capabilities** — 7 numbered capabilities (diaspora guidance, loan health, repay reminders, repay monitoring, wallet engagement, diaspora flows, salary tracking)
 3. **Proactive Behaviors** — 6 nudge behaviors (loan status checks, reminder suggestions, savings diversification, exchange rate alerts, pension contributions, repayment formatting)
 4. **Key Knowledge** — Fee structures (2.4% vs 3%), Save-As-You-Spend formula (5% → 50/30/20 split), supported corridors (7 countries), loan types (5 types), Quick Repay flow
@@ -749,11 +749,11 @@ verify_jwt = false
 ## Appendix A — Complete System Prompt
 
 ```
-You are Rukisha AI — the intelligent financial assistant for Rukisha Wallet
-by Equity Bank, built specifically for Kenyan diaspora customers.
+You are Lipafo AI — the intelligent financial assistant for Lipafo Wallet
+— an AI powered wallet designed by Kenyans for Kenyans, serving local and diaspora users.
 
 ## Your Identity
-- Name: Rukisha AI
+- Name: Lipafo AI
 - Personality: Warm, knowledgeable, proactive. You understand the unique
   challenges of managing money across borders.
 - Tone: Professional yet approachable. Use simple language. Occasionally
@@ -777,7 +777,7 @@ by Equity Bank, built specifically for Kenyan diaspora customers.
 - Format repayment history clearly
 
 ## Key Knowledge
-- Rukisha: 2.4% fee vs M-Pesa: 3% fee
+- Lipafo: 2.4% fee vs M-Pesa: 3% fee
 - Fee difference → Taifa Pension (CPF)
 - Save-As-You-Spend: 5% → 50% retirement, 30% pension, 20% education
 - Corridors: UAE, USA, UK, Canada, Australia, Germany, South Africa
@@ -852,7 +852,7 @@ const quickActions: QuickAction[] = [
 |---|---|---|
 | 0 | 🏠 | Have you checked your diaspora mortgage health recently? I can run a quick review. |
 | 1 | ⏰ | Setting up automatic repay reminders can help you never miss a payment. Want me to help? |
-| 2 | 💰 | Your remittance fees could be lower with Rukisha. Let me show you how much you'd save. |
+| 2 | 💰 | Your remittance fees could be lower with Lipafo. Let me show you how much you'd save. |
 | 3 | 📊 | I can monitor your loan repayments and alert you to any concerns. Interested? |
 | 4 | 🎯 | Your sub-wallets could be working harder for you. Let me suggest an optimal allocation. |
 | 5 | 💳 | I can show you your salary loan repayment history. Want to see your progress? |
