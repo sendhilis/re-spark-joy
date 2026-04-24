@@ -32,6 +32,95 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
     savingsGoal: "", savingsPercentage: "5", chamaName: "", contributionAmount: "",
     transferAmount: "", loanRepaymentAmount: "", debitDay: "25"
   });
+
+  // Remittance flow state
+  const FX_USD_KES = 150;
+  const [remitStep, setRemitStep] = useState<1 | 2 | 3 | 4>(1);
+  const [remitSource, setRemitSource] = useState<'intl_card' | 'kcb_diaspora' | 'lipafo_usd'>('intl_card');
+  const [remitRail, setRemitRail] = useState<'mpesa' | 'kcb_account' | 'pesalink' | 'lipafo_wallet'>('mpesa');
+  const [remitUSD, setRemitUSD] = useState("");
+  const [remitRecipientName, setRemitRecipientName] = useState("");
+  const [remitRecipientAccount, setRemitRecipientAccount] = useState("");
+  const [remitBankName, setRemitBankName] = useState("");
+  const [remitProcessing, setRemitProcessing] = useState(false);
+
+  const sourceLabel: Record<typeof remitSource, string> = {
+    intl_card: "Linked International Card (VISA/MC/AMEX)",
+    kcb_diaspora: "KCB Diaspora Account (ACH/SWIFT)",
+    lipafo_usd: "Lipafo USD Wallet",
+  };
+  const railLabel: Record<typeof remitRail, string> = {
+    mpesa: "M-PESA",
+    kcb_account: "KCB Kenya Account (PesaLink)",
+    pesalink: "Other Kenyan Bank (PesaLink)",
+    lipafo_wallet: "Recipient's Lipafo Wallet",
+  };
+  const railFeeKES: Record<typeof remitRail, number> = {
+    mpesa: 0,
+    kcb_account: 0,
+    pesalink: 25,
+    lipafo_wallet: 0,
+  };
+  const railPlaceholder: Record<typeof remitRail, string> = {
+    mpesa: "+254 712 345 678",
+    kcb_account: "KCB account number",
+    pesalink: "Bank account number",
+    lipafo_wallet: "Recipient phone or email",
+  };
+
+  const usdNum = parseFloat(remitUSD) || 0;
+  const grossKES = usdNum * FX_USD_KES;
+  const feeKES = grossKES > 0 ? railFeeKES[remitRail] : 0;
+  const recipientReceivesKES = Math.max(0, grossKES - feeKES);
+
+  const resetRemit = () => {
+    setRemitStep(1); setRemitUSD(""); setRemitRecipientName("");
+    setRemitRecipientAccount(""); setRemitBankName(""); setRemitProcessing(false);
+  };
+
+  const handleRemittanceSubmit = async () => {
+    if (!remitRecipientName || !remitRecipientAccount || usdNum <= 0) {
+      toast({ title: "Missing information", description: "Please complete recipient and amount details", variant: "destructive" });
+      return;
+    }
+    setRemitProcessing(true);
+    // Simulate rail handshake
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Source-side debit (recorded in sender's wallet ledger)
+    if (remitSource === 'lipafo_usd') {
+      if (balances.main < grossKES) {
+        setRemitProcessing(false);
+        toast({ title: "Insufficient Lipafo balance", description: `You need KES ${grossKES.toLocaleString()} in your wallet`, variant: "destructive" });
+        return;
+      }
+      await addTransaction({
+        type: 'sent', amount: -grossKES, status: 'completed',
+        description: `Diaspora remittance via ${railLabel[remitRail]} → ${remitRecipientName}`,
+        recipient: remitRecipientAccount, walletType: 'main',
+      });
+    } else {
+      // Card / KCB pull — record as informational outbound (no wallet debit since funds come from external source)
+      await addTransaction({
+        type: 'sent', amount: 0, status: 'completed',
+        description: `Diaspora remittance from ${sourceLabel[remitSource]} → ${remitRecipientName} via ${railLabel[remitRail]} ($${usdNum} USD)`,
+        recipient: remitRecipientAccount, walletType: 'main',
+      });
+    }
+
+    // Recipient-side credit simulation: if recipient is the same Lipafo user's wallet
+    // (lipafo_wallet rail), credit their main wallet in KES
+    if (remitRail === 'lipafo_wallet') {
+      await addTransaction({
+        type: 'received', amount: recipientReceivesKES, status: 'completed',
+        description: `Remittance received from diaspora ($${usdNum} USD @ ${FX_USD_KES})`,
+        recipient: remitRecipientName, walletType: 'main',
+      });
+    }
+
+    setRemitProcessing(false);
+    setRemitStep(4);
+  };
   const { toast } = useToast();
   const { balances, addTransaction } = useWallet();
 
