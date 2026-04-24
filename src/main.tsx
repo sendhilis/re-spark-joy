@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-const CACHE_RESET_KEY = "lipafo-brand-cache-reset-v2";
+const CACHE_RESET_KEY = "lipafo-brand-cache-reset-v3";
 
 async function resetStaleBrandingCaches() {
   if (sessionStorage.getItem(CACHE_RESET_KEY) === "done") {

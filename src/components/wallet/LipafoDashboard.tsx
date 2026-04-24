@@ -9,7 +9,7 @@ import { FXRateWidget } from "./FXRateWidget";
 import { useWallet } from "@/contexts/WalletContext";
 import { useI18n } from "@/contexts/I18nContext";
 
-export function RukishaDashboard() {
+export function LipafoDashboard() {
   const [showVirtualCard, setShowVirtualCard] = useState(false);
   const [saveFlowOpen, setSaveFlowOpen] = useState(false);
   const { balances, transactions } = useWallet();
