@@ -134,9 +134,11 @@ export function QuickDepositFlow({ open, onOpenChange }: QuickDepositFlowProps) 
               <Card className="glass-card p-4 space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Transfer to:</p>
                 <div className="space-y-1">
-                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Bank:</span> Equity Bank</p>
-                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Account:</span> 0180297456321</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Bank:</span> KCB Bank Kenya</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Account:</span> 1102987654321</p>
                   <p className="text-sm text-foreground"><span className="text-muted-foreground">Name:</span> LIPAFO WALLET LTD</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Branch:</span> KCB Kencom House</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Swift:</span> KCBLKENX</p>
                   <p className="text-sm text-foreground"><span className="text-muted-foreground">Ref:</span> RUK-{Math.random().toString(36).substr(2, 8).toUpperCase()}</p>
                 </div>
               </Card>
