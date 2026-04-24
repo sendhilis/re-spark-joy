@@ -46,6 +46,7 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
   const [debitWithdrawalOpen, setDebitWithdrawalOpen] = useState(false);
   const [bankDebitLinkOpen, setBankDebitLinkOpen] = useState(false);
   const [bnplOpen, setBnplOpen] = useState(false);
+  const [interopPaybillOpen, setInteropPaybillOpen] = useState(false);
   const { t } = useI18n();
 
   const actions = [
