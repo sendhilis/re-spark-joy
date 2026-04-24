@@ -131,6 +131,7 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
       <DebitCardWithdrawalFlow open={debitWithdrawalOpen} onOpenChange={setDebitWithdrawalOpen} />
       <BankDebitCardLinkFlow open={bankDebitLinkOpen} onOpenChange={setBankDebitLinkOpen} />
       <LipafoBNPLFlow open={bnplOpen} onOpenChange={setBnplOpen} />
+      <InteropPaybillFlow open={interopPaybillOpen} onOpenChange={setInteropPaybillOpen} />
 
       {/* Loan Discovery Full Screen */}
       {loanDiscoveryOpen && (
