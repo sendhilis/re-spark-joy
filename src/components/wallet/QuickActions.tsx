@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Send, Receipt, PiggyBank, CreditCard, Smartphone, Building, GraduationCap, QrCode, Globe, ArrowRightLeft, Banknote, Plane, ArrowDownToLine, ArrowUpFromLine, MapPin, ShoppingBag } from "lucide-react";
+import { Send, Receipt, PiggyBank, CreditCard, Smartphone, Building, GraduationCap, QrCode, Globe, ArrowRightLeft, Banknote, Plane, ArrowDownToLine, ArrowUpFromLine, MapPin, ShoppingBag, Network } from "lucide-react";
 import { TransferFlow } from "./flows/TransferFlow";
 import { PayBillsFlow } from "./flows/PayBillsFlow";
 import { SaveFlow } from "./flows/SaveFlow";
