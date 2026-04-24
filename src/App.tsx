@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RukishaAIWidget } from "@/components/ai/RukishaAIWidget";
 import Landing from "./pages/Landing";
@@ -22,6 +23,20 @@ import DownloadDoc from "./pages/DownloadDoc";
 
 const queryClient = new QueryClient();
 
+const HomeRoute = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -35,7 +50,8 @@ const App = () => {
               <Sonner />
               <RukishaAIWidget />
               <Routes>
-                <Route path="/" element={<Landing />} />
+                <Route path="/" element={<HomeRoute />} />
+                <Route path="/landing" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
