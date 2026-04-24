@@ -16,6 +16,7 @@ import { AgentDiscoveryFlow } from "./flows/AgentDiscoveryFlow";
 import { DebitCardWithdrawalFlow } from "./flows/DebitCardWithdrawalFlow";
 import { BankDebitCardLinkFlow } from "./flows/BankDebitCardLinkFlow";
 import { LipafoBNPLFlow } from "./flows/LipafoBNPLFlow";
+import { InteropPaybillFlow } from "./flows/InteropPaybillFlow";
 import { LoanDiscovery } from "./LoanDiscovery";
 import { useI18n } from "@/contexts/I18nContext";
 
