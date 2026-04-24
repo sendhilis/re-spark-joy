@@ -2,30 +2,46 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Unregister stale service workers + clear caches in preview/iframe contexts
-// to prevent the Lovable preview from serving outdated builds.
-const isInIframe = (() => {
-  try {
-    return window.self !== window.top;
-  } catch {
+const CACHE_RESET_KEY = "lipafo-brand-cache-reset-v2";
+
+async function resetStaleBrandingCaches() {
+  if (sessionStorage.getItem(CACHE_RESET_KEY) === "done") {
+    return false;
+  }
+
+  const resetTasks: Promise<unknown>[] = [];
+
+  if ("serviceWorker" in navigator) {
+    resetTasks.push(
+      navigator.serviceWorker.getRegistrations().then((registrations) =>
+        Promise.all(registrations.map((registration) => registration.unregister())),
+      ),
+    );
+  }
+
+  if ("caches" in window) {
+    resetTasks.push(
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))),
+    );
+  }
+
+  await Promise.all(resetTasks);
+  sessionStorage.setItem(CACHE_RESET_KEY, "done");
+
+  const currentUrl = new URL(window.location.href);
+  if (currentUrl.searchParams.get("cacheReset") !== "1") {
+    currentUrl.searchParams.set("cacheReset", "1");
+    window.location.replace(currentUrl.toString());
     return true;
   }
-})();
-const isPreviewHost =
-  window.location.hostname.includes("id-preview--") ||
-  window.location.hostname.includes("lovableproject.com") ||
-  window.location.hostname.includes("lovable.app") ||
-  window.location.hostname === "localhost";
 
-if (isPreviewHost || isInIframe) {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((r) => r.unregister());
-    });
-  }
-  if ("caches" in window) {
-    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
-  }
+  return false;
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+resetStaleBrandingCaches().then((reloading) => {
+  if (reloading) {
+    return;
+  }
+
+  createRoot(document.getElementById("root")!).render(<App />);
+});
