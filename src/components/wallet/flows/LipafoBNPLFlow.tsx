@@ -141,8 +141,11 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
       .find(
         (t) =>
           t.amount > 0 &&
+          t.type === "received" &&
+          t.walletType === "main" &&
           !t.description.toLowerCase().includes("bnpl") &&
-          t.type !== "pension_contribution",
+          !t.description.toLowerCase().includes("save-as-you-spend") &&
+          !t.description.toLowerCase().includes("taifa pension"),
       );
     if (!newInflow || newInflow.amount <= 0) return;
 
