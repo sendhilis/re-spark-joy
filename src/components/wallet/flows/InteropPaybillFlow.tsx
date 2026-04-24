@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/WalletContext";
 import {
-  Search, Building2, Smartphone, Hash, Store, Zap, CheckCircle2,
-  ArrowRight, Shield, Network, Loader2, Receipt
+  Search, Hash, Zap, CheckCircle2, ArrowRight, Shield, Network,
+  Loader2, Receipt, Landmark, Wallet, Clock, TrendingUp
 } from "lucide-react";
 
 interface InteropPaybillFlowProps {
@@ -19,77 +19,73 @@ interface InteropPaybillFlowProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Rail = "mpesa_paybill" | "mpesa_till" | "airtel" | "tkash" | "pesalink" | "bank_paybill";
-
 interface Biller {
   id: string;
   name: string;
-  paybill: string;
-  rail: Rail;
+  lipafoPaybill: string; // NEW Lipafo (KCB-issued) paybill
   category: string;
-  logo?: string;
   popular?: boolean;
+  settlementWindow: string; // e.g. "T+1"
 }
 
-// Comprehensive Kenyan biller directory — showcases interoperability
+// All paybills are NEW Lipafo numbers — issued by KCB, NO M-PESA connection.
+// Format: LPF-XXXXXX (6-digit Lipafo short code, KCB-orchestrated)
 const BILLER_DIRECTORY: Biller[] = [
-  // MPESA Paybills - Utilities
-  { id: "kplc-prepaid", name: "KPLC Prepaid (Token)", paybill: "888880", rail: "mpesa_paybill", category: "Utilities", popular: true },
-  { id: "kplc-postpaid", name: "KPLC Postpaid", paybill: "888888", rail: "mpesa_paybill", category: "Utilities", popular: true },
-  { id: "nairobi-water", name: "Nairobi Water & Sewerage", paybill: "444400", rail: "mpesa_paybill", category: "Utilities" },
-  { id: "mombasa-water", name: "Mombasa Water (MOWASCO)", paybill: "898998", rail: "mpesa_paybill", category: "Utilities" },
-  { id: "kisumu-water", name: "Kisumu Water (KIWASCO)", paybill: "807550", rail: "mpesa_paybill", category: "Utilities" },
+  // Utilities
+  { id: "kplc-prepaid",   name: "KPLC Prepaid (Token)",        lipafoPaybill: "LPF-100101", category: "Utilities", popular: true,  settlementWindow: "T+0" },
+  { id: "kplc-postpaid",  name: "KPLC Postpaid",                lipafoPaybill: "LPF-100102", category: "Utilities", popular: true,  settlementWindow: "T+1" },
+  { id: "nairobi-water",  name: "Nairobi Water & Sewerage",    lipafoPaybill: "LPF-100201", category: "Utilities",                  settlementWindow: "T+1" },
+  { id: "mombasa-water",  name: "Mombasa Water (MOWASCO)",     lipafoPaybill: "LPF-100202", category: "Utilities",                  settlementWindow: "T+1" },
+  { id: "kisumu-water",   name: "Kisumu Water (KIWASCO)",      lipafoPaybill: "LPF-100203", category: "Utilities",                  settlementWindow: "T+1" },
 
-  // Telecom
-  { id: "safaricom-postpaid", name: "Safaricom Postpaid", paybill: "200200", rail: "mpesa_paybill", category: "Telecom", popular: true },
-  { id: "safaricom-home", name: "Safaricom Home Fibre", paybill: "150501", rail: "mpesa_paybill", category: "Telecom" },
-  { id: "airtel-postpaid", name: "Airtel Kenya Postpaid", paybill: "220220", rail: "airtel", category: "Telecom" },
-  { id: "telkom-postpaid", name: "Telkom Kenya", paybill: "202020", rail: "tkash", category: "Telecom" },
-  { id: "zuku", name: "Zuku Fibre", paybill: "320320", rail: "mpesa_paybill", category: "Telecom" },
-  { id: "faiba", name: "Faiba (JTL)", paybill: "100100", rail: "mpesa_paybill", category: "Telecom" },
+  // Telecom (data/postpaid only — no airtime via mobile money rails)
+  { id: "safaricom-home", name: "Safaricom Home Fibre",         lipafoPaybill: "LPF-200101", category: "Telecom",                    settlementWindow: "T+1" },
+  { id: "zuku",           name: "Zuku Fibre",                   lipafoPaybill: "LPF-200102", category: "Telecom",                    settlementWindow: "T+1" },
+  { id: "faiba",          name: "Faiba (JTL)",                  lipafoPaybill: "LPF-200103", category: "Telecom",                    settlementWindow: "T+1" },
+  { id: "poa-internet",   name: "Poa! Internet",                lipafoPaybill: "LPF-200104", category: "Telecom",                    settlementWindow: "T+1" },
 
   // Pay TV
-  { id: "dstv", name: "DStv Kenya", paybill: "444900", rail: "mpesa_paybill", category: "Entertainment", popular: true },
-  { id: "gotv", name: "GOtv Kenya", paybill: "423655", rail: "mpesa_paybill", category: "Entertainment" },
-  { id: "startimes", name: "StarTimes", paybill: "828700", rail: "mpesa_paybill", category: "Entertainment" },
-  { id: "showmax", name: "Showmax", paybill: "300300", rail: "mpesa_paybill", category: "Entertainment" },
+  { id: "dstv",           name: "DStv Kenya",                   lipafoPaybill: "LPF-300101", category: "Entertainment", popular: true, settlementWindow: "T+0" },
+  { id: "gotv",           name: "GOtv Kenya",                   lipafoPaybill: "LPF-300102", category: "Entertainment",                settlementWindow: "T+0" },
+  { id: "startimes",      name: "StarTimes",                    lipafoPaybill: "LPF-300103", category: "Entertainment",                settlementWindow: "T+0" },
+  { id: "showmax",        name: "Showmax",                      lipafoPaybill: "LPF-300104", category: "Entertainment",                settlementWindow: "T+0" },
 
-  // Banks via PesaLink — true interop
-  { id: "kcb-loan", name: "KCB Bank — Loan Repayment", paybill: "522522", rail: "bank_paybill", category: "Banks" },
-  { id: "equity-loan", name: "Equity Bank — Loan/Account", paybill: "247247", rail: "pesalink", category: "Banks", popular: true },
-  { id: "coop-bank", name: "Co-operative Bank", paybill: "400200", rail: "pesalink", category: "Banks" },
-  { id: "absa-bank", name: "Absa Bank Kenya", paybill: "303030", rail: "pesalink", category: "Banks" },
-  { id: "stanchart", name: "Standard Chartered KE", paybill: "329329", rail: "pesalink", category: "Banks" },
-  { id: "ncba-bank", name: "NCBA Bank", paybill: "880100", rail: "pesalink", category: "Banks" },
-  { id: "im-bank", name: "I&M Bank", paybill: "542542", rail: "pesalink", category: "Banks" },
-  { id: "dtb-bank", name: "Diamond Trust Bank", paybill: "516600", rail: "pesalink", category: "Banks" },
-  { id: "family-bank", name: "Family Bank", paybill: "222111", rail: "pesalink", category: "Banks" },
-  { id: "stanbic-bank", name: "Stanbic Bank Kenya", paybill: "600100", rail: "pesalink", category: "Banks" },
+  // Banks — Lipafo settles directly to bank GL via KCB core
+  { id: "kcb-loan",       name: "KCB Bank — Loan Repayment",   lipafoPaybill: "LPF-400101", category: "Banks",                        settlementWindow: "Instant" },
+  { id: "equity-loan",    name: "Equity Bank — Loan/Account",  lipafoPaybill: "LPF-400102", category: "Banks", popular: true,         settlementWindow: "T+0" },
+  { id: "coop-bank",      name: "Co-operative Bank",            lipafoPaybill: "LPF-400103", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "absa-bank",      name: "Absa Bank Kenya",              lipafoPaybill: "LPF-400104", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "stanchart",      name: "Standard Chartered KE",        lipafoPaybill: "LPF-400105", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "ncba-bank",      name: "NCBA Bank",                    lipafoPaybill: "LPF-400106", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "im-bank",        name: "I&M Bank",                     lipafoPaybill: "LPF-400107", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "dtb-bank",       name: "Diamond Trust Bank",           lipafoPaybill: "LPF-400108", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "family-bank",    name: "Family Bank",                  lipafoPaybill: "LPF-400109", category: "Banks",                        settlementWindow: "T+0" },
+  { id: "stanbic-bank",   name: "Stanbic Bank Kenya",           lipafoPaybill: "LPF-400110", category: "Banks",                        settlementWindow: "T+0" },
 
   // SACCOs
-  { id: "stima-sacco", name: "Stima Sacco", paybill: "823100", rail: "mpesa_paybill", category: "SACCO" },
-  { id: "mwalimu-sacco", name: "Mwalimu National Sacco", paybill: "975100", rail: "mpesa_paybill", category: "SACCO" },
-  { id: "kenpipe-sacco", name: "Kenya Pipeline Sacco", paybill: "535300", rail: "mpesa_paybill", category: "SACCO" },
+  { id: "stima-sacco",    name: "Stima Sacco",                  lipafoPaybill: "LPF-500101", category: "SACCO",                        settlementWindow: "T+1" },
+  { id: "mwalimu-sacco",  name: "Mwalimu National Sacco",       lipafoPaybill: "LPF-500102", category: "SACCO",                        settlementWindow: "T+1" },
+  { id: "kenpipe-sacco",  name: "Kenya Pipeline Sacco",         lipafoPaybill: "LPF-500103", category: "SACCO",                        settlementWindow: "T+1" },
 
   // Insurance
-  { id: "nhif", name: "NHIF / SHIF", paybill: "200222", rail: "mpesa_paybill", category: "Insurance", popular: true },
-  { id: "jubilee", name: "Jubilee Insurance", paybill: "503000", rail: "mpesa_paybill", category: "Insurance" },
-  { id: "britam", name: "Britam Insurance", paybill: "503100", rail: "mpesa_paybill", category: "Insurance" },
-  { id: "cic-insurance", name: "CIC Insurance", paybill: "709000", rail: "mpesa_paybill", category: "Insurance" },
+  { id: "nhif",           name: "SHIF (Social Health)",         lipafoPaybill: "LPF-600101", category: "Insurance", popular: true,    settlementWindow: "T+1" },
+  { id: "jubilee",        name: "Jubilee Insurance",            lipafoPaybill: "LPF-600102", category: "Insurance",                    settlementWindow: "T+1" },
+  { id: "britam",         name: "Britam Insurance",             lipafoPaybill: "LPF-600103", category: "Insurance",                    settlementWindow: "T+1" },
+  { id: "cic-insurance",  name: "CIC Insurance",                lipafoPaybill: "LPF-600104", category: "Insurance",                    settlementWindow: "T+1" },
 
   // Government
-  { id: "kra", name: "KRA (Tax Payments)", paybill: "572572", rail: "mpesa_paybill", category: "Government", popular: true },
-  { id: "ntsa", name: "NTSA (TIMS)", paybill: "350353", rail: "mpesa_paybill", category: "Government" },
-  { id: "ecitizen", name: "eCitizen Services", paybill: "206206", rail: "mpesa_paybill", category: "Government" },
+  { id: "kra",            name: "KRA (Tax Payments)",           lipafoPaybill: "LPF-700101", category: "Government", popular: true,   settlementWindow: "Instant" },
+  { id: "ntsa",           name: "NTSA (TIMS)",                  lipafoPaybill: "LPF-700102", category: "Government",                   settlementWindow: "T+0" },
+  { id: "ecitizen",       name: "eCitizen Services",            lipafoPaybill: "LPF-700103", category: "Government",                   settlementWindow: "Instant" },
 ];
 
-const railMeta: Record<Rail, { label: string; icon: any; color: string }> = {
-  mpesa_paybill: { label: "M-PESA Paybill", icon: Smartphone, color: "text-success" },
-  mpesa_till:    { label: "M-PESA Till (Buy Goods)", icon: Store, color: "text-success" },
-  airtel:        { label: "Airtel Money", icon: Smartphone, color: "text-destructive" },
-  tkash:         { label: "T-Kash (Telkom)", icon: Smartphone, color: "text-primary" },
-  pesalink:      { label: "PesaLink (Inter-bank)", icon: Network, color: "text-primary" },
-  bank_paybill:  { label: "Bank Paybill", icon: Building2, color: "text-primary" },
+// Flat KCB-orchestrated Lipafo fee tiers (in KES) — NO M-PESA charges ever
+const computeLipafoFee = (amount: number): number => {
+  if (amount <= 0) return 0;
+  if (amount <= 1000) return 10;
+  if (amount <= 10000) return 20;
+  if (amount <= 50000) return 30;
+  return 45; // flat cap above 50k
 };
 
 export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowProps) {
@@ -101,8 +97,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
   const [category, setCategory] = useState<string>("All");
   const [selectedBiller, setSelectedBiller] = useState<Biller | null>(null);
 
-  // Manual entry state
-  const [manualRail, setManualRail] = useState<Rail>("mpesa_paybill");
+  // Manual entry — Lipafo paybill only
   const [manualPaybill, setManualPaybill] = useState("");
   const [manualName, setManualName] = useState("");
 
@@ -110,15 +105,16 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const categories = useMemo(() => {
-    return ["All", ...Array.from(new Set(BILLER_DIRECTORY.map(b => b.category)))];
-  }, []);
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(BILLER_DIRECTORY.map(b => b.category)))],
+    []
+  );
 
   const filtered = useMemo(() => {
     return BILLER_DIRECTORY.filter(b => {
       const matchCat = category === "All" || b.category === category;
       const q = search.trim().toLowerCase();
-      const matchSearch = !q || b.name.toLowerCase().includes(q) || b.paybill.includes(q);
+      const matchSearch = !q || b.name.toLowerCase().includes(q) || b.lipafoPaybill.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
   }, [search, category]);
@@ -126,36 +122,27 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
   const activeBiller: Biller | null = useMemo(() => {
     if (tab === "directory") return selectedBiller;
     if (!manualPaybill) return null;
+    const formatted = manualPaybill.toUpperCase().startsWith("LPF-")
+      ? manualPaybill.toUpperCase()
+      : `LPF-${manualPaybill.replace(/\D/g, "")}`;
     return {
       id: "manual",
-      name: manualName || `Paybill ${manualPaybill}`,
-      paybill: manualPaybill,
-      rail: manualRail,
+      name: manualName || `Lipafo Biller ${formatted}`,
+      lipafoPaybill: formatted,
       category: "Custom",
+      settlementWindow: "T+1",
     };
-  }, [tab, selectedBiller, manualPaybill, manualName, manualRail]);
+  }, [tab, selectedBiller, manualPaybill, manualName]);
 
   const amt = parseFloat(amount) || 0;
-  const interopFee = activeBiller
-    ? activeBiller.rail === "pesalink" || activeBiller.rail === "bank_paybill" ? 25
-    : activeBiller.rail === "airtel" || activeBiller.rail === "tkash" ? 15
-    : 0  // M-PESA paybills via Lipafo zero-rated
-    : 0;
-  const total = amt + interopFee;
+  const lipafoFee = computeLipafoFee(amt);
+  const total = amt + lipafoFee;
   const insufficient = amt > 0 && total > balances.main;
 
   const reset = () => {
-    setStep(1);
-    setSearch("");
-    setCategory("All");
-    setSelectedBiller(null);
-    setManualPaybill("");
-    setManualName("");
-    setManualRail("mpesa_paybill");
-    setAccountNumber("");
-    setAmount("");
-    setProcessing(false);
-    setTab("directory");
+    setStep(1); setSearch(""); setCategory("All"); setSelectedBiller(null);
+    setManualPaybill(""); setManualName(""); setAccountNumber(""); setAmount("");
+    setProcessing(false); setTab("directory");
   };
 
   const handleClose = (o: boolean) => {
@@ -175,13 +162,12 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
   const handleConfirm = async () => {
     if (!activeBiller || insufficient || amt <= 0) return;
     setProcessing(true);
-    // Simulate rail handshake
     await new Promise(r => setTimeout(r, 1400));
     await addTransaction({
       type: "bill",
       amount: -total,
-      description: `${activeBiller.name} • ${railMeta[activeBiller.rail].label} • Acc ${accountNumber}`,
-      recipient: activeBiller.paybill,
+      description: `${activeBiller.name} • Lipafo (KCB) • Acc ${accountNumber}`,
+      recipient: activeBiller.lipafoPaybill,
       status: "completed",
       walletType: "main",
     });
@@ -195,28 +181,28 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Network className="h-5 w-5 text-primary" />
-            Lipafo Interop Paybill
+            Lipafo Paybill — Powered by KCB
           </DialogTitle>
           <DialogDescription>
-            Pay any biller in Kenya — M-PESA, Airtel Money, T-Kash, PesaLink & all bank paybills.
+            Direct bank-orchestrated bill payments. Flat fee, KCB-held float, zero mobile-money charges.
           </DialogDescription>
         </DialogHeader>
 
         {/* STEP 1 — Choose biller */}
         {step === 1 && (
           <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            <div className="glass-card p-3 rounded-xl border border-primary/30 bg-primary/5 flex items-center gap-3">
-              <Shield className="h-5 w-5 text-primary shrink-0" />
-              <div className="text-xs text-muted-foreground">
-                <span className="text-foreground font-semibold">True interoperability:</span> Lipafo routes payments across
-                M-PESA, Airtel, T-Kash, PesaLink and direct bank rails — all from one wallet.
+            <div className="glass-card p-3 rounded-xl border border-primary/30 bg-primary/5 flex items-start gap-3">
+              <Landmark className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div><span className="text-foreground font-semibold">Lipafo is the primary rail.</span> Every paybill below is a KCB-issued Lipafo short code (LPF-XXXXXX).</div>
+                <div className="flex items-center gap-1 text-success"><Zap className="h-3 w-3" /> No M-PESA fees. No mobile-money intermediary. Flat KCB charge only.</div>
               </div>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="directory">Biller Directory</TabsTrigger>
-                <TabsTrigger value="manual">Enter Paybill / Till</TabsTrigger>
+                <TabsTrigger value="directory">Lipafo Directory</TabsTrigger>
+                <TabsTrigger value="manual">Enter Lipafo Code</TabsTrigger>
               </TabsList>
 
               <TabsContent value="directory" className="flex-1 overflow-hidden flex flex-col space-y-3 mt-3">
@@ -224,7 +210,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by name or paybill…"
+                      placeholder="Search by name or LPF code…"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="glass-card pl-9"
@@ -241,8 +227,6 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 <ScrollArea className="flex-1 pr-3">
                   <div className="space-y-2">
                     {filtered.map(biller => {
-                      const meta = railMeta[biller.rail];
-                      const RailIcon = meta.icon;
                       const isSelected = selectedBiller?.id === biller.id;
                       return (
                         <button
@@ -258,16 +242,18 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                                 <span className="font-semibold text-foreground text-sm truncate">{biller.name}</span>
                                 {biller.popular && <Badge variant="secondary" className="text-[10px]">Popular</Badge>}
                               </div>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                                 <Hash className="h-3 w-3" />
-                                <span className="font-mono">{biller.paybill}</span>
+                                <span className="font-mono text-primary">{biller.lipafoPaybill}</span>
                                 <span>•</span>
                                 <span>{biller.category}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{biller.settlementWindow}</span>
                               </div>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                              <RailIcon className={`h-4 w-4 ${meta.color}`} />
-                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{meta.label.split(" ")[0]}</span>
+                              <Landmark className="h-4 w-4 text-primary" />
+                              <span className="text-[10px] text-muted-foreground">KCB rail</span>
                             </div>
                           </div>
                         </button>
@@ -275,7 +261,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                     })}
                     {filtered.length === 0 && (
                       <div className="text-center text-sm text-muted-foreground py-8">
-                        No biller found. Try the "Enter Paybill / Till" tab.
+                        No biller found. Try the "Enter Lipafo Code" tab.
                       </div>
                     )}
                   </div>
@@ -283,25 +269,17 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
               </TabsContent>
 
               <TabsContent value="manual" className="space-y-3 mt-3">
-                <div>
-                  <Label>Payment Rail</Label>
-                  <Select value={manualRail} onValueChange={(v) => setManualRail(v as Rail)}>
-                    <SelectTrigger className="glass-card"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(railMeta).map(([k, m]) => (
-                        <SelectItem key={k} value={k}>{m.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="glass-card p-3 rounded-lg border border-primary/20 bg-primary/5 text-xs text-muted-foreground">
+                  <Landmark className="h-3 w-3 inline mr-1 text-primary" />
+                  Enter any KCB-issued Lipafo paybill code (format: <span className="font-mono text-foreground">LPF-XXXXXX</span>).
                 </div>
                 <div>
-                  <Label>Paybill / Till / Bank Code</Label>
+                  <Label>Lipafo Paybill Code</Label>
                   <Input
-                    placeholder="e.g. 247247"
+                    placeholder="e.g. LPF-400102"
                     value={manualPaybill}
-                    onChange={(e) => setManualPaybill(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => setManualPaybill(e.target.value)}
                     className="glass-card font-mono"
-                    inputMode="numeric"
                   />
                 </div>
                 <div>
@@ -315,7 +293,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 </div>
                 <div className="glass-card p-3 rounded-lg bg-muted/20 text-xs text-muted-foreground">
                   <Zap className="h-3 w-3 inline mr-1 text-primary" />
-                  Lipafo automatically detects and routes via the correct rail with real-time validation.
+                  Lipafo validates the code in real-time against the KCB biller registry.
                 </div>
               </TabsContent>
             </Tabs>
@@ -336,24 +314,26 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
             <div className="glass-card p-4 rounded-xl border border-primary/30 bg-primary/5">
               <div className="text-xs text-muted-foreground mb-1">Paying to</div>
               <div className="font-semibold text-foreground">{activeBiller.name}</div>
-              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                 <Hash className="h-3 w-3" />
-                <span className="font-mono">{activeBiller.paybill}</span>
+                <span className="font-mono text-primary">{activeBiller.lipafoPaybill}</span>
                 <span>•</span>
-                <span>{railMeta[activeBiller.rail].label}</span>
+                <span className="flex items-center gap-1"><Landmark className="h-3 w-3" /> KCB-orchestrated</span>
+                <span>•</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {activeBiller.settlementWindow}</span>
               </div>
             </div>
             <div>
               <Label>Account / Reference Number</Label>
               <Input
-                placeholder="Meter no., account no., phone, policy no…"
+                placeholder="Meter no., account no., policy no…"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
                 className="glass-card"
                 autoFocus
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Same reference you'd use on the biller's USSD or app.
+                Same reference issued by your biller.
               </p>
             </div>
             <div className="flex gap-3">
@@ -365,7 +345,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
 
         {/* STEP 3 — Amount + review */}
         {step === 3 && activeBiller && (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto">
             <div>
               <Label>Amount (KES)</Label>
               <Input
@@ -388,21 +368,42 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
               </div>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Biller</span><span className="text-foreground">{activeBiller.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Paybill</span><span className="text-foreground font-mono">{activeBiller.paybill}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Lipafo Code</span><span className="text-foreground font-mono">{activeBiller.lipafoPaybill}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Account</span><span className="text-foreground">{accountNumber}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><span className="text-foreground">{railMeta[activeBiller.rail].label}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><span className="text-foreground">Lipafo (KCB direct)</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="text-foreground">KES {amt.toLocaleString()}</span></div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Interop fee</span>
-                  <span className={interopFee === 0 ? "text-success font-semibold" : "text-foreground"}>
-                    {interopFee === 0 ? "FREE" : `KES ${interopFee}`}
-                  </span>
+                  <span className="text-muted-foreground">KCB Lipafo fee (flat)</span>
+                  <span className="text-foreground">KES {lipafoFee}</span>
+                </div>
+                <div className="flex justify-between text-success">
+                  <span>M-PESA fee</span>
+                  <span className="font-semibold">KES 0 — bypassed</span>
                 </div>
                 <div className="border-t border-glass-border/30 pt-2 flex justify-between font-semibold">
-                  <span className="text-foreground">Total</span>
+                  <span className="text-foreground">Total debit</span>
                   <span className="text-foreground">KES {total.toLocaleString()}</span>
                 </div>
               </div>
+
+              {/* Float economics — KCB holds float till settlement */}
+              <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <TrendingUp className="h-3 w-3" /> Float & Settlement
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1"><Wallet className="h-3 w-3" /> Float held by</span>
+                  <span className="text-foreground font-medium">KCB Lipafo Pool</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Biller settlement</span>
+                  <span className="text-foreground font-medium">{activeBiller.settlementWindow}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground italic pt-1">
+                  KCB earns float yield until backend settlement to the biller.
+                </p>
+              </div>
+
               {insufficient && (
                 <div className="text-xs text-destructive">Insufficient balance in main wallet.</div>
               )}
@@ -415,7 +416,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 onClick={handleConfirm}
                 disabled={processing || insufficient || amt <= 0}
               >
-                {processing ? (<><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Routing…</>) : "Pay Now"}
+                {processing ? (<><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Routing via KCB…</>) : "Pay Now"}
               </Button>
             </div>
           </div>
@@ -430,11 +431,14 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
             <div>
               <h3 className="font-bold text-lg text-foreground">Payment Successful</h3>
               <p className="text-sm text-muted-foreground">
-                KES {amt.toLocaleString()} sent to {activeBiller.name} via {railMeta[activeBiller.rail].label}.
+                KES {amt.toLocaleString()} routed to {activeBiller.name} via Lipafo (KCB).
               </p>
             </div>
-            <div className="glass-card p-3 rounded-lg text-xs text-muted-foreground">
-              Ref: LIPAFO-{Date.now().toString().slice(-8)}
+            <div className="glass-card p-3 rounded-lg space-y-1 text-xs text-left">
+              <div className="flex justify-between"><span className="text-muted-foreground">Lipafo Ref</span><span className="font-mono text-foreground">LPF-TXN-{Date.now().toString().slice(-8)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Float status</span><span className="text-primary font-medium">Held by KCB</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Biller settlement</span><span className="text-foreground">{activeBiller.settlementWindow}</span></div>
+              <div className="flex justify-between text-success"><span>M-PESA fee paid</span><span className="font-semibold">KES 0</span></div>
             </div>
             <Button className="w-full button-3d" onClick={() => handleClose(false)}>Done</Button>
           </div>
