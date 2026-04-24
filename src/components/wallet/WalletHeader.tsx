@@ -4,19 +4,25 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/contexts/I18nContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function WalletHeader() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useI18n();
+  const { signOut } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (e) {
+      console.error("signOut failed", e);
+    }
     toast({
       title: t('auth.loggedOut'),
       description: t('auth.loggedOutDesc'),
     });
-    navigate("/");
+    navigate("/auth", { replace: true });
   };
 
   return (
