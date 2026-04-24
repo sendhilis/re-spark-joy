@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-const CACHE_RESET_VERSION = "6";
+const CACHE_RESET_VERSION = "7";
 const CACHE_RESET_KEY = `lipafo-brand-cache-reset-v${CACHE_RESET_VERSION}`;
 const BRANDING_STORAGE_PATTERNS = [/rukisha/i, /diaspora-connect/i, /brand-cache-reset/i];
 
