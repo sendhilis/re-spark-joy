@@ -444,20 +444,140 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
 
                   <TabsContent value="remittance" className="space-y-4">
                     <Card className="glass-card p-6">
-                      <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2"><Send className="h-5 w-5 text-primary" />Send Money to Kenya</h3>
-                      <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div><Label>Recipient Phone/Account</Label><Input placeholder="+254 712 345 678" value={formData.recipient}
-                            onChange={(e) => setFormData({...formData, recipient: e.target.value})} required /></div>
-                          <div><Label>Amount (USD)</Label><Input type="number" placeholder="100" value={formData.amount}
-                            onChange={(e) => setFormData({...formData, amount: e.target.value})} required /></div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-foreground flex items-center gap-2"><Send className="h-5 w-5 text-primary" />Send Money to Kenya</h3>
+                        <Badge variant="secondary">Step {remitStep} of 4</Badge>
+                      </div>
+
+                      {/* Stepper */}
+                      <div className="flex items-center justify-between mb-6">
+                        {(['Source','Destination','Amount','Done'] as const).map((label, i) => {
+                          const s = (i + 1) as 1|2|3|4;
+                          return (
+                            <div key={label} className="flex items-center gap-2 flex-1">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${remitStep >= s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{s}</div>
+                              <span className={`text-xs ${remitStep >= s ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</span>
+                              {i < 3 && <div className={`flex-1 h-0.5 mx-1 ${remitStep > s ? 'bg-primary' : 'bg-muted'}`} />}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Step 1: Source of funds */}
+                      {remitStep === 1 && (
+                        <div className="space-y-3">
+                          <Label>Pay from</Label>
+                          {(Object.keys(sourceLabel) as Array<keyof typeof sourceLabel>).map(key => (
+                            <button key={key} type="button" onClick={() => setRemitSource(key)}
+                              className={`w-full text-left p-4 rounded-lg border transition-all ${remitSource === key ? 'border-primary bg-primary/10' : 'border-glass-border/30 hover:border-primary/30'}`}>
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-primary/20">
+                                  {key === 'intl_card' ? <CreditCard className="h-4 w-4 text-primary" /> : key === 'kcb_diaspora' ? <Wallet className="h-4 w-4 text-primary" /> : <DollarSign className="h-4 w-4 text-primary" />}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-foreground">{sourceLabel[key]}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {key === 'intl_card' && 'Charge your linked international card in USD'}
+                                    {key === 'kcb_diaspora' && 'Pull from your KCB diaspora USD account'}
+                                    {key === 'lipafo_usd' && `Use Lipafo wallet • Available KES ${balances.main.toLocaleString()}`}
+                                  </p>
+                                </div>
+                                {remitSource === key && <CheckCircle className="h-5 w-5 text-primary" />}
+                              </div>
+                            </button>
+                          ))}
+                          <Button onClick={() => setRemitStep(2)} className="w-full">Continue</Button>
                         </div>
-                        <div className="glass-card p-4 rounded-lg">
-                          <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">Exchange Rate</span><span className="font-semibold">1 USD = 150 KES</span></div>
-                          <div className="flex justify-between items-center mt-2"><span className="text-sm text-muted-foreground">Transfer Fee</span><Badge variant="secondary" className="text-primary">FREE</Badge></div>
+                      )}
+
+                      {/* Step 2: Destination rail + recipient */}
+                      {remitStep === 2 && (
+                        <div className="space-y-3">
+                          <Label>Send to</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(Object.keys(railLabel) as Array<keyof typeof railLabel>).map(key => (
+                              <button key={key} type="button" onClick={() => setRemitRail(key)}
+                                className={`p-3 rounded-lg border text-left transition-all ${remitRail === key ? 'border-primary bg-primary/10' : 'border-glass-border/30 hover:border-primary/30'}`}>
+                                <p className="text-xs font-medium text-foreground">{railLabel[key]}</p>
+                                <p className="text-[10px] text-muted-foreground mt-1">Fee: {railFeeKES[key] === 0 ? 'FREE' : `KES ${railFeeKES[key]}`}</p>
+                              </button>
+                            ))}
+                          </div>
+                          <div><Label>Recipient full name</Label><Input placeholder="Jane Mwangi" value={remitRecipientName} onChange={e => setRemitRecipientName(e.target.value)} /></div>
+                          <div><Label>{remitRail === 'mpesa' ? 'M-PESA phone number' : remitRail === 'lipafo_wallet' ? 'Lipafo phone/email' : 'Account number'}</Label>
+                            <Input placeholder={railPlaceholder[remitRail]} value={remitRecipientAccount} onChange={e => setRemitRecipientAccount(e.target.value)} /></div>
+                          {remitRail === 'pesalink' && (
+                            <div><Label>Recipient Bank</Label><Input placeholder="Equity, Co-op, Absa, etc." value={remitBankName} onChange={e => setRemitBankName(e.target.value)} /></div>
+                          )}
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setRemitStep(1)} className="flex-1">Back</Button>
+                            <Button onClick={() => {
+                              if (!remitRecipientName || !remitRecipientAccount) {
+                                toast({ title: "Missing details", description: "Enter recipient name and account", variant: "destructive" });
+                                return;
+                              }
+                              setRemitStep(3);
+                            }} className="flex-1">Continue</Button>
+                          </div>
                         </div>
-                        <Button type="submit" className="w-full">Send Money</Button>
-                      </form>
+                      )}
+
+                      {/* Step 3: Amount + live FX + review */}
+                      {remitStep === 3 && (
+                        <div className="space-y-4">
+                          <div>
+                            <Label>You send (USD)</Label>
+                            <Input type="number" placeholder="100" value={remitUSD} onChange={e => setRemitUSD(e.target.value)} />
+                          </div>
+
+                          <Card className="glass-card p-4 space-y-2 bg-primary/5 border-primary/20">
+                            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Exchange rate</span><span className="font-medium text-foreground">1 USD = {FX_USD_KES} KES</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Gross (KES)</span><span className="font-medium text-foreground">KES {grossKES.toLocaleString()}</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail fee</span><span className="font-medium text-foreground">{feeKES === 0 ? 'FREE' : `KES ${feeKES}`}</span></div>
+                            <div className="border-t border-glass-border/30 pt-2 flex justify-between">
+                              <span className="text-sm font-semibold text-foreground">Recipient receives</span>
+                              <span className="text-base font-bold text-primary">KES {recipientReceivesKES.toLocaleString()}</span>
+                            </div>
+                          </Card>
+
+                          <Card className="glass-card p-4 space-y-1 text-xs">
+                            <div className="flex justify-between"><span className="text-muted-foreground">From</span><span className="text-foreground">{sourceLabel[remitSource]}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">To</span><span className="text-foreground">{remitRecipientName} • {railLabel[remitRail]}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Account</span><span className="text-foreground">{remitRecipientAccount}{remitBankName && ` • ${remitBankName}`}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Settlement</span><span className="text-foreground flex items-center gap-1"><Clock className="h-3 w-3" />Instant</span></div>
+                          </Card>
+
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setRemitStep(2)} className="flex-1" disabled={remitProcessing}>Back</Button>
+                            <Button onClick={handleRemittanceSubmit} className="flex-1" disabled={remitProcessing || usdNum <= 0}>
+                              {remitProcessing ? 'Processing…' : `Send $${usdNum || 0}`}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 4: Receipt */}
+                      {remitStep === 4 && (
+                        <div className="space-y-4 text-center py-4">
+                          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                            <CheckCircle className="h-8 w-8 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-semibold text-foreground">Remittance sent! 🎉</h4>
+                            <p className="text-sm text-muted-foreground mt-1">{remitRecipientName} will receive KES {recipientReceivesKES.toLocaleString()} via {railLabel[remitRail]}</p>
+                          </div>
+                          <Card className="glass-card p-4 text-left space-y-1 text-xs">
+                            <div className="flex justify-between"><span className="text-muted-foreground">Sent</span><span className="text-foreground">${usdNum} USD</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Received</span><span className="text-foreground">KES {recipientReceivesKES.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><span className="text-foreground">{railLabel[remitRail]}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="text-foreground font-mono">LPF{Date.now().toString().slice(-8)}</span></div>
+                          </Card>
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => { resetRemit(); onOpenChange(false); }} className="flex-1">Done</Button>
+                            <Button onClick={resetRemit} className="flex-1">Send another</Button>
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   </TabsContent>
 
