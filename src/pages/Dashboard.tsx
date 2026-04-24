@@ -1,7 +1,7 @@
-import { RukishaDashboard } from "@/components/wallet/RukishaDashboard";
+import { LipafoDashboard } from "@/components/wallet/LipafoDashboard";
 
 const Dashboard = () => {
-  return <RukishaDashboard />;
+  return <LipafoDashboard />;
 };
 
 export default Dashboard;
