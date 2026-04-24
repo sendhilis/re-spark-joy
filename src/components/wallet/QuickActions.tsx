@@ -52,6 +52,7 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
   const actions = [
     { id: 'loan-discovery', title: t('quickActions.getLoan'), icon: Banknote, description: t('quickActions.getLoanDesc'), onClick: () => setLoanDiscoveryOpen(true) },
     { id: 'lipafo-bnpl', title: 'Lipafo BNPL', icon: ShoppingBag, description: 'Buy now, pay on next inflow', onClick: () => setBnplOpen(true), highlight: 'success' },
+    { id: 'interop-paybill', title: 'Interop Paybill', icon: Network, description: 'Pay any bank, M-PESA, Airtel, T-Kash', onClick: () => setInteropPaybillOpen(true), highlight: 'primary' },
     { id: 'wallet-transfer', title: t('quickActions.moveMoney'), icon: ArrowRightLeft, description: t('quickActions.moveMoneyDesc'), onClick: () => setWalletTransferOpen(true) },
     { id: 'transfer', title: t('quickActions.sendMoney'), icon: Send, description: t('quickActions.sendMoneyDesc'), onClick: () => setTransferOpen(true) },
     { id: 'cash-in', title: t('quickActions.cashIn'), icon: ArrowDownToLine, description: t('quickActions.cashInDesc'), onClick: () => setAgentCashInOpen(true), highlight: 'success' },
