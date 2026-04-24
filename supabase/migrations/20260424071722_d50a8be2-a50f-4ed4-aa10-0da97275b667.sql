@@ -1,0 +1,1 @@
+DELETE FROM transactions WHERE ABS(amount) < 0.01 AND amount != 0;
