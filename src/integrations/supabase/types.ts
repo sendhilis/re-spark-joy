@@ -234,6 +234,113 @@ export type Database = {
         }
         Relationships: []
       }
+      merchant_settlements: {
+        Row: {
+          created_at: string
+          fee_amount: number
+          gross_amount: number
+          id: string
+          merchant_id: string
+          net_amount: number
+          paid_out_at: string | null
+          scheduled_payout_at: string
+          settlement_date: string
+          status: string
+          transaction_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fee_amount?: number
+          gross_amount?: number
+          id?: string
+          merchant_id: string
+          net_amount?: number
+          paid_out_at?: string | null
+          scheduled_payout_at: string
+          settlement_date: string
+          status?: string
+          transaction_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fee_amount?: number
+          gross_amount?: number
+          id?: string
+          merchant_id?: string
+          net_amount?: number
+          paid_out_at?: string | null
+          scheduled_payout_at?: string
+          settlement_date?: string
+          status?: string
+          transaction_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_settlements_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchants: {
+        Row: {
+          category: string
+          contact_email: string | null
+          contact_phone: string | null
+          country_code: string
+          created_at: string
+          id: string
+          lipafo_code: string
+          mcc: string | null
+          merchant_name: string
+          monthly_volume: number
+          settlement_account: string | null
+          settlement_bank: string
+          status: string
+          till_code: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          lipafo_code: string
+          mcc?: string | null
+          merchant_name: string
+          monthly_volume?: number
+          settlement_account?: string | null
+          settlement_bank?: string
+          status?: string
+          till_code: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          lipafo_code?: string
+          mcc?: string | null
+          merchant_name?: string
+          monthly_volume?: number
+          settlement_account?: string | null
+          settlement_bank?: string
+          status?: string
+          till_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mpesa_global_tariff_runs: {
         Row: {
           created_at: string
@@ -327,6 +434,98 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      settlement_dispatches: {
+        Row: {
+          amount: number
+          beneficiary_bank: string
+          created_at: string
+          dispatched_at: string | null
+          float_revenue: number
+          id: string
+          position_id: string | null
+          reference: string
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          beneficiary_bank: string
+          created_at?: string
+          dispatched_at?: string | null
+          float_revenue?: number
+          id?: string
+          position_id?: string | null
+          reference: string
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          beneficiary_bank?: string
+          created_at?: string
+          dispatched_at?: string | null
+          float_revenue?: number
+          id?: string
+          position_id?: string | null
+          reference?: string
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_dispatches_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_positions: {
+        Row: {
+          created_at: string
+          cutoff_at: string
+          id: string
+          inbound_volume: number
+          net_position: number
+          outbound_volume: number
+          participating_bank: string
+          position_date: string
+          status: string
+          transaction_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cutoff_at?: string
+          id?: string
+          inbound_volume?: number
+          net_position?: number
+          outbound_volume?: number
+          participating_bank: string
+          position_date: string
+          status?: string
+          transaction_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cutoff_at?: string
+          id?: string
+          inbound_volume?: number
+          net_position?: number
+          outbound_volume?: number
+          participating_bank?: string
+          position_date?: string
+          status?: string
+          transaction_count?: number
+          updated_at?: string
         }
         Relationships: []
       }
