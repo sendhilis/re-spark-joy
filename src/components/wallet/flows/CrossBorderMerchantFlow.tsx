@@ -438,14 +438,29 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
               <>
                 {/* Lipafo vs Legacy cost comparison */}
                 <div className="glass-card p-3 rounded-xl border border-success/30 bg-success/5 space-y-2">
-                  <div className="text-xs font-semibold text-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-success" /> Cost vs. legacy M-PESA + correspondent route
+                  <div className="text-xs font-semibold text-foreground flex items-center justify-between gap-1 flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3 text-success" /> Cost vs. legacy M-PESA + correspondent route
+                    </span>
+                    {legacyIsGenuine ? (
+                      <Badge variant="default" className="text-[9px] py-0 px-1.5 bg-success/20 text-success border-success/30">
+                        Live Safaricom tariff
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-warning/40 text-warning">
+                        Estimated · refresh tariffs in admin
+                      </Badge>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2">
                       <div className="text-muted-foreground">Old way</div>
                       <div className="text-destructive font-bold text-base">KES {legacyCost.toLocaleString()}</div>
-                      <div className="text-[10px] text-muted-foreground">M-PESA + bank wire + 3.5% FX</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {legacyIsGenuine
+                          ? `Safaricom fee KES ${legacyFromTariffs!.bandFee.toLocaleString()} + FX ${legacyFromTariffs!.fxBps != null ? `${legacyFromTariffs!.fxBps} bps` : "≈3.5%"}`
+                          : "M-PESA + bank wire + 3.5% FX (estimate)"}
+                      </div>
                     </div>
                     <div className="rounded-lg bg-success/10 border border-success/20 p-2">
                       <div className="text-muted-foreground">Lipafo</div>
@@ -456,6 +471,11 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
                   <div className="text-xs text-success font-semibold text-center">
                     You save KES {userSavings.toLocaleString()} ({Math.round((userSavings / Math.max(legacyCost, 1)) * 100)}%)
                   </div>
+                  {tariffSnapshotAt && legacyIsGenuine && (
+                    <div className="text-[9px] text-muted-foreground text-center">
+                      Source: safaricom.co.ke · snapshot {new Date(tariffSnapshotAt).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
 
                 {/* KCB revenue snapshot */}
