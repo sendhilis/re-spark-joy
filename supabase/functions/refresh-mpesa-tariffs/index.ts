@@ -225,17 +225,35 @@ Deno.serve(async (req) => {
       });
     }
     const rawRows = parsed.rows ?? [];
-    if (rawRows.length === 0) {
-      await logRun("failed", `AI extracted zero rows. AI said: ${cleaned.slice(0, 400)} | MD preview: ${markdown.slice(0, 200)}`);
-      return new Response(JSON.stringify({
-        error: "No tariff rows extracted",
-        ai_response: cleaned.slice(0, 1000),
-        markdown_length: markdown.length,
-        markdown_preview: markdown.slice(0, 500),
-      }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    // 3. Decide source: scraped rows if any, else curated baseline
+    const snapshot = new Date().toISOString();
+    let toInsert: TariffRow[] = [];
+    let sourceUrl = SAFARICOM_TARIFF_URL;
+    let usedBaseline = false;
+
+    if (rawRows.length > 0) {
+      toInsert = rawRows
+        .filter((r) => r && typeof r.country_name === "string" &&
+          typeof r.band_min_kes === "number" && typeof r.band_max_kes === "number" &&
+          typeof r.fee_kes === "number")
+        .map((r) => {
+          const { code, name } = normalizeCorridor(r.country_name);
+          return {
+            corridor_code: code,
+            country_name: name,
+            band_min_kes: r.band_min_kes,
+            band_max_kes: r.band_max_kes,
+            fee_kes: r.fee_kes,
+            fx_margin_bps: r.fx_margin_bps ?? null,
+          };
+        });
+    }
+
+    if (toInsert.length === 0) {
+      toInsert = BASELINE_TARIFFS;
+      sourceUrl = BASELINE_SOURCE;
+      usedBaseline = true;
     }
 
     // 3. Normalize + insert
