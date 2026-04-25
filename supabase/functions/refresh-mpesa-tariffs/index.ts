@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 const SAFARICOM_TARIFF_URL =
-  "https://www.safaricom.co.ke/main-mpesa-resources/m-pesa-global/tariffs";
+  "https://www.safaricom.co.ke/main-mpesa/m-pesa-services/m-pesa-global/imt";
 
 interface TariffRow {
   corridor_code: string;
@@ -177,20 +177,27 @@ Deno.serve(async (req) => {
       });
     }
     const content: string = aiJson?.choices?.[0]?.message?.content ?? "{}";
+    // Strip markdown code fences if AI wrapped JSON in ```json ... ```
+    const cleaned = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
     let parsed: { rows?: Array<Omit<TariffRow, "corridor_code"> & { country_name: string }> } = {};
     try {
-      parsed = JSON.parse(content);
+      parsed = JSON.parse(cleaned);
     } catch {
-      await logRun("failed", `AI returned non-JSON: ${content.slice(0, 300)}`);
-      return new Response(JSON.stringify({ error: "AI returned non-JSON", content }), {
+      await logRun("failed", `AI returned non-JSON: ${cleaned.slice(0, 300)}`);
+      return new Response(JSON.stringify({ error: "AI returned non-JSON", content: cleaned }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const rawRows = parsed.rows ?? [];
     if (rawRows.length === 0) {
-      await logRun("failed", "AI extracted zero rows");
-      return new Response(JSON.stringify({ error: "No tariff rows extracted" }), {
+      await logRun("failed", `AI extracted zero rows. AI said: ${cleaned.slice(0, 400)} | MD preview: ${markdown.slice(0, 200)}`);
+      return new Response(JSON.stringify({
+        error: "No tariff rows extracted",
+        ai_response: cleaned.slice(0, 1000),
+        markdown_length: markdown.length,
+        markdown_preview: markdown.slice(0, 500),
+      }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
