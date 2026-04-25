@@ -256,38 +256,12 @@ Deno.serve(async (req) => {
       usedBaseline = true;
     }
 
-    // 3. Normalize + insert
-    const snapshot = new Date().toISOString();
-    const toInsert: TariffRow[] = rawRows
-      .filter((r) => r && typeof r.country_name === "string" &&
-        typeof r.band_min_kes === "number" && typeof r.band_max_kes === "number" &&
-        typeof r.fee_kes === "number")
-      .map((r) => {
-        const { code, name } = normalizeCorridor(r.country_name);
-        return {
-          corridor_code: code,
-          country_name: name,
-          band_min_kes: r.band_min_kes,
-          band_max_kes: r.band_max_kes,
-          fee_kes: r.fee_kes,
-          fx_margin_bps: r.fx_margin_bps ?? null,
-        };
-      });
-
-    if (toInsert.length === 0) {
-      await logRun("failed", "All extracted rows failed validation");
-      return new Response(JSON.stringify({ error: "All extracted rows invalid" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { error: insertErr } = await adminClient
       .from("mpesa_global_tariffs")
       .insert(toInsert.map((r) => ({
         ...r,
         snapshot_at: snapshot,
-        source_url: SAFARICOM_TARIFF_URL,
+        source_url: sourceUrl,
       })));
     if (insertErr) {
       await logRun("failed", `DB insert: ${insertErr.message}`);
@@ -297,9 +271,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    await logRun("success", `Imported ${toInsert.length} tariff rows`, toInsert.length);
+    const msg = usedBaseline
+      ? `Seeded ${toInsert.length} curated baseline rows (Safaricom page had no structured table)`
+      : `Imported ${toInsert.length} scraped tariff rows`;
+    await logRun("success", msg, toInsert.length);
     return new Response(
-      JSON.stringify({ success: true, rowsImported: toInsert.length, snapshot_at: snapshot }),
+      JSON.stringify({
+        success: true,
+        rowsImported: toInsert.length,
+        snapshot_at: snapshot,
+        source: usedBaseline ? "baseline" : "scraped",
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
