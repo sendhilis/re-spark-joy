@@ -258,6 +258,7 @@ export function MerchantPortal() {
                     <TableHead>Till</TableHead>
                     <TableHead>Lipafo Code</TableHead>
                     <TableHead>Country</TableHead>
+                    <TableHead>Corridor</TableHead>
                     <TableHead>Settlement Bank</TableHead>
                     <TableHead>Account</TableHead>
                     <TableHead className="text-right">Monthly Vol</TableHead>
@@ -271,6 +272,7 @@ export function MerchantPortal() {
                       <TableCell className="font-mono text-xs">{m.till_code}</TableCell>
                       <TableCell className="font-mono text-xs text-primary">{m.lipafo_code}</TableCell>
                       <TableCell><Badge variant="outline">{m.country_code}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className={CORRIDOR_BADGE[m.corridor_type]}>{CORRIDOR_LABEL[m.corridor_type]}</Badge></TableCell>
                       <TableCell className="text-xs">{m.settlement_bank}</TableCell>
                       <TableCell className="font-mono text-xs">{m.settlement_account || "—"}</TableCell>
                       <TableCell className="text-right text-xs">{fmtKES(Number(m.monthly_volume))}</TableCell>
