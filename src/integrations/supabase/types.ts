@@ -234,6 +234,75 @@ export type Database = {
         }
         Relationships: []
       }
+      mpesa_global_tariff_runs: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          rows_imported: number
+          source_url: string | null
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          rows_imported?: number
+          source_url?: string | null
+          status: string
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          rows_imported?: number
+          source_url?: string | null
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      mpesa_global_tariffs: {
+        Row: {
+          band_max_kes: number
+          band_min_kes: number
+          corridor_code: string
+          country_name: string
+          created_at: string
+          fee_kes: number
+          fx_margin_bps: number | null
+          id: string
+          snapshot_at: string
+          source_url: string
+        }
+        Insert: {
+          band_max_kes: number
+          band_min_kes: number
+          corridor_code: string
+          country_name: string
+          created_at?: string
+          fee_kes: number
+          fx_margin_bps?: number | null
+          id?: string
+          snapshot_at?: string
+          source_url: string
+        }
+        Update: {
+          band_max_kes?: number
+          band_min_kes?: number
+          corridor_code?: string
+          country_name?: string
+          created_at?: string
+          fee_kes?: number
+          fx_margin_bps?: number | null
+          id?: string
+          snapshot_at?: string
+          source_url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
