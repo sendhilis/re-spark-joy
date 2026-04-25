@@ -139,7 +139,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="agents" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11 glass-card">
+          <TabsList className="grid w-full grid-cols-12 glass-card">
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
             <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">{t('admin.diaspora')}</span></TabsTrigger>
             <TabsTrigger value="accounting" className="flex items-center gap-2"><Calculator className="h-4 w-4" /><span className="hidden md:inline">{t('admin.accounting')}</span></TabsTrigger>
