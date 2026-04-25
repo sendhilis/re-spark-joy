@@ -176,6 +176,7 @@ export function AdminDashboard() {
           <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
           <TabsContent value="settlement"><SettlementEngine /></TabsContent>
           <TabsContent value="merchants"><MerchantPortal /></TabsContent>
+          <TabsContent value="routing"><CorridorRoutingTable /></TabsContent>
           <TabsContent value="kcb-benefits"><KCBBenefitsDashboard /></TabsContent>
         </Tabs>
       </div>
