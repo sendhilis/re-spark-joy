@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/WalletContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Globe2, Search, ArrowRight, CheckCircle2, Loader2, Landmark, Network,
   Banknote, CreditCard, Wallet, Coins, FileText, ArrowDownToLine, TrendingUp, Building2, Zap, Hash
 } from "lucide-react";
+
+interface MpesaTariffRow {
+  corridor_code: string;
+  band_min_kes: number;
+  band_max_kes: number;
+  fee_kes: number;
+  fx_margin_bps: number | null;
+  snapshot_at: string;
+  source_url: string;
+}
 
 interface CrossBorderMerchantFlowProps {
   open: boolean;
@@ -103,12 +114,27 @@ const computeCrossBorderFee = (kesAmount: number): number => {
   return 450;
 };
 
-/* M-PESA + bank correspondent equivalent cost (mock comparison) */
-const computeLegacyCost = (kesAmount: number): number => {
-  // Approx: M-PESA send + paybill + bank wire + correspondent + FX margin ~3.5%
+/* M-PESA + bank correspondent equivalent cost — fallback estimate when no scraped data */
+const computeLegacyCostEstimate = (kesAmount: number): number => {
   const flat = 220 + 350; // m-pesa + bank charge
   const fxMargin = kesAmount * 0.035;
   return Math.round(flat + fxMargin);
+};
+
+/* Compute legacy cost from real Safaricom tariff rows when available */
+const computeLegacyCostFromTariffs = (
+  kesAmount: number,
+  corridorCode: string,
+  rows: MpesaTariffRow[],
+): { cost: number; bandFee: number; fxBps: number | null } | null => {
+  if (kesAmount <= 0) return null;
+  const matches = rows.filter(r => r.corridor_code === corridorCode);
+  if (matches.length === 0) return null;
+  const band = matches.find(r => kesAmount >= Number(r.band_min_kes) && kesAmount <= Number(r.band_max_kes));
+  if (!band) return null;
+  const fxBps = band.fx_margin_bps != null ? Number(band.fx_margin_bps) : null;
+  const fxMargin = fxBps != null ? Math.round(kesAmount * (fxBps / 10_000)) : Math.round(kesAmount * 0.035);
+  return { cost: Number(band.fee_kes) + fxMargin, bandFee: Number(band.fee_kes), fxBps };
 };
 
 export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerchantFlowProps) {
@@ -124,6 +150,25 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
   const [reference, setReference] = useState("");
   const [kesAmount, setKesAmount] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [tariffRows, setTariffRows] = useState<MpesaTariffRow[]>([]);
+
+  // Load latest scraped Safaricom tariff snapshot once dialog opens
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("mpesa_global_tariffs")
+        .select("corridor_code, band_min_kes, band_max_kes, fee_kes, fx_margin_bps, snapshot_at, source_url")
+        .order("snapshot_at", { ascending: false })
+        .limit(500);
+      if (cancelled || !data) return;
+      // Keep only the latest snapshot (rows already sorted desc)
+      const latest = data[0]?.snapshot_at;
+      setTariffRows(latest ? (data as MpesaTariffRow[]).filter(r => r.snapshot_at === latest) : []);
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const corridor = useMemo(() => CORRIDORS.find(c => c.code === corridorCode)!, [corridorCode]);
   const channel  = useMemo(() => SOURCE_CHANNELS.find(c => c.id === channelId)!, [channelId]);
@@ -137,7 +182,10 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
 
   const amt = parseFloat(kesAmount) || 0;
   const kcbFee = computeCrossBorderFee(amt);
-  const legacyCost = computeLegacyCost(amt);
+  const legacyFromTariffs = computeLegacyCostFromTariffs(amt, corridorCode, tariffRows);
+  const legacyCost = legacyFromTariffs?.cost ?? computeLegacyCostEstimate(amt);
+  const legacyIsGenuine = !!legacyFromTariffs;
+  const tariffSnapshotAt = tariffRows[0]?.snapshot_at ?? null;
   const fxMarginRevenueKES = Math.round(amt * (channel.kcbBps / 10_000));
   const totalDebit = amt + kcbFee;
   const localAmount = amt * corridor.rate;
@@ -390,14 +438,29 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
               <>
                 {/* Lipafo vs Legacy cost comparison */}
                 <div className="glass-card p-3 rounded-xl border border-success/30 bg-success/5 space-y-2">
-                  <div className="text-xs font-semibold text-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-success" /> Cost vs. legacy M-PESA + correspondent route
+                  <div className="text-xs font-semibold text-foreground flex items-center justify-between gap-1 flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3 text-success" /> Cost vs. legacy M-PESA + correspondent route
+                    </span>
+                    {legacyIsGenuine ? (
+                      <Badge variant="default" className="text-[9px] py-0 px-1.5 bg-success/20 text-success border-success/30">
+                        Live Safaricom tariff
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-warning/40 text-warning">
+                        Estimated · refresh tariffs in admin
+                      </Badge>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2">
                       <div className="text-muted-foreground">Old way</div>
                       <div className="text-destructive font-bold text-base">KES {legacyCost.toLocaleString()}</div>
-                      <div className="text-[10px] text-muted-foreground">M-PESA + bank wire + 3.5% FX</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {legacyIsGenuine
+                          ? `Safaricom fee KES ${legacyFromTariffs!.bandFee.toLocaleString()} + FX ${legacyFromTariffs!.fxBps != null ? `${legacyFromTariffs!.fxBps} bps` : "≈3.5%"}`
+                          : "M-PESA + bank wire + 3.5% FX (estimate)"}
+                      </div>
                     </div>
                     <div className="rounded-lg bg-success/10 border border-success/20 p-2">
                       <div className="text-muted-foreground">Lipafo</div>
@@ -408,6 +471,11 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
                   <div className="text-xs text-success font-semibold text-center">
                     You save KES {userSavings.toLocaleString()} ({Math.round((userSavings / Math.max(legacyCost, 1)) * 100)}%)
                   </div>
+                  {tariffSnapshotAt && legacyIsGenuine && (
+                    <div className="text-[9px] text-muted-foreground text-center">
+                      Source: safaricom.co.ke · snapshot {new Date(tariffSnapshotAt).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
 
                 {/* KCB revenue snapshot */}
