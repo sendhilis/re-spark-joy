@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/WalletContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Globe2, Search, ArrowRight, CheckCircle2, Loader2, Landmark, Network,
   Banknote, CreditCard, Wallet, Coins, FileText, ArrowDownToLine, TrendingUp, Building2, Zap, Hash
 } from "lucide-react";
+
+interface MpesaTariffRow {
+  corridor_code: string;
+  band_min_kes: number;
+  band_max_kes: number;
+  fee_kes: number;
+  fx_margin_bps: number | null;
+  snapshot_at: string;
+  source_url: string;
+}
 
 interface CrossBorderMerchantFlowProps {
   open: boolean;
@@ -103,12 +114,27 @@ const computeCrossBorderFee = (kesAmount: number): number => {
   return 450;
 };
 
-/* M-PESA + bank correspondent equivalent cost (mock comparison) */
-const computeLegacyCost = (kesAmount: number): number => {
-  // Approx: M-PESA send + paybill + bank wire + correspondent + FX margin ~3.5%
+/* M-PESA + bank correspondent equivalent cost — fallback estimate when no scraped data */
+const computeLegacyCostEstimate = (kesAmount: number): number => {
   const flat = 220 + 350; // m-pesa + bank charge
   const fxMargin = kesAmount * 0.035;
   return Math.round(flat + fxMargin);
+};
+
+/* Compute legacy cost from real Safaricom tariff rows when available */
+const computeLegacyCostFromTariffs = (
+  kesAmount: number,
+  corridorCode: string,
+  rows: MpesaTariffRow[],
+): { cost: number; bandFee: number; fxBps: number | null } | null => {
+  if (kesAmount <= 0) return null;
+  const matches = rows.filter(r => r.corridor_code === corridorCode);
+  if (matches.length === 0) return null;
+  const band = matches.find(r => kesAmount >= Number(r.band_min_kes) && kesAmount <= Number(r.band_max_kes));
+  if (!band) return null;
+  const fxBps = band.fx_margin_bps != null ? Number(band.fx_margin_bps) : null;
+  const fxMargin = fxBps != null ? Math.round(kesAmount * (fxBps / 10_000)) : Math.round(kesAmount * 0.035);
+  return { cost: Number(band.fee_kes) + fxMargin, bandFee: Number(band.fee_kes), fxBps };
 };
 
 export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerchantFlowProps) {
