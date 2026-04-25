@@ -170,9 +170,15 @@ export function MerchantPortal() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Country</Label>
-                  <Select value={form.country_code} onValueChange={(v) => setForm({ ...form, country_code: v })}>
+                  <Select value={form.country_code} onValueChange={onCountryChange}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      {routes.map((r) => (
+                        <SelectItem key={r.country_code} value={r.country_code}>
+                          {r.country_name} ({r.country_code}) — {CORRIDOR_LABEL[r.corridor_type]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div>
@@ -183,6 +189,12 @@ export function MerchantPortal() {
                   </Select>
                 </div>
               </div>
+              {selectedRoute && (
+                <div className={`p-2 rounded-md border text-xs ${CORRIDOR_BADGE[selectedRoute.corridor_type]}`}>
+                  Rail: <span className="font-semibold">{CORRIDOR_LABEL[selectedRoute.corridor_type]}</span>
+                  {selectedRoute.partner_bank && <> · via {selectedRoute.partner_bank}</>}
+                </div>
+              )}
               <div>
                 <Label>Settlement Bank</Label>
                 <Select value={form.settlement_bank} onValueChange={(v) => setForm({ ...form, settlement_bank: v })}>
