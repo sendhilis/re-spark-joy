@@ -62,17 +62,19 @@ type MerchantSettlement = {
 const SETTLEMENT_BANKS = [
   "KCB Bank Kenya", "Equity Bank", "Co-operative Bank", "NCBA Bank",
   "Stanbic Bank", "KCB Bank Uganda", "KCB Bank Tanzania", "KCB Bank Rwanda",
+  "PAPSS Network", "Standard Bank", "NatWest", "Citibank N.A.",
 ];
-const COUNTRIES = ["KE", "UG", "TZ", "RW", "BI", "SS", "CD", "ET"];
 const CATEGORIES = ["retail", "food", "fuel", "health", "education", "travel", "utility"];
 
 const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
-const generateLipafoCode = (country: string) =>
-  country === "KE"
-    ? `LPF-MR-${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`
-    : `LPF-XB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+const generateLipafoCode = (country: string, corridor: CorridorType) => {
+  if (corridor === "on_us" && country === "KE") return `LPF-MR-${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`;
+  if (corridor === "papss") return `LPF-PA-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+  if (corridor === "correspondent") return `LPF-CB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+  return `LPF-XB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+};
 
 const generateTillCode = (country: string) =>
   country === "KE"
@@ -82,6 +84,7 @@ const generateTillCode = (country: string) =>
 export function MerchantPortal() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [settlements, setSettlements] = useState<MerchantSettlement[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     merchant_name: "",
@@ -94,31 +97,47 @@ export function MerchantPortal() {
   });
 
   const load = async () => {
-    const [mRes, sRes] = await Promise.all([
+    const [mRes, sRes, rRes] = await Promise.all([
       supabase.from("merchants").select("*").order("created_at", { ascending: false }),
       supabase.from("merchant_settlements").select("*").order("settlement_date", { ascending: false }).limit(50),
+      supabase.from("corridor_routes").select("country_code,country_name,corridor_type,partner_bank,active").eq("active", true).order("country_name"),
     ]);
     if (mRes.data) setMerchants(mRes.data as Merchant[]);
     if (sRes.data) setSettlements(sRes.data as MerchantSettlement[]);
+    if (rRes.data) setRoutes(rRes.data as Route[]);
   };
 
   useEffect(() => { load(); }, []);
 
+  const selectedRoute = routes.find(r => r.country_code === form.country_code);
+
+  const onCountryChange = (code: string) => {
+    const r = routes.find(x => x.country_code === code);
+    setForm(f => ({
+      ...f,
+      country_code: code,
+      settlement_bank: r?.partner_bank || f.settlement_bank,
+    }));
+  };
+
   const onboard = async () => {
     if (!form.merchant_name) { toast.error("Merchant name required"); return; }
+    if (!selectedRoute) { toast.error("No active corridor route for this country"); return; }
+    const corridor_type = selectedRoute.corridor_type;
     const till_code = generateTillCode(form.country_code);
-    const lipafo_code = generateLipafoCode(form.country_code);
+    const lipafo_code = generateLipafoCode(form.country_code, corridor_type);
     const { error } = await supabase.from("merchants").insert({
       ...form,
       till_code,
       lipafo_code,
+      corridor_type,
       mcc: null,
       monthly_volume: 0,
       status: "active",
     });
     if (error) toast.error(error.message);
     else {
-      toast.success(`Merchant onboarded — Till ${till_code} / ${lipafo_code}`);
+      toast.success(`Merchant onboarded via ${CORRIDOR_LABEL[corridor_type]} — Till ${till_code} / ${lipafo_code}`);
       setOpen(false);
       setForm({ merchant_name: "", category: "retail", country_code: "KE", settlement_bank: "KCB Bank Kenya", settlement_account: "", contact_email: "", contact_phone: "" });
       load();
