@@ -158,6 +158,7 @@ export function AdminDashboard() {
             <TabsTrigger value="switch-fee" className="flex items-center gap-2"><Sigma className="h-4 w-4" /><span className="hidden md:inline">Switch Fee</span></TabsTrigger>
             <TabsTrigger value="settlement" className="flex items-center gap-2"><Repeat className="h-4 w-4" /><span className="hidden md:inline">Settlement</span></TabsTrigger>
             <TabsTrigger value="merchants" className="flex items-center gap-2"><Briefcase className="h-4 w-4" /><span className="hidden md:inline">Merchants</span></TabsTrigger>
+            <TabsTrigger value="routing" className="flex items-center gap-2"><Network className="h-4 w-4" /><span className="hidden md:inline">Routing</span></TabsTrigger>
             <TabsTrigger value="kcb-benefits" className="flex items-center gap-2"><Crown className="h-4 w-4" /><span className="hidden md:inline">KCB ROI</span></TabsTrigger>
           </TabsList>
 
