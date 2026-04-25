@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma, Repeat, Briefcase, Crown } from "lucide-react";
+import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma, Repeat, Briefcase, Crown, Network } from "lucide-react";
 import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { SettlementEngine } from "./SettlementEngine";
 import { MerchantPortal } from "./MerchantPortal";
 import { KCBBenefitsDashboard } from "./KCBBenefitsDashboard";
+import { CorridorRoutingTable } from "./CorridorRoutingTable";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,7 +143,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="agents" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-15 glass-card" style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}>
+          <TabsList className="grid w-full grid-cols-16 glass-card" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
             <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">{t('admin.diaspora')}</span></TabsTrigger>
             <TabsTrigger value="accounting" className="flex items-center gap-2"><Calculator className="h-4 w-4" /><span className="hidden md:inline">{t('admin.accounting')}</span></TabsTrigger>
@@ -157,6 +158,7 @@ export function AdminDashboard() {
             <TabsTrigger value="switch-fee" className="flex items-center gap-2"><Sigma className="h-4 w-4" /><span className="hidden md:inline">Switch Fee</span></TabsTrigger>
             <TabsTrigger value="settlement" className="flex items-center gap-2"><Repeat className="h-4 w-4" /><span className="hidden md:inline">Settlement</span></TabsTrigger>
             <TabsTrigger value="merchants" className="flex items-center gap-2"><Briefcase className="h-4 w-4" /><span className="hidden md:inline">Merchants</span></TabsTrigger>
+            <TabsTrigger value="routing" className="flex items-center gap-2"><Network className="h-4 w-4" /><span className="hidden md:inline">Routing</span></TabsTrigger>
             <TabsTrigger value="kcb-benefits" className="flex items-center gap-2"><Crown className="h-4 w-4" /><span className="hidden md:inline">KCB ROI</span></TabsTrigger>
           </TabsList>
 
@@ -174,6 +176,7 @@ export function AdminDashboard() {
           <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
           <TabsContent value="settlement"><SettlementEngine /></TabsContent>
           <TabsContent value="merchants"><MerchantPortal /></TabsContent>
+          <TabsContent value="routing"><CorridorRoutingTable /></TabsContent>
           <TabsContent value="kcb-benefits"><KCBBenefitsDashboard /></TabsContent>
         </Tabs>
       </div>

@@ -136,6 +136,51 @@ export type Database = {
         }
         Relationships: []
       }
+      corridor_routes: {
+        Row: {
+          active: boolean
+          corridor_type: string
+          country_code: string
+          country_name: string
+          created_at: string
+          extra_fee_bps: number
+          id: string
+          notes: string | null
+          partner_bank: string | null
+          settlement_currency: string
+          settlement_time: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          corridor_type: string
+          country_code: string
+          country_name: string
+          created_at?: string
+          extra_fee_bps?: number
+          id?: string
+          notes?: string | null
+          partner_bank?: string | null
+          settlement_currency: string
+          settlement_time?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          corridor_type?: string
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          extra_fee_bps?: number
+          id?: string
+          notes?: string | null
+          partner_bank?: string | null
+          settlement_currency?: string
+          settlement_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flagged_transactions: {
         Row: {
           created_at: string
@@ -292,6 +337,7 @@ export type Database = {
           category: string
           contact_email: string | null
           contact_phone: string | null
+          corridor_type: string
           country_code: string
           created_at: string
           id: string
@@ -309,6 +355,7 @@ export type Database = {
           category?: string
           contact_email?: string | null
           contact_phone?: string | null
+          corridor_type?: string
           country_code?: string
           created_at?: string
           id?: string
@@ -326,6 +373,7 @@ export type Database = {
           category?: string
           contact_email?: string | null
           contact_phone?: string | null
+          corridor_type?: string
           country_code?: string
           created_at?: string
           id?: string

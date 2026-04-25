@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Store, Receipt } from "lucide-react";
 
+type CorridorType = "on_us" | "papss" | "correspondent";
+
 type Merchant = {
   id: string;
   merchant_name: string;
@@ -24,6 +26,24 @@ type Merchant = {
   status: string;
   monthly_volume: number;
   contact_email: string | null;
+  corridor_type: CorridorType;
+};
+
+type Route = {
+  country_code: string;
+  country_name: string;
+  corridor_type: CorridorType;
+  partner_bank: string | null;
+  active: boolean;
+};
+
+const CORRIDOR_BADGE: Record<CorridorType, string> = {
+  on_us:         "bg-success/15 text-success border-success/30",
+  papss:         "bg-primary/15 text-primary border-primary/30",
+  correspondent: "bg-warning/15 text-warning border-warning/30",
+};
+const CORRIDOR_LABEL: Record<CorridorType, string> = {
+  on_us: "On-Us", papss: "PAPSS", correspondent: "Correspondent",
 };
 
 type MerchantSettlement = {
@@ -42,17 +62,19 @@ type MerchantSettlement = {
 const SETTLEMENT_BANKS = [
   "KCB Bank Kenya", "Equity Bank", "Co-operative Bank", "NCBA Bank",
   "Stanbic Bank", "KCB Bank Uganda", "KCB Bank Tanzania", "KCB Bank Rwanda",
+  "PAPSS Network", "Standard Bank", "NatWest", "Citibank N.A.",
 ];
-const COUNTRIES = ["KE", "UG", "TZ", "RW", "BI", "SS", "CD", "ET"];
 const CATEGORIES = ["retail", "food", "fuel", "health", "education", "travel", "utility"];
 
 const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
-const generateLipafoCode = (country: string) =>
-  country === "KE"
-    ? `LPF-MR-${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`
-    : `LPF-XB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+const generateLipafoCode = (country: string, corridor: CorridorType) => {
+  if (corridor === "on_us" && country === "KE") return `LPF-MR-${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`;
+  if (corridor === "papss") return `LPF-PA-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+  if (corridor === "correspondent") return `LPF-CB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+  return `LPF-XB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+};
 
 const generateTillCode = (country: string) =>
   country === "KE"
@@ -62,6 +84,7 @@ const generateTillCode = (country: string) =>
 export function MerchantPortal() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [settlements, setSettlements] = useState<MerchantSettlement[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     merchant_name: "",
@@ -74,31 +97,47 @@ export function MerchantPortal() {
   });
 
   const load = async () => {
-    const [mRes, sRes] = await Promise.all([
+    const [mRes, sRes, rRes] = await Promise.all([
       supabase.from("merchants").select("*").order("created_at", { ascending: false }),
       supabase.from("merchant_settlements").select("*").order("settlement_date", { ascending: false }).limit(50),
+      supabase.from("corridor_routes").select("country_code,country_name,corridor_type,partner_bank,active").eq("active", true).order("country_name"),
     ]);
     if (mRes.data) setMerchants(mRes.data as Merchant[]);
     if (sRes.data) setSettlements(sRes.data as MerchantSettlement[]);
+    if (rRes.data) setRoutes(rRes.data as Route[]);
   };
 
   useEffect(() => { load(); }, []);
 
+  const selectedRoute = routes.find(r => r.country_code === form.country_code);
+
+  const onCountryChange = (code: string) => {
+    const r = routes.find(x => x.country_code === code);
+    setForm(f => ({
+      ...f,
+      country_code: code,
+      settlement_bank: r?.partner_bank || f.settlement_bank,
+    }));
+  };
+
   const onboard = async () => {
     if (!form.merchant_name) { toast.error("Merchant name required"); return; }
+    if (!selectedRoute) { toast.error("No active corridor route for this country"); return; }
+    const corridor_type = selectedRoute.corridor_type;
     const till_code = generateTillCode(form.country_code);
-    const lipafo_code = generateLipafoCode(form.country_code);
+    const lipafo_code = generateLipafoCode(form.country_code, corridor_type);
     const { error } = await supabase.from("merchants").insert({
       ...form,
       till_code,
       lipafo_code,
+      corridor_type,
       mcc: null,
       monthly_volume: 0,
       status: "active",
     });
     if (error) toast.error(error.message);
     else {
-      toast.success(`Merchant onboarded — Till ${till_code} / ${lipafo_code}`);
+      toast.success(`Merchant onboarded via ${CORRIDOR_LABEL[corridor_type]} — Till ${till_code} / ${lipafo_code}`);
       setOpen(false);
       setForm({ merchant_name: "", category: "retail", country_code: "KE", settlement_bank: "KCB Bank Kenya", settlement_account: "", contact_email: "", contact_phone: "" });
       load();
@@ -131,9 +170,15 @@ export function MerchantPortal() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Country</Label>
-                  <Select value={form.country_code} onValueChange={(v) => setForm({ ...form, country_code: v })}>
+                  <Select value={form.country_code} onValueChange={onCountryChange}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      {routes.map((r) => (
+                        <SelectItem key={r.country_code} value={r.country_code}>
+                          {r.country_name} ({r.country_code}) — {CORRIDOR_LABEL[r.corridor_type]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div>
@@ -144,6 +189,12 @@ export function MerchantPortal() {
                   </Select>
                 </div>
               </div>
+              {selectedRoute && (
+                <div className={`p-2 rounded-md border text-xs ${CORRIDOR_BADGE[selectedRoute.corridor_type]}`}>
+                  Rail: <span className="font-semibold">{CORRIDOR_LABEL[selectedRoute.corridor_type]}</span>
+                  {selectedRoute.partner_bank && <> · via {selectedRoute.partner_bank}</>}
+                </div>
+              )}
               <div>
                 <Label>Settlement Bank</Label>
                 <Select value={form.settlement_bank} onValueChange={(v) => setForm({ ...form, settlement_bank: v })}>
@@ -207,6 +258,7 @@ export function MerchantPortal() {
                     <TableHead>Till</TableHead>
                     <TableHead>Lipafo Code</TableHead>
                     <TableHead>Country</TableHead>
+                    <TableHead>Corridor</TableHead>
                     <TableHead>Settlement Bank</TableHead>
                     <TableHead>Account</TableHead>
                     <TableHead className="text-right">Monthly Vol</TableHead>
@@ -220,6 +272,7 @@ export function MerchantPortal() {
                       <TableCell className="font-mono text-xs">{m.till_code}</TableCell>
                       <TableCell className="font-mono text-xs text-primary">{m.lipafo_code}</TableCell>
                       <TableCell><Badge variant="outline">{m.country_code}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className={CORRIDOR_BADGE[m.corridor_type]}>{CORRIDOR_LABEL[m.corridor_type]}</Badge></TableCell>
                       <TableCell className="text-xs">{m.settlement_bank}</TableCell>
                       <TableCell className="font-mono text-xs">{m.settlement_account || "—"}</TableCell>
                       <TableCell className="text-right text-xs">{fmtKES(Number(m.monthly_volume))}</TableCell>
