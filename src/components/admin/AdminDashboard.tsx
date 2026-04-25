@@ -151,6 +151,7 @@ export function AdminDashboard() {
             <TabsTrigger value="country-compliance" className="flex items-center gap-2"><FileCheck className="h-4 w-4" /><span className="hidden md:inline">{config.flag} {t('admin.regulatory')}</span></TabsTrigger>
             <TabsTrigger value="country-fees" className="flex items-center gap-2"><Banknote className="h-4 w-4" /><span className="hidden md:inline">{config.flag} {t('admin.fees')}</span></TabsTrigger>
             <TabsTrigger value="tariffs" className="flex items-center gap-2"><Receipt className="h-4 w-4" /><span className="hidden md:inline">Tariffs</span></TabsTrigger>
+            <TabsTrigger value="switch-fee" className="flex items-center gap-2"><Sigma className="h-4 w-4" /><span className="hidden md:inline">Switch Fee</span></TabsTrigger>
           </TabsList>
 
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
