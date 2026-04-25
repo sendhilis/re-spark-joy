@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt } from "lucide-react";
+import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma } from "lucide-react";
 import { TariffsPanel } from "./TariffsPanel";
+import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,7 +139,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="agents" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11 glass-card">
+          <TabsList className="grid w-full grid-cols-12 glass-card">
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
             <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">{t('admin.diaspora')}</span></TabsTrigger>
             <TabsTrigger value="accounting" className="flex items-center gap-2"><Calculator className="h-4 w-4" /><span className="hidden md:inline">{t('admin.accounting')}</span></TabsTrigger>
@@ -150,6 +151,7 @@ export function AdminDashboard() {
             <TabsTrigger value="country-compliance" className="flex items-center gap-2"><FileCheck className="h-4 w-4" /><span className="hidden md:inline">{config.flag} {t('admin.regulatory')}</span></TabsTrigger>
             <TabsTrigger value="country-fees" className="flex items-center gap-2"><Banknote className="h-4 w-4" /><span className="hidden md:inline">{config.flag} {t('admin.fees')}</span></TabsTrigger>
             <TabsTrigger value="tariffs" className="flex items-center gap-2"><Receipt className="h-4 w-4" /><span className="hidden md:inline">Tariffs</span></TabsTrigger>
+            <TabsTrigger value="switch-fee" className="flex items-center gap-2"><Sigma className="h-4 w-4" /><span className="hidden md:inline">Switch Fee</span></TabsTrigger>
           </TabsList>
 
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
@@ -163,6 +165,7 @@ export function AdminDashboard() {
           <TabsContent value="country-compliance"><CountryCompliancePanel /></TabsContent>
           <TabsContent value="country-fees"><CountryFeePanel /></TabsContent>
           <TabsContent value="tariffs"><TariffsPanel /></TabsContent>
+          <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
         </Tabs>
       </div>
     </div>
