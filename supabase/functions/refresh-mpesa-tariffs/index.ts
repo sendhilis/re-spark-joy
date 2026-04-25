@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 const SAFARICOM_TARIFF_URL =
-  "https://www.safaricom.co.ke/main-mpesa-resources/m-pesa-global/tariffs";
+  "https://www.safaricom.co.ke/main-mpesa/m-pesa-services/m-pesa-global/imt";
 
 interface TariffRow {
   corridor_code: string;
