@@ -23,19 +23,7 @@ import DownloadDoc from "./pages/DownloadDoc";
 
 const queryClient = new QueryClient();
 
-const HomeRoute = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
-};
+const HomeRoute = () => <Landing />;
 
 const App = () => {
   return (
