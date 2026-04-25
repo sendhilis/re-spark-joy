@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Send, Receipt, PiggyBank, CreditCard, Smartphone, Building, GraduationCap, QrCode, Globe, ArrowRightLeft, Banknote, Plane, ArrowDownToLine, ArrowUpFromLine, MapPin, ShoppingBag, Network } from "lucide-react";
+import { Send, Receipt, PiggyBank, CreditCard, Smartphone, Building, GraduationCap, QrCode, Globe, ArrowRightLeft, Banknote, Plane, ArrowDownToLine, ArrowUpFromLine, MapPin, ShoppingBag, Network, Globe2 } from "lucide-react";
 import { TransferFlow } from "./flows/TransferFlow";
 import { PayBillsFlow } from "./flows/PayBillsFlow";
 import { SaveFlow } from "./flows/SaveFlow";
@@ -17,6 +17,7 @@ import { DebitCardWithdrawalFlow } from "./flows/DebitCardWithdrawalFlow";
 import { BankDebitCardLinkFlow } from "./flows/BankDebitCardLinkFlow";
 import { LipafoBNPLFlow } from "./flows/LipafoBNPLFlow";
 import { InteropPaybillFlow } from "./flows/InteropPaybillFlow";
+import { CrossBorderMerchantFlow } from "./flows/CrossBorderMerchantFlow";
 import { LoanDiscovery } from "./LoanDiscovery";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -47,12 +48,14 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
   const [bankDebitLinkOpen, setBankDebitLinkOpen] = useState(false);
   const [bnplOpen, setBnplOpen] = useState(false);
   const [interopPaybillOpen, setInteropPaybillOpen] = useState(false);
+  const [xBorderOpen, setXBorderOpen] = useState(false);
   const { t } = useI18n();
 
   const actions = [
     { id: 'loan-discovery', title: t('quickActions.getLoan'), icon: Banknote, description: t('quickActions.getLoanDesc'), onClick: () => setLoanDiscoveryOpen(true) },
     { id: 'lipafo-bnpl', title: 'Lipafo BNPL', icon: ShoppingBag, description: 'Buy now, pay on next inflow', onClick: () => setBnplOpen(true), highlight: 'success' },
     { id: 'interop-paybill', title: 'Interop Paybill', icon: Network, description: 'Pay any bank, M-PESA, Airtel, T-Kash', onClick: () => setInteropPaybillOpen(true), highlight: 'primary' },
+    { id: 'x-border-merchant', title: 'X-Border Merchant', icon: Globe2, description: 'Pay merchants across Africa via Lipafo switch', onClick: () => setXBorderOpen(true), highlight: 'primary' },
     { id: 'wallet-transfer', title: t('quickActions.moveMoney'), icon: ArrowRightLeft, description: t('quickActions.moveMoneyDesc'), onClick: () => setWalletTransferOpen(true) },
     { id: 'transfer', title: t('quickActions.sendMoney'), icon: Send, description: t('quickActions.sendMoneyDesc'), onClick: () => setTransferOpen(true) },
     { id: 'cash-in', title: t('quickActions.cashIn'), icon: ArrowDownToLine, description: t('quickActions.cashInDesc'), onClick: () => setAgentCashInOpen(true), highlight: 'success' },
@@ -132,6 +135,7 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
       <BankDebitCardLinkFlow open={bankDebitLinkOpen} onOpenChange={setBankDebitLinkOpen} />
       <LipafoBNPLFlow open={bnplOpen} onOpenChange={setBnplOpen} />
       <InteropPaybillFlow open={interopPaybillOpen} onOpenChange={setInteropPaybillOpen} />
+      <CrossBorderMerchantFlow open={xBorderOpen} onOpenChange={setXBorderOpen} />
 
       {/* Loan Discovery Full Screen */}
       {loanDiscoveryOpen && (
