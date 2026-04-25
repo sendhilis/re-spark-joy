@@ -150,6 +150,25 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
   const [reference, setReference] = useState("");
   const [kesAmount, setKesAmount] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [tariffRows, setTariffRows] = useState<MpesaTariffRow[]>([]);
+
+  // Load latest scraped Safaricom tariff snapshot once dialog opens
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("mpesa_global_tariffs")
+        .select("corridor_code, band_min_kes, band_max_kes, fee_kes, fx_margin_bps, snapshot_at, source_url")
+        .order("snapshot_at", { ascending: false })
+        .limit(500);
+      if (cancelled || !data) return;
+      // Keep only the latest snapshot (rows already sorted desc)
+      const latest = data[0]?.snapshot_at;
+      setTariffRows(latest ? (data as MpesaTariffRow[]).filter(r => r.snapshot_at === latest) : []);
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const corridor = useMemo(() => CORRIDORS.find(c => c.code === corridorCode)!, [corridorCode]);
   const channel  = useMemo(() => SOURCE_CHANNELS.find(c => c.id === channelId)!, [channelId]);
@@ -163,7 +182,10 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
 
   const amt = parseFloat(kesAmount) || 0;
   const kcbFee = computeCrossBorderFee(amt);
-  const legacyCost = computeLegacyCost(amt);
+  const legacyFromTariffs = computeLegacyCostFromTariffs(amt, corridorCode, tariffRows);
+  const legacyCost = legacyFromTariffs?.cost ?? computeLegacyCostEstimate(amt);
+  const legacyIsGenuine = !!legacyFromTariffs;
+  const tariffSnapshotAt = tariffRows[0]?.snapshot_at ?? null;
   const fxMarginRevenueKES = Math.round(amt * (channel.kcbBps / 10_000));
   const totalDebit = amt + kcbFee;
   const localAmount = amt * corridor.rate;
