@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Store, Receipt } from "lucide-react";
 
+type CorridorType = "on_us" | "papss" | "correspondent";
+
 type Merchant = {
   id: string;
   merchant_name: string;
@@ -24,6 +26,24 @@ type Merchant = {
   status: string;
   monthly_volume: number;
   contact_email: string | null;
+  corridor_type: CorridorType;
+};
+
+type Route = {
+  country_code: string;
+  country_name: string;
+  corridor_type: CorridorType;
+  partner_bank: string | null;
+  active: boolean;
+};
+
+const CORRIDOR_BADGE: Record<CorridorType, string> = {
+  on_us:         "bg-success/15 text-success border-success/30",
+  papss:         "bg-primary/15 text-primary border-primary/30",
+  correspondent: "bg-warning/15 text-warning border-warning/30",
+};
+const CORRIDOR_LABEL: Record<CorridorType, string> = {
+  on_us: "On-Us", papss: "PAPSS", correspondent: "Correspondent",
 };
 
 type MerchantSettlement = {
