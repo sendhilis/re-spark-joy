@@ -165,6 +165,7 @@ export function AdminDashboard() {
           <TabsContent value="country-compliance"><CountryCompliancePanel /></TabsContent>
           <TabsContent value="country-fees"><CountryFeePanel /></TabsContent>
           <TabsContent value="tariffs"><TariffsPanel /></TabsContent>
+          <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
         </Tabs>
       </div>
     </div>
