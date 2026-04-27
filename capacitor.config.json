@@ -1,0 +1,12 @@
+{
+  "appId": "app.lovable.e4604602b5df42ac8a51c0c86ccb4940",
+  "appName": "Lipafo",
+  "webDir": "dist",
+  "server": {
+    "url": "https://e4604602-b5df-42ac-8a51-c0c86ccb4940.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
