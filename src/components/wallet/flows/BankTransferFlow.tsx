@@ -82,12 +82,35 @@ export function BankTransferFlow({ open, onOpenChange }: BankTransferFlowProps) 
             <div><Label>Account Number</Label><Input placeholder="Enter account number" value={transferData.accountNumber}
               onChange={(e) => setTransferData({...transferData, accountNumber: formatAccountNumber(e.target.value)})} className="glass-card" maxLength={16} /></div>
             <div>
-              <Label>Account Holder Name</Label><Input placeholder="Enter account holder's name" value={transferData.accountName}
-                onChange={(e) => setTransferData({...transferData, accountName: e.target.value})} className="glass-card" />
-              <p className="text-xs text-muted-foreground mt-1">Name should match the bank account</p>
+              <Label>Account Holder Name</Label>
+              <Input
+                placeholder="e.g. John Mwangi Kamau"
+                value={transferData.accountName}
+                onChange={(e) => setTransferData({...transferData, accountName: e.target.value.replace(/[^a-zA-Z\s.'-]/g, '').slice(0, 60)})}
+                className="glass-card"
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Type the recipient's full name as registered with the bank (letters only, min 3 characters).
+              </p>
             </div>
-            <Button onClick={handleNext} className="w-full button-3d"
-              disabled={!transferData.bank || !transferData.accountNumber || !transferData.accountName || transferData.accountNumber.length < 8}>Next</Button>
+            {(() => {
+              const reasons: string[] = [];
+              if (!transferData.bank) reasons.push("Select a bank");
+              if (!transferData.accountNumber) reasons.push("Enter account number");
+              else if (transferData.accountNumber.length < 6) reasons.push("Account number must be at least 6 digits");
+              if (!transferData.accountName.trim()) reasons.push("Enter account holder name");
+              else if (transferData.accountName.trim().length < 3) reasons.push("Name must be at least 3 characters");
+              const disabled = reasons.length > 0;
+              return (
+                <>
+                  {disabled && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">{reasons.join(" · ")}</p>
+                  )}
+                  <Button onClick={handleNext} className="w-full button-3d" disabled={disabled}>Next</Button>
+                </>
+              );
+            })()}
           </div>
         )}
 
