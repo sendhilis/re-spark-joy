@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma, Repeat, Briefcase, Crown, Network } from "lucide-react";
+import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma, Repeat, Briefcase, Crown, Network, Target } from "lucide-react";
+import { StrategicGapsDashboard } from "./StrategicGapsDashboard";
 import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { SettlementEngine } from "./SettlementEngine";
@@ -143,8 +144,9 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="agents" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-16 glass-card" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
+          <TabsList className="grid w-full glass-card" style={{ gridTemplateColumns: "repeat(17, minmax(0, 1fr))" }}>
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
+            <TabsTrigger value="strategic-gaps" className="flex items-center gap-2"><Target className="h-4 w-4" /><span className="hidden md:inline">Strategic Gaps</span></TabsTrigger>
             <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">{t('admin.diaspora')}</span></TabsTrigger>
             <TabsTrigger value="accounting" className="flex items-center gap-2"><Calculator className="h-4 w-4" /><span className="hidden md:inline">{t('admin.accounting')}</span></TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2"><Users className="h-4 w-4" /><span className="hidden md:inline">{t('admin.users')}</span></TabsTrigger>
@@ -163,6 +165,7 @@ export function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
+          <TabsContent value="strategic-gaps"><StrategicGapsDashboard /></TabsContent>
           <TabsContent value="diaspora"><DiasporaDashboard /></TabsContent>
           <TabsContent value="accounting"><AccountingManagement /></TabsContent>
           <TabsContent value="users"><UserManagement /></TabsContent>
