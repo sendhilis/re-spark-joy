@@ -165,6 +165,7 @@ export function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
+          <TabsContent value="strategic-gaps"><StrategicGapsDashboard /></TabsContent>
           <TabsContent value="diaspora"><DiasporaDashboard /></TabsContent>
           <TabsContent value="accounting"><AccountingManagement /></TabsContent>
           <TabsContent value="users"><UserManagement /></TabsContent>
