@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FolderTree, GitBranch, BookOpen, Layers, RefreshCw, Settings2, Server } from "lucide-react";
+import { FolderTree, GitBranch, BookOpen, Layers, RefreshCw, Settings2, Server, Zap } from "lucide-react";
 import { ChartOfAccounts } from "./ChartOfAccounts";
 import { GLMapping } from "./GLMapping";
 import { JournalEntries } from "./JournalEntries";
 import { PoolGLManagement } from "./PoolGLManagement";
 import { Reconciliation } from "./Reconciliation";
+import { ReconciliationFlow } from "./ReconciliationFlow";
 import { FeeDefinition } from "./FeeDefinition";
 import { CoreBankingPosting } from "./CoreBankingPosting";
 import { useI18n } from "@/contexts/I18nContext";
@@ -20,7 +21,7 @@ export function AccountingManagement() {
       </div>
 
       <Tabs defaultValue="coa" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7 glass-card h-auto py-1">
+        <TabsList className="grid w-full grid-cols-8 glass-card h-auto py-1">
           <TabsTrigger value="coa" className="flex items-center gap-1.5 text-xs py-2">
             <FolderTree className="h-3.5 w-3.5" /><span className="hidden lg:inline">{t('accounting.coa')}</span><span className="lg:hidden">COA</span>
           </TabsTrigger>
@@ -39,6 +40,9 @@ export function AccountingManagement() {
           <TabsTrigger value="recon" className="flex items-center gap-1.5 text-xs py-2">
             <RefreshCw className="h-3.5 w-3.5" /><span className="hidden lg:inline">{t('accounting.reconciliation')}</span><span className="lg:hidden">Recon</span>
           </TabsTrigger>
+          <TabsTrigger value="recon-flow" className="flex items-center gap-1.5 text-xs py-2">
+            <Zap className="h-3.5 w-3.5" /><span className="hidden lg:inline">Recon Flow</span><span className="lg:hidden">Flow</span>
+          </TabsTrigger>
           <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs py-2">
             <Settings2 className="h-3.5 w-3.5" /><span className="hidden lg:inline">{t('accounting.feeSchedules')}</span><span className="lg:hidden">Fees</span>
           </TabsTrigger>
@@ -50,6 +54,7 @@ export function AccountingManagement() {
         <TabsContent value="pool-gl"><PoolGLManagement /></TabsContent>
         <TabsContent value="core-posting"><CoreBankingPosting /></TabsContent>
         <TabsContent value="recon"><Reconciliation /></TabsContent>
+        <TabsContent value="recon-flow"><ReconciliationFlow /></TabsContent>
         <TabsContent value="fees"><FeeDefinition /></TabsContent>
       </Tabs>
     </div>
