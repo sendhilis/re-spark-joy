@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History, Trash2, Banknote } from "lucide-react";
+import { LoanOriginationPanel, extractLipafoAction } from "./LoanOriginationPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -18,6 +19,7 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
+  { id: "loan_origination", label: "Apply for a Loan", icon: <Banknote className="h-4 w-4" />, description: "I'll help you find and apply for the right loan" },
   { id: "salary_repay_history", label: "Repay History", icon: <History className="h-4 w-4" />, description: "View salary loan repayment history" },
   { id: "loan_health", label: "Loan Health Check", icon: <Heart className="h-4 w-4" />, description: "Review your diaspora loan status" },
   { id: "repay_reminder", label: "Repay Reminders", icon: <Bell className="h-4 w-4" />, description: "Set up payment reminders" },
