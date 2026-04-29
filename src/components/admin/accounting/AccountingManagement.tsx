@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FolderTree, GitBranch, BookOpen, Layers, RefreshCw, Settings2, Server } from "lucide-react";
+import { FolderTree, GitBranch, BookOpen, Layers, RefreshCw, Settings2, Server, Zap } from "lucide-react";
 import { ChartOfAccounts } from "./ChartOfAccounts";
 import { GLMapping } from "./GLMapping";
 import { JournalEntries } from "./JournalEntries";
 import { PoolGLManagement } from "./PoolGLManagement";
 import { Reconciliation } from "./Reconciliation";
+import { ReconciliationFlow } from "./ReconciliationFlow";
 import { FeeDefinition } from "./FeeDefinition";
 import { CoreBankingPosting } from "./CoreBankingPosting";
 import { useI18n } from "@/contexts/I18nContext";
