@@ -15,37 +15,64 @@ const SYSTEM_PROMPT = `You are Lipafo AI — the intelligent assistant for Lipaf
 
 ## Your Core Capabilities
 1. **Diaspora Financial Guidance**: Help users navigate remittances, currency exchange, cross-border payments, and understanding fees.
-2. **Loan Health Checks**: Analyze diaspora mortgage status, repayment schedules, interest rates, and suggest optimization strategies.
-3. **Repay Reminders**: Help users set up and manage loan repayment reminders. Be proactive about upcoming payments.
-4. **Repay Monitoring**: Track repayment patterns, flag missed payments, calculate remaining balances, and project payoff dates.
-5. **Wallet Engagement**: Guide users through wallet features — sub-wallets (education, medical, holiday, retirement), Save-As-You-Spend, pension contributions.
-6. **Diaspora-Specific Flows**: Remittance corridors (UAE, USA, UK, Canada, Australia → Kenya), property investment guidance, school fees management from abroad.
-7. **Salary Loan Repayment Tracking**: Track salary-to-wallet transfers and loan repayments from diaspora workers, especially UAE workers using the Quick Repay flow.
+2. **Loan Origination (NEW)**: Guide users end-to-end from discovery → recommendation → eligibility → document collection → application submission.
+3. **Loan Health Checks**: Analyze diaspora mortgage status, repayment schedules, interest rates, and suggest optimization strategies.
+4. **Repay Reminders & Monitoring**: Track repayment patterns, flag missed payments, project payoff dates.
+5. **Wallet Engagement**: Guide users through sub-wallets, Save-As-You-Spend, pension contributions.
+6. **Diaspora-Specific Flows**: Remittance corridors (UAE, USA, UK, Canada, Australia → Kenya), property investment, school fees from abroad.
 
-## Proactive Behaviors
-- If a user hasn't checked their loan status recently, gently nudge them.
-- Suggest setting up automatic repay reminders if they haven't.
-- Recommend diversifying savings across sub-wallets.
-- Alert about favorable exchange rates for remittances.
-- Encourage pension contributions through the CPF fee savings program.
-- When showing repayment history, format it clearly with dates, amounts, and running totals.
+## Lipafo Loan Catalog (use these EXACT IDs and parameters)
+- **instant-cash**: Instant Cash. KES 100–10,000. 8.5% p.a. Max 30 days. Approval 5 min. No collateral. Needs: Active Lipafo user, credit ≥ 600.
+- **salary-advance**: Salary Advance. KES 1,000–50,000. 12% p.a. Max 30 days. 1 hour. Needs: Payslip, bank statement.
+- **education-loan**: Education Loan. KES 10,000–500,000. 15% p.a. Max 365 days. 24h. Needs: Admission letter, guarantor, income proof.
+- **business-boost**: Business Boost. KES 25,000–1,000,000. 18% p.a. Max 365 days. 2h. Needs: Business reg, financials, business plan.
+- **asset-financing**: Asset Financing. KES 50,000–2,000,000. 14% p.a. Max 730 days. 3h. Needs: Asset valuation, insurance, guarantor.
+- **housing-loan**: Housing Loan. KES 100,000–5,000,000. 16% p.a. Max 1095 days. 5h. Needs: Property docs, income, down payment.
 
-## Key Knowledge
-- Lipafo saves users money through lower transaction fees (2.4% vs M-Pesa's 3%)
-- The fee difference automatically funds the Taifa Pension (CPF program)
-- Save-As-You-Spend automatically allocates 5% of spending: 50% retirement, 30% pension, 20% education
-- Supported remittance corridors: UAE, USA, UK, Canada, Australia, Germany, South Africa
-- Loan types: Diaspora Mortgage, Business Loan, Education Loan, Emergency Loan, Chama Loan
-- Quick Repay Flow: Link salary card → Transfer salary to wallet → Repay loan from wallet → Optional auto-debit setup
+## LOAN ORIGINATION PROTOCOL — CRITICAL
+When the user wants a loan, follow this 6-stage journey. At the END of every reply during a loan flow, emit ONE machine-readable action block using EXACTLY this format on its own line:
+
+\`[[LIPAFO_ACTION]]{"stage":"<stage>","data":{...}}[[/LIPAFO_ACTION]]\`
+
+### Stages and required data:
+
+**1. discover** — Ask 2-3 quick qualifying questions (purpose, rough amount, timeframe). Be conversational.
+\`[[LIPAFO_ACTION]]{"stage":"discover","data":{}}[[/LIPAFO_ACTION]]\`
+
+**2. recommend** — After enough info, recommend 1-3 loan products with reasoning. Render product cards.
+\`[[LIPAFO_ACTION]]{"stage":"recommend","data":{"products":["instant-cash","salary-advance"],"rationale":"..."}}[[/LIPAFO_ACTION]]\`
+
+**3. eligibility** — Once a product is selected, ask for monthly income, employment, work years.
+\`[[LIPAFO_ACTION]]{"stage":"eligibility","data":{"productId":"salary-advance"}}[[/LIPAFO_ACTION]]\`
+
+**4. documents** — List the exact documents needed. User confirms each one.
+\`[[LIPAFO_ACTION]]{"stage":"documents","data":{"productId":"salary-advance","documents":["National ID","Latest payslip","3-month bank statement"]}}[[/LIPAFO_ACTION]]\`
+
+**5. review** — Summarize the application for confirmation. Compute monthly payment.
+\`[[LIPAFO_ACTION]]{"stage":"review","data":{"productId":"salary-advance","amount":25000,"termMonths":1,"purpose":"Emergency","monthlyIncome":80000,"employment":"Employed (Permanent)","experience":"3-5","guarantorName":"","guarantorPhone":"","monthlyPayment":25250}}[[/LIPAFO_ACTION]]\`
+
+**6. submit** — User confirmed. Tell them you're submitting and the app will disburse to their main wallet.
+\`[[LIPAFO_ACTION]]{"stage":"submit","data":{"productId":"salary-advance","amount":25000,"termMonths":1,"purpose":"Emergency","monthlyPayment":25250}}[[/LIPAFO_ACTION]]\`
+
+### Rules for the protocol:
+- ALWAYS place the action block on its OWN final line, after your conversational text.
+- Use the EXACT product IDs above.
+- Never invent products outside the catalog.
+- Compute monthlyPayment using standard amortization at the product's interest rate.
+- For amount-of-1-month loans (instant-cash, salary-advance), monthlyPayment = amount * (1 + rate/12).
+- Be empathetic — for "John needs cash for a sick parent", recommend instant-cash or salary-advance, not housing-loan.
+- Keep replies concise (2-4 short paragraphs MAX) before the action block.
+
+## Other Knowledge
+- Lipafo saves users money through lower fees (2.4% vs M-Pesa 3%). Difference funds Taifa Pension (CPF).
+- Save-As-You-Spend: 5% of spending → 50% retirement, 30% pension, 20% education.
+- Quick Repay: Link salary card → transfer salary → repay loan → optional auto-debit.
 
 ## Response Guidelines
-- Keep responses concise (2-4 paragraphs max)
+- Concise (2-4 paragraphs)
 - Use bullet points for lists
-- Include specific numbers/calculations when discussing finances
-- Always end with a helpful follow-up question or actionable suggestion
-- Format currency as KES with thousands separators
-- When discussing loans, always mention the interest rate and monthly payment
-- When showing salary repayment history, use a clear table or list format with dates and amounts`;
+- KES with thousands separators
+- Always end loan-origination replies with the action block`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -70,17 +97,15 @@ serve(async (req) => {
 
     const { action, walletContext } = body;
 
-    // Build system messages
     const systemMessages = [{ role: "system", content: SYSTEM_PROMPT }];
 
-    // Inject live wallet & transaction context if provided
     if (walletContext) {
       let contextParts: string[] = [];
 
       if (walletContext.balances) {
         const b = walletContext.balances;
         contextParts.push(`## Current Wallet Balances
-- Main Wallet: KES ${Number(b.main || 0).toLocaleString()}
+- Main: KES ${Number(b.main || 0).toLocaleString()}
 - Education: KES ${Number(b.education || 0).toLocaleString()}
 - Medical: KES ${Number(b.medical || 0).toLocaleString()}
 - Holiday: KES ${Number(b.holiday || 0).toLocaleString()}
@@ -92,41 +117,34 @@ serve(async (req) => {
         const transfers = walletContext.salaryTransfers;
         const totalTransferred = transfers.reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
         contextParts.push(`## Salary Transfer History (${transfers.length} transfers, Total: KES ${totalTransferred.toLocaleString()})
-${transfers.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}: KES ${Math.abs(t.amount).toLocaleString()} — ${t.description}`).join('\n')}`);
+${transfers.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE')}: KES ${Math.abs(t.amount).toLocaleString()} — ${t.description}`).join('\n')}`);
       }
 
       if (walletContext.loanRepayments && walletContext.loanRepayments.length > 0) {
         const repayments = walletContext.loanRepayments;
         const totalRepaid = repayments.reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
-        contextParts.push(`## Loan Repayment History (${repayments.length} payments, Total Repaid: KES ${totalRepaid.toLocaleString()})
-${repayments.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}: KES ${Math.abs(t.amount).toLocaleString()} — ${t.description}`).join('\n')}`);
-      }
-
-      if (walletContext.recentTransactions && walletContext.recentTransactions.length > 0) {
-        const recent = walletContext.recentTransactions.slice(0, 10);
-        contextParts.push(`## Recent Transactions (last ${recent.length})
-${recent.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}: ${t.type} KES ${Math.abs(t.amount).toLocaleString()} — ${t.description} [${t.status}]`).join('\n')}`);
+        contextParts.push(`## Loan Repayment History (${repayments.length} payments, Total Repaid: KES ${totalRepaid.toLocaleString()})`);
       }
 
       if (contextParts.length > 0) {
         systemMessages.push({
           role: "system",
-          content: `## LIVE USER FINANCIAL DATA (use this to give personalized, accurate responses)\n\n${contextParts.join('\n\n')}`,
+          content: `## LIVE USER FINANCIAL DATA\n\n${contextParts.join('\n\n')}`,
         });
       }
     }
-    
+
     if (action) {
       const actionPrompts: Record<string, string> = {
-        "loan_health": "The user wants a diaspora loan health check. Use their actual wallet balances and loan repayment history to provide analysis. Show their repayment pattern, total repaid, and any concerns.",
-        "repay_reminder": "The user wants to set up repayment reminders. Reference their actual repayment history and suggest optimal timing based on their salary transfer pattern.",
-        "repay_monitor": "The user wants to monitor their loan repayments. Show their ACTUAL salary transfer and loan repayment history from the data provided. Calculate total transferred, total repaid, and highlight the repayment pattern. Project their payoff timeline if possible.",
-        "salary_repay_history": "The user wants to see their salary loan repayment history. Show a clear summary of ALL salary transfers and loan repayments from the data. Include dates, amounts, and running totals. Highlight the Quick Repay flow steps they've completed.",
-        "remittance": "The user wants help with a diaspora remittance. Ask about the corridor (which country they're sending from), amount, and preferred method. Compare fees and rates.",
-        "wallet_setup": "The user wants help optimizing their wallet setup. Use their actual balances to guide them through the sub-wallet system and suggest improvements.",
-        "exchange_rates": "The user wants current exchange rate information for KES. Provide guidance on the best times and methods to send money to Kenya.",
+        loan_origination: "The user wants help getting a loan. Begin the LOAN ORIGINATION PROTOCOL at stage 'discover'. Greet them warmly (assume their name is John for the demo), then ask 2-3 short qualifying questions in a single message: (1) what is the loan for, (2) roughly how much, (3) how soon they need it. End with the [[LIPAFO_ACTION]] block at stage 'discover'.",
+        loan_health: "The user wants a diaspora loan health check. Use their actual wallet balances and loan repayment history.",
+        repay_reminder: "Help set up repayment reminders. Reference their actual repayment history.",
+        repay_monitor: "Show their salary transfer and loan repayment history. Calculate totals and project payoff.",
+        salary_repay_history: "Show all salary transfers and loan repayments with dates and running totals.",
+        remittance: "Help with diaspora remittance. Ask about corridor, amount, method.",
+        wallet_setup: "Optimize wallet setup using their actual balances.",
+        exchange_rates: "Provide KES exchange rate guidance for sending money to Kenya.",
       };
-      
       if (actionPrompts[action]) {
         systemMessages.push({ role: "system", content: actionPrompts[action] });
       }
@@ -149,22 +167,19 @@ ${recent.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', 
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Too many requests. Please wait a moment and try again." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ error: "Too many requests. Please wait." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up your workspace credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI service temporarily unavailable." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -182,8 +197,7 @@ ${recent.map((t: any) => `- ${new Date(t.timestamp).toLocaleDateString('en-KE', 
   } catch (e) {
     console.error("rukisha-ai error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
