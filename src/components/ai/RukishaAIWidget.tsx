@@ -214,6 +214,18 @@ export function RukishaAIWidget() {
     await streamChat(newMessages, action.id);
   };
 
+  // Synthetic user reply triggered by inline action panels (loan flow buttons)
+  const sendSyntheticReply = useCallback(async (text: string) => {
+    if (isLoading) return;
+    const userMsg: Msg = { role: "user", content: text };
+    setMessages(prev => {
+      const next = [...prev, userMsg];
+      persistMessage(userMsg);
+      streamChat(next);
+      return next;
+    });
+  }, [isLoading, persistMessage, streamChat]);
+
   const handleNudgeClick = () => {
     setShowNudge(false);
     setIsOpen(true);
