@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles, CreditCard, TrendingUp, Bell, Heart, Wallet, Globe, History, Trash2, Banknote } from "lucide-react";
+import { LoanOriginationPanel, extractLipafoAction } from "./LoanOriginationPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -18,6 +19,7 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
+  { id: "loan_origination", label: "Apply for a Loan", icon: <Banknote className="h-4 w-4" />, description: "I'll help you find and apply for the right loan" },
   { id: "salary_repay_history", label: "Repay History", icon: <History className="h-4 w-4" />, description: "View salary loan repayment history" },
   { id: "loan_health", label: "Loan Health Check", icon: <Heart className="h-4 w-4" />, description: "Review your diaspora loan status" },
   { id: "repay_reminder", label: "Repay Reminders", icon: <Bell className="h-4 w-4" />, description: "Set up payment reminders" },
@@ -212,6 +214,18 @@ export function RukishaAIWidget() {
     await streamChat(newMessages, action.id);
   };
 
+  // Synthetic user reply triggered by inline action panels (loan flow buttons)
+  const sendSyntheticReply = useCallback(async (text: string) => {
+    if (isLoading) return;
+    const userMsg: Msg = { role: "user", content: text };
+    setMessages(prev => {
+      const next = [...prev, userMsg];
+      persistMessage(userMsg);
+      streamChat(next);
+      return next;
+    });
+  }, [isLoading, persistMessage, streamChat]);
+
   const handleNudgeClick = () => {
     setShowNudge(false);
     setIsOpen(true);
@@ -309,25 +323,36 @@ export function RukishaAIWidget() {
               </div>
             )}
 
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "glass-card text-foreground rounded-bl-md"
-                  }`}
-                >
-                  {msg.role === "assistant" ? (
-                    <div className="prose prose-sm prose-invert max-w-none text-sm [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>p:last-child]:mb-0">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+            {messages.map((msg, i) => {
+              const isAssistant = msg.role === "assistant";
+              const { cleaned, action } = isAssistant
+                ? extractLipafoAction(msg.content)
+                : { cleaned: msg.content, action: null };
+              return (
+                <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "glass-card text-foreground rounded-bl-md"
+                    }`}
+                  >
+                    {isAssistant ? (
+                      <div className="prose prose-sm prose-invert max-w-none text-sm [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>p:last-child]:mb-0">
+                        <ReactMarkdown>{cleaned}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm">{msg.content}</p>
+                    )}
+                  </div>
+                  {action && (
+                    <div className="max-w-[85%] w-full">
+                      <LoanOriginationPanel action={action} onUserReply={sendSyntheticReply} />
                     </div>
-                  ) : (
-                    <p className="text-sm">{msg.content}</p>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex justify-start">
