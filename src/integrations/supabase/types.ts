@@ -112,6 +112,54 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_connectors: {
+        Row: {
+          bank_code: string
+          bank_name: string
+          circuit_state: string
+          endpoint_url: string | null
+          failure_count: number
+          id: string
+          last_failure_at: string | null
+          opened_at: string | null
+          p50_latency_ms: number
+          p99_latency_ms: number
+          success_count: number
+          timeout_ms: number
+          updated_at: string
+        }
+        Insert: {
+          bank_code: string
+          bank_name: string
+          circuit_state?: string
+          endpoint_url?: string | null
+          failure_count?: number
+          id?: string
+          last_failure_at?: string | null
+          opened_at?: string | null
+          p50_latency_ms?: number
+          p99_latency_ms?: number
+          success_count?: number
+          timeout_ms?: number
+          updated_at?: string
+        }
+        Update: {
+          bank_code?: string
+          bank_name?: string
+          circuit_state?: string
+          endpoint_url?: string | null
+          failure_count?: number
+          id?: string
+          last_failure_at?: string | null
+          opened_at?: string | null
+          p50_latency_ms?: number
+          p99_latency_ms?: number
+          success_count?: number
+          timeout_ms?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -227,6 +275,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fraud_rules: {
+        Row: {
+          action: string
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          rule_code: string
+          rule_type: string
+          threshold: number
+          window_seconds: number
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          description: string
+          enabled?: boolean
+          id?: string
+          rule_code: string
+          rule_type: string
+          threshold: number
+          window_seconds?: number
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          rule_code?: string
+          rule_type?: string
+          threshold?: number
+          window_seconds?: number
+        }
+        Relationships: []
       }
       loan_applications: {
         Row: {
@@ -464,6 +548,39 @@ export type Database = {
         }
         Relationships: []
       }
+      position_ledger_shards: {
+        Row: {
+          account_identifier: string
+          account_type: string
+          balance: number
+          credit_count: number
+          debit_count: number
+          id: string
+          shard_no: number
+          updated_at: string
+        }
+        Insert: {
+          account_identifier: string
+          account_type?: string
+          balance?: number
+          credit_count?: number
+          debit_count?: number
+          id?: string
+          shard_no: number
+          updated_at?: string
+        }
+        Update: {
+          account_identifier?: string
+          account_type?: string
+          balance?: number
+          credit_count?: number
+          debit_count?: number
+          id?: string
+          shard_no?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -583,6 +700,183 @@ export type Database = {
         }
         Relationships: []
       }
+      settlement_runs: {
+        Row: {
+          banks_settled: number
+          checkpoint_at: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          events_processed: number
+          id: string
+          last_processed_event_id: number
+          run_date: string
+          started_at: string | null
+          status: string
+          total_volume: number
+        }
+        Insert: {
+          banks_settled?: number
+          checkpoint_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          events_processed?: number
+          id?: string
+          last_processed_event_id?: number
+          run_date: string
+          started_at?: string | null
+          status?: string
+          total_volume?: number
+        }
+        Update: {
+          banks_settled?: number
+          checkpoint_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          events_processed?: number
+          id?: string
+          last_processed_event_id?: number
+          run_date?: string
+          started_at?: string | null
+          status?: string
+          total_volume?: number
+        }
+        Relationships: []
+      }
+      switch_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          from_state: string | null
+          id: number
+          intent_id: string | null
+          payload: Json
+          span_id: string
+          to_state: string | null
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          from_state?: string | null
+          id?: number
+          intent_id?: string | null
+          payload?: Json
+          span_id: string
+          to_state?: string | null
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          from_state?: string | null
+          id?: number
+          intent_id?: string | null
+          payload?: Json
+          span_id?: string
+          to_state?: string | null
+          trace_id?: string
+        }
+        Relationships: []
+      }
+      trace_spans: {
+        Row: {
+          attributes: Json
+          duration_ms: number | null
+          id: number
+          operation: string
+          parent_span_id: string | null
+          service: string
+          span_id: string
+          started_at: string
+          status: string
+          trace_id: string
+        }
+        Insert: {
+          attributes?: Json
+          duration_ms?: number | null
+          id?: number
+          operation: string
+          parent_span_id?: string | null
+          service: string
+          span_id: string
+          started_at?: string
+          status?: string
+          trace_id: string
+        }
+        Update: {
+          attributes?: Json
+          duration_ms?: number | null
+          id?: number
+          operation?: string
+          parent_span_id?: string | null
+          service?: string
+          span_id?: string
+          started_at?: string
+          status?: string
+          trace_id?: string
+        }
+        Relationships: []
+      }
+      transaction_intents: {
+        Row: {
+          amount: number
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          currency: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          payee_bank: string | null
+          payee_identifier: string
+          payer_identifier: string
+          rail: string
+          state: string
+          trace_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          payee_bank?: string | null
+          payee_identifier: string
+          payer_identifier: string
+          rail?: string
+          state?: string
+          trace_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          payee_bank?: string | null
+          payee_identifier?: string
+          payer_identifier?: string
+          rail?: string
+          state?: string
+          trace_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -640,6 +934,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      velocity_counters: {
+        Row: {
+          bucket: string
+          count: number
+          id: string
+          subject: string
+          total_amount: number
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          count?: number
+          id?: string
+          subject: string
+          total_amount?: number
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          count?: number
+          id?: string
+          subject?: string
+          total_amount?: number
+          window_start?: string
         }
         Relationships: []
       }
