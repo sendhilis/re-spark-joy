@@ -147,7 +147,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="switch-ops" className="space-y-6">
-          <TabsList className="grid w-full glass-card" style={{ gridTemplateColumns: "repeat(19, minmax(0, 1fr))" }}>
+          <TabsList className="grid w-full glass-card" style={{ gridTemplateColumns: "repeat(20, minmax(0, 1fr))" }}>
             <TabsTrigger value="switch-ops" className="flex items-center gap-2"><Cpu className="h-4 w-4" /><span className="hidden md:inline">Switch Ops</span></TabsTrigger>
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
             <TabsTrigger value="strategic-gaps" className="flex items-center gap-2"><Target className="h-4 w-4" /><span className="hidden md:inline">Strategic Gaps</span></TabsTrigger>
