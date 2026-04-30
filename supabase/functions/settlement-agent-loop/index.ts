@@ -101,9 +101,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === "dispatch") {
+      // Dispatch all generated instructions (any cycle) for the pilot demo
       const { data: pending } = await supabase
         .from("settlement_instructions").select("id")
-        .eq("status", "generated").eq("cycle_date", today);
+        .eq("status", "generated");
       if (!pending?.length) return json({ ok: true, dispatched: 0 });
       await supabase.from("settlement_instructions")
         .update({ status: "dispatched", dispatched_at: new Date().toISOString() })
@@ -112,10 +113,20 @@ Deno.serve(async (req) => {
     }
 
     if (action === "confirm") {
-      // Simulate KCB confirming all dispatched legs
+      // For demo robustness: auto-dispatch any still-generated instructions first
+      const { data: stillGenerated } = await supabase
+        .from("settlement_instructions").select("id")
+        .eq("status", "generated");
+      if (stillGenerated?.length) {
+        await supabase.from("settlement_instructions")
+          .update({ status: "dispatched", dispatched_at: new Date().toISOString() })
+          .in("id", stillGenerated.map((i) => i.id));
+      }
+
+      // Simulate KCB confirming all dispatched legs (any cycle)
       const { data: dispatched } = await supabase
         .from("settlement_instructions").select("*")
-        .eq("status", "dispatched").eq("cycle_date", today);
+        .eq("status", "dispatched");
       if (!dispatched?.length) return json({ ok: true, confirmed: 0 });
 
       const { data: collat } = await supabase.from("member_collateral").select("*");
