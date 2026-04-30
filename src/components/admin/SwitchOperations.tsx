@@ -127,13 +127,13 @@ export function SwitchOperations() {
     <div className="space-y-6">
       <Alert className="glass-card border-warning/40">
         <AlertTriangle className="h-4 w-4 text-warning" />
-        <AlertTitle className="text-foreground">Reference architecture — ~100 TPS ceiling on Lovable Cloud</AlertTitle>
+        <AlertTitle className="text-foreground">Reference architecture — ~100 TPS ceiling on the current managed backend</AlertTitle>
         <AlertDescription className="text-muted-foreground text-sm">
           This panel demonstrates the 8 design patterns of a real payment switch (idempotency,
           event sourcing, hot-account sharding, circuit breakers, resumable settlement, fraud at wire
           speed, distributed tracing). The business logic is production-correct.
           <strong className="text-foreground"> Production target is 5,000 TPS on Kafka + ScyllaDB + Flink + Redis</strong>
-          {" "}— see the architecture document for the migration path. Postgres will not sustain 5,000 TPS.
+          {" "}— see the architecture document for the migration path. The current managed Postgres backend will not sustain 5,000 TPS.
         </AlertDescription>
       </Alert>
 
@@ -369,7 +369,7 @@ export function SwitchOperations() {
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-primary" /> 8 patterns — reference (Lovable Cloud) → production
+                <ShieldAlert className="h-4 w-4 text-primary" /> 8 patterns — reference (current backend) → production
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
