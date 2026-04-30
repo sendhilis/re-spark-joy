@@ -8,6 +8,7 @@ import { StrategicGapsDashboard } from "./StrategicGapsDashboard";
 import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { SettlementEngine } from "./SettlementEngine";
+import { SettlementAgentConsole } from "./SettlementAgentConsole";
 import { MerchantPortal } from "./MerchantPortal";
 import { KCBBenefitsDashboard } from "./KCBBenefitsDashboard";
 import { CorridorRoutingTable } from "./CorridorRoutingTable";
@@ -145,7 +146,7 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="switch-ops" className="space-y-6">
-          <TabsList className="grid w-full glass-card" style={{ gridTemplateColumns: "repeat(18, minmax(0, 1fr))" }}>
+          <TabsList className="grid w-full glass-card" style={{ gridTemplateColumns: "repeat(19, minmax(0, 1fr))" }}>
             <TabsTrigger value="switch-ops" className="flex items-center gap-2"><Cpu className="h-4 w-4" /><span className="hidden md:inline">Switch Ops</span></TabsTrigger>
             <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
             <TabsTrigger value="strategic-gaps" className="flex items-center gap-2"><Target className="h-4 w-4" /><span className="hidden md:inline">Strategic Gaps</span></TabsTrigger>
@@ -161,6 +162,7 @@ export function AdminDashboard() {
             <TabsTrigger value="tariffs" className="flex items-center gap-2"><Receipt className="h-4 w-4" /><span className="hidden md:inline">Tariffs</span></TabsTrigger>
             <TabsTrigger value="switch-fee" className="flex items-center gap-2"><Sigma className="h-4 w-4" /><span className="hidden md:inline">Switch Fee</span></TabsTrigger>
             <TabsTrigger value="settlement" className="flex items-center gap-2"><Repeat className="h-4 w-4" /><span className="hidden md:inline">Settlement</span></TabsTrigger>
+            <TabsTrigger value="agent-console" className="flex items-center gap-2"><Shield className="h-4 w-4" /><span className="hidden md:inline">Agent (KCB)</span></TabsTrigger>
             <TabsTrigger value="merchants" className="flex items-center gap-2"><Briefcase className="h-4 w-4" /><span className="hidden md:inline">Merchants</span></TabsTrigger>
             <TabsTrigger value="routing" className="flex items-center gap-2"><Network className="h-4 w-4" /><span className="hidden md:inline">Routing</span></TabsTrigger>
             <TabsTrigger value="kcb-benefits" className="flex items-center gap-2"><Crown className="h-4 w-4" /><span className="hidden md:inline">KCB ROI</span></TabsTrigger>
@@ -181,6 +183,7 @@ export function AdminDashboard() {
           <TabsContent value="tariffs"><TariffsPanel /></TabsContent>
           <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
           <TabsContent value="settlement"><SettlementEngine /></TabsContent>
+          <TabsContent value="agent-console"><SettlementAgentConsole /></TabsContent>
           <TabsContent value="merchants"><MerchantPortal /></TabsContent>
           <TabsContent value="routing"><CorridorRoutingTable /></TabsContent>
           <TabsContent value="kcb-benefits"><KCBBenefitsDashboard /></TabsContent>
