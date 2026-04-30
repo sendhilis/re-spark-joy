@@ -1,0 +1,1 @@
+ALTER TABLE public.merchants ALTER COLUMN till_code DROP NOT NULL;
