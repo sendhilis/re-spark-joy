@@ -390,8 +390,11 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
 
         {step === "amount" && selected && (
           <div className="space-y-4">
-            <Card className="glass-card p-3">
-              <p className="text-sm font-medium text-foreground">{selected.merchant_name}</p>
+            <Card className="glass-card p-3 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-foreground truncate">{selected.merchant_name}</p>
+                <Badge variant="outline" className="text-[10px] font-mono shrink-0">{selected.lipafo_code}</Badge>
+              </div>
               {isBank ? (
                 <p className="text-xs text-muted-foreground">
                   📱 {selected.contact_phone} · settles to {selected.settlement_bank}
@@ -401,6 +404,9 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
                   🆔 LMID {selected.lmid} · credits Lipafo wallet instantly
                 </p>
               )}
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Globe2 className="h-3 w-3" /> {selected.country_code} · {CORRIDOR_LABEL[selected.corridor_type]}
+              </p>
             </Card>
             <div>
               <Label>Amount (KES)</Label>
@@ -416,41 +422,54 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
           </div>
         )}
 
-        {step === "confirm" && selected && (
-          <div className="space-y-4">
-            <Card className="glass-card p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Merchant</span><span className="font-medium">{selected.merchant_name}</span></div>
-              {isBank ? (
-                <>
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Mobile (identifier)</span><span className="font-mono">{selected.contact_phone}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Beneficiary bank</span><span>{selected.settlement_bank}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Bank rail · T+1 net</Badge></div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">LMID (identifier)</span><span className="font-mono">{selected.lmid}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Beneficiary</span><span>Lipafo Wallet</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">On-us · instant</Badge></div>
-                </>
-              )}
-              <Separator />
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-lg text-primary">{fmtKES(Number(amount))}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Switch fee</span><span className="text-success">Free</span></div>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground">M-PESA involvement</span><span className="text-success">None</span></div>
-            </Card>
-            <Card className="glass-card p-3 bg-primary/5">
-              <p className="text-xs text-muted-foreground">
-                {isBank
-                  ? <>Trace: Lipafo wallet → Lipafo Switch (MSISDN → bank lookup) → KCB pool → T+1 net dispatch to {selected.settlement_bank}.</>
-                  : <>Trace: Lipafo wallet → Lipafo Switch (LMID → wallet lookup) → instant credit to merchant's Lipafo wallet.</>}
-              </p>
-            </Card>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep("amount")}>Back</Button>
-              <Button className="flex-1 button-3d" onClick={submit}>Confirm & Pay</Button>
+        {step === "confirm" && selected && (() => {
+          const corridor = selected.corridor_type;
+          const rail =
+            !isBank ? "lipafo_internal" :
+            corridor === "papss" ? "papss" :
+            corridor === "correspondent" ? "correspondent" : "bank_rail";
+          const railLabel =
+            rail === "lipafo_internal" ? "On-us · instant" :
+            rail === "papss" ? "PAPSS · T+2 net" :
+            rail === "correspondent" ? "Correspondent · T+2 net" : "Bank rail · T+1 net";
+          const traceText =
+            rail === "lipafo_internal" ? <>Trace: Lipafo wallet → Switch (LMID lookup) → instant credit to merchant's Lipafo wallet.</> :
+            rail === "papss" ? <>Trace: Lipafo wallet → Switch (Lipafo Code → PAPSS routing) → Lipafo {selected.country_code} pool → T+2 net dispatch to {selected.settlement_bank}.</> :
+            rail === "correspondent" ? <>Trace: Lipafo wallet → Switch (Lipafo Code → correspondent banking) → nostro account → T+2 net dispatch to {selected.settlement_bank}.</> :
+            <>Trace: Lipafo wallet → Switch (MSISDN/Lipafo Code lookup) → KCB pool → T+1 net dispatch to {selected.settlement_bank}.</>;
+          return (
+            <div className="space-y-4">
+              <Card className="glass-card p-4 space-y-2">
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Merchant</span><span className="font-medium">{selected.merchant_name}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Lipafo Code</span><span className="font-mono text-primary">{selected.lipafo_code}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Corridor</span><span className="text-xs">{CORRIDOR_LABEL[corridor]} · {selected.country_code}</span></div>
+                {isBank ? (
+                  <>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Resolved identifier</span><span className="font-mono">{selected.contact_phone || "—"}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Beneficiary bank</span><span>{selected.settlement_bank}</span></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Resolved identifier</span><span className="font-mono">{selected.lmid}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Beneficiary</span><span>Lipafo Wallet</span></div>
+                  </>
+                )}
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">{railLabel}</Badge></div>
+                <Separator />
+                <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-lg text-primary">{fmtKES(Number(amount))}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Switch fee</span><span className="text-success">Free</span></div>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">M-PESA involvement</span><span className="text-success">None</span></div>
+              </Card>
+              <Card className="glass-card p-3 bg-primary/5">
+                <p className="text-xs text-muted-foreground">{traceText}</p>
+              </Card>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep("amount")}>Back</Button>
+                <Button className="flex-1 button-3d" onClick={submit}>Confirm & Pay</Button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {step === "processing" && (
           <div className="py-10 flex flex-col items-center gap-3">
