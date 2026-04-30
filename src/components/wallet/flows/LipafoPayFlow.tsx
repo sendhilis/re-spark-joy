@@ -117,20 +117,49 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
     setStep("processing");
     try {
       const isBank = selected.merchant_segment === "bank_linked";
-      const identifier = isBank ? (selected.contact_phone || "") : (selected.lmid || "");
-      const identifierKind: "MSISDN" | "LMID" = isBank ? "MSISDN" : "LMID";
-      const ref = `LPF-${isBank ? "P2B" : "P2L"}-${Date.now()}`;
+      const corridor = selected.corridor_type;
+      const paidByCode = segmentTab === "lipafo_code";
+
+      // Identifier shown in receipt: prefer Lipafo Code if that was the entry point.
+      const identifier = paidByCode
+        ? selected.lipafo_code
+        : (isBank ? (selected.contact_phone || "") : (selected.lmid || ""));
+      const identifierKind: "MSISDN" | "LMID" | "LIPAFO_CODE" = paidByCode
+        ? "LIPAFO_CODE"
+        : (isBank ? "MSISDN" : "LMID");
+
+      // Rail selection driven by merchant corridor + segment.
+      let rail: "bank_rail" | "lipafo_internal" | "papss" | "correspondent";
+      if (!isBank) rail = "lipafo_internal";
+      else if (corridor === "papss") rail = "papss";
+      else if (corridor === "correspondent") rail = "correspondent";
+      else rail = "bank_rail";
+
+      const refPrefix =
+        rail === "lipafo_internal" ? "P2L" :
+        rail === "papss" ? "PAPSS" :
+        rail === "correspondent" ? "CORR" : "P2B";
+      const ref = `LPF-${refPrefix}-${Date.now()}`;
       const today = new Date().toISOString().slice(0, 10);
       const cutoff = new Date(); cutoff.setHours(13, 0, 0, 0);
-      const dispatchAt = new Date(cutoff); dispatchAt.setDate(dispatchAt.getDate() + 1);
+      const dispatchAt = new Date(cutoff);
+      // Cross-border = T+2; domestic bank = T+1; on-us = instant
+      dispatchAt.setDate(dispatchAt.getDate() + (rail === "papss" || rail === "correspondent" ? 2 : 1));
+
+      const beneficiaryKey =
+        rail === "lipafo_internal" ? "LIPAFO_WALLET" :
+        rail === "papss" ? `PAPSS:${selected.settlement_bank}` :
+        rail === "correspondent" ? `CORR:${selected.settlement_bank}` :
+        selected.settlement_bank;
 
       // 1) Debit Jane's main Lipafo wallet
+      const descTail = paidByCode ? ` · Code ${selected.lipafo_code}` : "";
       await addTransaction({
         type: "qr_payment",
         amount: -amt,
         description: isBank
-          ? `LipafoPay → ${selected.merchant_name} (Mobile ${identifier} · ${selected.settlement_bank})`
-          : `LipafoPay → ${selected.merchant_name} (LMID ${identifier})`,
+          ? `LipafoPay → ${selected.merchant_name} (${identifierKind} ${identifier} · ${selected.settlement_bank})${paidByCode ? "" : descTail}`
+          : `LipafoPay → ${selected.merchant_name} (LMID ${selected.lmid})${descTail}`,
         recipient: selected.merchant_name,
         status: "completed",
         walletType: "main",
@@ -139,55 +168,8 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
       let positionId: string | undefined;
       let dispatchId: string | undefined;
 
-      if (isBank) {
-        // BANK-LINKED rail: Lipafo Switch resolves MSISDN → bank account
-        // → KCB pool owes the merchant's bank → record EOD net position + T+1 dispatch.
-        // NO M-PESA involvement.
-        const { data: existing } = await supabase
-          .from("settlement_positions")
-          .select("*")
-          .eq("position_date", today)
-          .eq("participating_bank", selected.settlement_bank)
-          .maybeSingle();
-
-        if (existing) {
-          const newInbound = Number(existing.inbound_volume) + amt;
-          const newCount = (existing.transaction_count || 0) + 1;
-          const newNet = newInbound - Number(existing.outbound_volume);
-          await supabase.from("settlement_positions").update({
-            inbound_volume: newInbound,
-            transaction_count: newCount,
-            net_position: newNet,
-          }).eq("id", existing.id);
-          positionId = existing.id;
-        } else {
-          const { data: ins } = await supabase.from("settlement_positions").insert({
-            position_date: today,
-            participating_bank: selected.settlement_bank,
-            inbound_volume: amt,
-            outbound_volume: 0,
-            net_position: amt,
-            transaction_count: 1,
-            cutoff_at: cutoff.toISOString(),
-            status: "pending",
-          }).select().single();
-          positionId = ins?.id;
-        }
-
-        const floatRev = Math.round(amt * 0.0002);
-        const { data: disp } = await supabase.from("settlement_dispatches").insert({
-          position_id: positionId,
-          beneficiary_bank: selected.settlement_bank,
-          amount: amt,
-          scheduled_at: dispatchAt.toISOString(),
-          reference: ref,
-          status: "scheduled",
-          float_revenue: floatRev,
-        }).select().single();
-        dispatchId = disp?.id;
-      } else {
-        // MOBILE-ONLY rail: LMID merchant has a Lipafo wallet — fully on-us, instant.
-        // Record an "internal" settlement position against LIPAFO_WALLET for visibility.
+      if (rail === "lipafo_internal") {
+        // On-us: instant credit, recorded against LIPAFO_WALLET pool
         const { data: existing } = await supabase
           .from("settlement_positions")
           .select("*")
@@ -197,44 +179,71 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
 
         if (existing) {
           const newInbound = Number(existing.inbound_volume) + amt;
-          const newCount = (existing.transaction_count || 0) + 1;
           await supabase.from("settlement_positions").update({
             inbound_volume: newInbound,
-            transaction_count: newCount,
+            transaction_count: (existing.transaction_count || 0) + 1,
             net_position: newInbound - Number(existing.outbound_volume),
           }).eq("id", existing.id);
           positionId = existing.id;
         } else {
           const { data: ins } = await supabase.from("settlement_positions").insert({
-            position_date: today,
-            participating_bank: "LIPAFO_WALLET",
-            inbound_volume: amt,
-            outbound_volume: 0,
-            net_position: amt,
-            transaction_count: 1,
-            cutoff_at: cutoff.toISOString(),
-            status: "settled",
+            position_date: today, participating_bank: "LIPAFO_WALLET",
+            inbound_volume: amt, outbound_volume: 0, net_position: amt,
+            transaction_count: 1, cutoff_at: cutoff.toISOString(), status: "settled",
           }).select().single();
           positionId = ins?.id;
         }
 
-        // Instant credit (recorded as already-dispatched for trace visibility)
         const { data: disp } = await supabase.from("settlement_dispatches").insert({
-          position_id: positionId,
-          beneficiary_bank: "LIPAFO_WALLET",
-          amount: amt,
-          scheduled_at: new Date().toISOString(),
-          dispatched_at: new Date().toISOString(),
-          reference: ref,
-          status: "dispatched",
-          float_revenue: 0,
+          position_id: positionId, beneficiary_bank: "LIPAFO_WALLET", amount: amt,
+          scheduled_at: new Date().toISOString(), dispatched_at: new Date().toISOString(),
+          reference: ref, status: "dispatched", float_revenue: 0,
+        }).select().single();
+        dispatchId = disp?.id;
+      } else {
+        // Bank rail / PAPSS / Correspondent — net position + scheduled dispatch
+        const { data: existing } = await supabase
+          .from("settlement_positions")
+          .select("*")
+          .eq("position_date", today)
+          .eq("participating_bank", beneficiaryKey)
+          .maybeSingle();
+
+        if (existing) {
+          const newInbound = Number(existing.inbound_volume) + amt;
+          await supabase.from("settlement_positions").update({
+            inbound_volume: newInbound,
+            transaction_count: (existing.transaction_count || 0) + 1,
+            net_position: newInbound - Number(existing.outbound_volume),
+          }).eq("id", existing.id);
+          positionId = existing.id;
+        } else {
+          const { data: ins } = await supabase.from("settlement_positions").insert({
+            position_date: today, participating_bank: beneficiaryKey,
+            inbound_volume: amt, outbound_volume: 0, net_position: amt,
+            transaction_count: 1, cutoff_at: cutoff.toISOString(), status: "pending",
+          }).select().single();
+          positionId = ins?.id;
+        }
+
+        // Float = 2 bps domestic, 5 bps cross-border (held longer)
+        const floatBps = rail === "bank_rail" ? 0.0002 : 0.0005;
+        const { data: disp } = await supabase.from("settlement_dispatches").insert({
+          position_id: positionId, beneficiary_bank: beneficiaryKey, amount: amt,
+          scheduled_at: dispatchAt.toISOString(), reference: ref, status: "scheduled",
+          float_revenue: Math.round(amt * floatBps),
         }).select().single();
         dispatchId = disp?.id;
       }
 
-      setTrace({ ref, rail: isBank ? "bank_rail" : "lipafo_internal", identifier, identifierKind, positionId, dispatchId });
+      setTrace({ ref, rail, identifier, identifierKind, positionId, dispatchId });
       setStep("done");
-      toast.success(isBank ? "Paid to bank merchant via mobile number" : "Paid to LMID merchant instantly");
+      toast.success(
+        rail === "lipafo_internal" ? "Paid instantly to LMID merchant" :
+        rail === "papss" ? "Routed via PAPSS · settles T+2" :
+        rail === "correspondent" ? "Routed via correspondent bank · settles T+2" :
+        "Paid to bank merchant · settles T+1"
+      );
     } catch (e) {
       toast.error(`Payment failed: ${(e as Error).message}`);
       setStep("confirm");
