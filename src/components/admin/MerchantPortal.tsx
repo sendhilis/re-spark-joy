@@ -8,16 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Store, Receipt } from "lucide-react";
+import { Plus, Store, Receipt, Smartphone, Landmark } from "lucide-react";
 
 type CorridorType = "on_us" | "papss" | "correspondent";
+type Segment = "bank_linked" | "mobile_only";
 
 type Merchant = {
   id: string;
   merchant_name: string;
-  till_code: string;
+  till_code: string | null;
   lipafo_code: string;
   category: string;
   country_code: string;
@@ -26,7 +28,10 @@ type Merchant = {
   status: string;
   monthly_volume: number;
   contact_email: string | null;
+  contact_phone: string | null;
   corridor_type: CorridorType;
+  merchant_segment: Segment;
+  lmid: string | null;
 };
 
 type Route = {
@@ -76,10 +81,9 @@ const generateLipafoCode = (country: string, corridor: CorridorType) => {
   return `LPF-XB-${country}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
 };
 
-const generateTillCode = (country: string) =>
-  country === "KE"
-    ? String(500000 + Math.floor(Math.random() * 99999))
-    : `${country}-${String(200000 + Math.floor(Math.random() * 99999))}`;
+const generateLMID = () => `LMID-${String(900000 + Math.floor(Math.random() * 99999))}`;
+
+const normalizeMSISDN = (raw: string) => raw.replace(/[^\d+]/g, "");
 
 export function MerchantPortal() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
@@ -94,6 +98,7 @@ export function MerchantPortal() {
     settlement_account: "",
     contact_email: "",
     contact_phone: "",
+    merchant_segment: "bank_linked" as Segment,
   });
 
   const load = async () => {
@@ -110,6 +115,7 @@ export function MerchantPortal() {
   useEffect(() => { load(); }, []);
 
   const selectedRoute = routes.find(r => r.country_code === form.country_code);
+  const isBank = form.merchant_segment === "bank_linked";
 
   const onCountryChange = (code: string) => {
     const r = routes.find(x => x.country_code === code);
@@ -123,25 +129,41 @@ export function MerchantPortal() {
   const onboard = async () => {
     if (!form.merchant_name) { toast.error("Merchant name required"); return; }
     if (!selectedRoute) { toast.error("No active corridor route for this country"); return; }
+    if (!form.contact_phone) { toast.error("Mobile number required"); return; }
+    if (isBank && !form.settlement_account) { toast.error("Bank-linked merchants must provide a settlement account"); return; }
+
     const corridor_type = selectedRoute.corridor_type;
-    const till_code = generateTillCode(form.country_code);
     const lipafo_code = generateLipafoCode(form.country_code, corridor_type);
+    const msisdn = normalizeMSISDN(form.contact_phone);
+    const lmid = isBank ? null : generateLMID();
+
     const { error } = await supabase.from("merchants").insert({
-      ...form,
-      till_code,
+      merchant_name: form.merchant_name,
+      category: form.category,
+      country_code: form.country_code,
+      settlement_bank: isBank ? form.settlement_bank : "LIPAFO_WALLET",
+      settlement_account: isBank ? form.settlement_account : null,
+      contact_email: form.contact_email,
+      contact_phone: msisdn,
       lipafo_code,
       corridor_type,
+      merchant_segment: form.merchant_segment,
+      lmid,
+      till_code: null,
       mcc: null,
       monthly_volume: 0,
       status: "active",
     });
-    if (error) toast.error(error.message);
-    else {
-      toast.success(`Merchant onboarded via ${CORRIDOR_LABEL[corridor_type]} — Till ${till_code} / ${lipafo_code}`);
-      setOpen(false);
-      setForm({ merchant_name: "", category: "retail", country_code: "KE", settlement_bank: "KCB Bank Kenya", settlement_account: "", contact_email: "", contact_phone: "" });
-      load();
-    }
+    if (error) { toast.error(error.message); return; }
+
+    toast.success(
+      isBank
+        ? `Bank-linked merchant onboarded — identifier MSISDN ${msisdn} (${form.settlement_bank})`
+        : `Mobile-only merchant onboarded — identifier ${lmid}`
+    );
+    setOpen(false);
+    setForm({ merchant_name: "", category: "retail", country_code: "KE", settlement_bank: "KCB Bank Kenya", settlement_account: "", contact_email: "", contact_phone: "", merchant_segment: "bank_linked" });
+    load();
   };
 
   const merchantById = (id: string) => merchants.find((m) => m.id === id);
@@ -149,24 +171,54 @@ export function MerchantPortal() {
   const totalNet = settlements.reduce((s, x) => s + Number(x.net_amount), 0);
   const totalFees = settlements.reduce((s, x) => s + Number(x.fee_amount), 0);
 
+  const bankCount = merchants.filter(m => m.merchant_segment === "bank_linked").length;
+  const mobileCount = merchants.filter(m => m.merchant_segment === "mobile_only").length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Merchant Portal</h2>
-          <p className="text-sm text-muted-foreground">Onboarding, Till/Lipafo code issuance, settlement bank mapping</p>
+          <p className="text-sm text-muted-foreground">
+            Onboarding · MSISDN for bank-linked merchants · LMID for mobile-only merchants
+          </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="button-3d"><Plus className="h-4 w-4 mr-2" />Onboard Merchant</Button>
           </DialogTrigger>
-          <DialogContent className="glass-card">
+          <DialogContent className="glass-card max-w-lg">
             <DialogHeader><DialogTitle>Onboard New Merchant</DialogTitle></DialogHeader>
             <div className="space-y-3">
+              <div>
+                <Label className="mb-2 block">Merchant Segment</Label>
+                <RadioGroup
+                  value={form.merchant_segment}
+                  onValueChange={(v) => setForm({ ...form, merchant_segment: v as Segment })}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  <label className={`flex items-start gap-2 p-3 rounded-md border cursor-pointer ${isBank ? "border-primary bg-primary/5" : "border-border"}`}>
+                    <RadioGroupItem value="bank_linked" id="seg-bank" className="mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold flex items-center gap-1"><Landmark className="h-3.5 w-3.5" /> Bank-linked</div>
+                      <div className="text-[11px] text-muted-foreground">Identifier: Mobile number (MSISDN). Settles to bank account.</div>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-2 p-3 rounded-md border cursor-pointer ${!isBank ? "border-primary bg-primary/5" : "border-border"}`}>
+                    <RadioGroupItem value="mobile_only" id="seg-mobile" className="mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold flex items-center gap-1"><Smartphone className="h-3.5 w-3.5" /> Mobile-only</div>
+                      <div className="text-[11px] text-muted-foreground">Issued LMID. Credited to Lipafo wallet (no bank).</div>
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
+
               <div>
                 <Label>Merchant Name</Label>
                 <Input value={form.merchant_name} onChange={(e) => setForm({ ...form, merchant_name: e.target.value })} placeholder="e.g. Naivas Kilimani" />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Country</Label>
@@ -189,48 +241,71 @@ export function MerchantPortal() {
                   </Select>
                 </div>
               </div>
+
               {selectedRoute && (
                 <div className={`p-2 rounded-md border text-xs ${CORRIDOR_BADGE[selectedRoute.corridor_type]}`}>
                   Rail: <span className="font-semibold">{CORRIDOR_LABEL[selectedRoute.corridor_type]}</span>
                   {selectedRoute.partner_bank && <> · via {selectedRoute.partner_bank}</>}
                 </div>
               )}
+
               <div>
-                <Label>Settlement Bank</Label>
-                <Select value={form.settlement_bank} onValueChange={(v) => setForm({ ...form, settlement_bank: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{SETTLEMENT_BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                </Select>
+                <Label>Mobile Number {isBank && <span className="text-[11px] text-muted-foreground">(used as merchant identifier)</span>}</Label>
+                <Input
+                  value={form.contact_phone}
+                  onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
+                  placeholder="+254 7XX XXX XXX"
+                />
               </div>
+
+              {isBank ? (
+                <>
+                  <div>
+                    <Label>Settlement Bank</Label>
+                    <Select value={form.settlement_bank} onValueChange={(v) => setForm({ ...form, settlement_bank: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{SETTLEMENT_BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Settlement Account</Label>
+                    <Input value={form.settlement_account} onChange={(e) => setForm({ ...form, settlement_account: e.target.value })} placeholder="e.g. COOP-1100023401" />
+                  </div>
+                </>
+              ) : (
+                <div className="p-2 rounded-md border border-primary/30 bg-primary/5 text-xs">
+                  A <span className="font-mono font-semibold">LMID-XXXXXX</span> identifier will be auto-issued. Funds credit instantly to the merchant's Lipafo wallet — no bank settlement.
+                </div>
+              )}
+
               <div>
-                <Label>Settlement Account</Label>
-                <Input value={form.settlement_account} onChange={(e) => setForm({ ...form, settlement_account: e.target.value })} placeholder="e.g. KCB-1100023401" />
+                <Label>Contact Email</Label>
+                <Input value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Contact Email</Label>
-                  <Input value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Contact Phone</Label>
-                  <Input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">Till code and Lipafo code will be auto-issued upon onboarding.</p>
+
+              <p className="text-xs text-muted-foreground">
+                {isBank
+                  ? "Lipafo will resolve the MSISDN to this bank account during settlement."
+                  : "Mobile-only merchants are paid on-us via the Lipafo internal rail."}
+              </p>
             </div>
-            <DialogFooter><Button onClick={onboard} className="button-3d">Issue codes & onboard</Button></DialogFooter>
+            <DialogFooter>
+              <Button onClick={onboard} className="button-3d">
+                {isBank ? "Onboard with MSISDN identifier" : "Issue LMID & onboard"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="glass-card">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Active Merchants</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{merchants.filter((m) => m.status === "active").length}</div></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bank-linked Merchants</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold flex items-center gap-2"><Landmark className="h-5 w-5 text-primary" />{bankCount}</div></CardContent>
         </Card>
         <Card className="glass-card">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Gross Settled (last 50)</CardTitle></CardHeader>
-          <CardContent><div className="text-xl font-bold">{fmtKES(totalGross)}</div></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Mobile-only (LMID)</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold flex items-center gap-2"><Smartphone className="h-5 w-5 text-success" />{mobileCount}</div></CardContent>
         </Card>
         <Card className="glass-card">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Fees Captured</CardTitle></CardHeader>
@@ -250,35 +325,60 @@ export function MerchantPortal() {
 
         <TabsContent value="merchants">
           <Card className="glass-card">
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Merchant</TableHead>
-                    <TableHead>Till</TableHead>
+                    <TableHead>Segment</TableHead>
+                    <TableHead>Identifier</TableHead>
                     <TableHead>Lipafo Code</TableHead>
                     <TableHead>Country</TableHead>
-                    <TableHead>Corridor</TableHead>
-                    <TableHead>Settlement Bank</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead className="text-right">Monthly Vol</TableHead>
+                    <TableHead>Settlement</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {merchants.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">{m.merchant_name}<div className="text-xs text-muted-foreground">{m.category}</div></TableCell>
-                      <TableCell className="font-mono text-xs">{m.till_code}</TableCell>
-                      <TableCell className="font-mono text-xs text-primary">{m.lipafo_code}</TableCell>
-                      <TableCell><Badge variant="outline">{m.country_code}</Badge></TableCell>
-                      <TableCell><Badge variant="outline" className={CORRIDOR_BADGE[m.corridor_type]}>{CORRIDOR_LABEL[m.corridor_type]}</Badge></TableCell>
-                      <TableCell className="text-xs">{m.settlement_bank}</TableCell>
-                      <TableCell className="font-mono text-xs">{m.settlement_account || "—"}</TableCell>
-                      <TableCell className="text-right text-xs">{fmtKES(Number(m.monthly_volume))}</TableCell>
-                      <TableCell><Badge variant={m.status === "active" ? "default" : "outline"}>{m.status}</Badge></TableCell>
-                    </TableRow>
-                  ))}
+                  {merchants.map((m) => {
+                    const bank = m.merchant_segment === "bank_linked";
+                    const identifier = bank ? (m.contact_phone || "—") : (m.lmid || "—");
+                    return (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">
+                          {m.merchant_name}
+                          <div className="text-xs text-muted-foreground">{m.category}</div>
+                        </TableCell>
+                        <TableCell>
+                          {bank ? (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                              <Landmark className="h-3 w-3 mr-1" />Bank-linked
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                              <Smartphone className="h-3 w-3 mr-1" />Mobile-only
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {identifier}
+                          <div className="text-[10px] text-muted-foreground uppercase">{bank ? "MSISDN" : "LMID"}</div>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-primary">{m.lipafo_code}</TableCell>
+                        <TableCell><Badge variant="outline">{m.country_code}</Badge></TableCell>
+                        <TableCell className="text-xs">
+                          {bank ? (
+                            <>
+                              <div>{m.settlement_bank}</div>
+                              <div className="font-mono text-[10px] text-muted-foreground">{m.settlement_account || "—"}</div>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">Lipafo Wallet (on-us)</span>
+                          )}
+                        </TableCell>
+                        <TableCell><Badge variant={m.status === "active" ? "default" : "outline"}>{m.status}</Badge></TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -287,7 +387,7 @@ export function MerchantPortal() {
 
         <TabsContent value="settlements">
           <Card className="glass-card">
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
