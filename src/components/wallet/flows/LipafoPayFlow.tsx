@@ -46,39 +46,67 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
   const { balances, addTransaction } = useWallet();
   const [step, setStep] = useState<"select" | "amount" | "confirm" | "processing" | "done">("select");
   const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [segmentTab, setSegmentTab] = useState<"bank_linked" | "mobile_only">("bank_linked");
+  const [segmentTab, setSegmentTab] = useState<"bank_linked" | "mobile_only" | "lipafo_code">("bank_linked");
   const [search, setSearch] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
   const [selected, setSelected] = useState<Merchant | null>(null);
   const [amount, setAmount] = useState("");
   const [trace, setTrace] = useState<{
     ref: string;
-    rail: "bank_rail" | "lipafo_internal";
+    rail: "bank_rail" | "lipafo_internal" | "papss" | "correspondent";
     identifier: string;
-    identifierKind: "MSISDN" | "LMID";
+    identifierKind: "MSISDN" | "LMID" | "LIPAFO_CODE";
     positionId?: string;
     dispatchId?: string;
   } | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setStep("select"); setSelected(null); setAmount(""); setTrace(null); setSearch("");
+    setStep("select"); setSelected(null); setAmount(""); setTrace(null);
+    setSearch(""); setCodeInput(""); setCodeError(null);
     supabase.from("merchants")
-      .select("id,merchant_name,till_code,lipafo_code,lmid,merchant_segment,settlement_bank,contact_phone,category")
-      .eq("status", "active").order("merchant_name").limit(50)
+      .select("id,merchant_name,till_code,lipafo_code,lmid,merchant_segment,settlement_bank,contact_phone,category,country_code,corridor_type")
+      .eq("status", "active").order("merchant_name").limit(100)
       .then(({ data }) => { if (data) setMerchants(data as Merchant[]); });
   }, [open]);
 
   const filtered = merchants
-    .filter((m) => m.merchant_segment === segmentTab)
+    .filter((m) => segmentTab === "lipafo_code" ? false : m.merchant_segment === segmentTab)
     .filter((m) => {
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
         m.merchant_name.toLowerCase().includes(q) ||
         (m.contact_phone || "").includes(q) ||
-        (m.lmid || "").toLowerCase().includes(q)
+        (m.lmid || "").toLowerCase().includes(q) ||
+        m.lipafo_code.toLowerCase().includes(q)
       );
     });
+
+  const resolveByCode = async () => {
+    const code = codeInput.trim().toUpperCase();
+    setCodeError(null);
+    if (!code) { setCodeError("Enter a Lipafo Code (e.g. LPF-MR-4521)"); return; }
+    setResolving(true);
+    try {
+      const { data, error } = await supabase
+        .from("merchants")
+        .select("id,merchant_name,till_code,lipafo_code,lmid,merchant_segment,settlement_bank,contact_phone,category,country_code,corridor_type")
+        .eq("lipafo_code", code)
+        .eq("status", "active")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) { setCodeError("No active merchant found for this Lipafo Code."); return; }
+      setSelected(data as Merchant);
+      setStep("amount");
+    } catch (e) {
+      setCodeError((e as Error).message);
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const submit = async () => {
     if (!selected || !amount) return;
