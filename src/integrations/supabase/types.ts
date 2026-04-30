@@ -350,7 +350,7 @@ export type Database = {
           settlement_account: string | null
           settlement_bank: string
           status: string
-          till_code: string
+          till_code: string | null
           updated_at: string
         }
         Insert: {
@@ -370,7 +370,7 @@ export type Database = {
           settlement_account?: string | null
           settlement_bank?: string
           status?: string
-          till_code: string
+          till_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -390,7 +390,7 @@ export type Database = {
           settlement_account?: string | null
           settlement_bank?: string
           status?: string
-          till_code?: string
+          till_code?: string | null
           updated_at?: string
         }
         Relationships: []
