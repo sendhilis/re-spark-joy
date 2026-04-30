@@ -489,19 +489,24 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             <Card className="glass-card p-3 space-y-1.5 text-xs">
               <p className="font-semibold text-foreground mb-1">Settlement Engine trace</p>
               <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="font-mono">{trace.ref}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Lipafo Code</span><span className="font-mono text-primary">{selected.lipafo_code}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Identifier ({trace.identifierKind})</span><span className="font-mono">{trace.identifier}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Corridor</span><span>{CORRIDOR_LABEL[selected.corridor_type]} · {selected.country_code}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Rail</span>
                 <Badge variant="outline" className="text-[10px]">
-                  {trace.rail === "bank_rail" ? "Bank rail · T+1" : "On-us · instant"}
+                  {trace.rail === "bank_rail" ? "Bank rail · T+1" :
+                   trace.rail === "lipafo_internal" ? "On-us · instant" :
+                   trace.rail === "papss" ? "PAPSS · T+2" : "Correspondent · T+2"}
                 </Badge>
               </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">{trace.rail === "bank_rail" ? "Beneficiary bank" : "Beneficiary"}</span>
-                <span>{trace.rail === "bank_rail" ? selected.settlement_bank : "Lipafo Wallet"}</span>
+              <div className="flex justify-between"><span className="text-muted-foreground">{trace.rail === "lipafo_internal" ? "Beneficiary" : "Beneficiary bank"}</span>
+                <span>{trace.rail === "lipafo_internal" ? "Lipafo Wallet" : selected.settlement_bank}</span>
               </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Inbound recorded</span><span className="text-success">+{fmtKES(Number(amount))}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Dispatch</span>
                 <Badge variant="outline" className="text-[10px]">
-                  {trace.rail === "bank_rail" ? "scheduled (T+1)" : "dispatched"}
+                  {trace.rail === "lipafo_internal" ? "dispatched" :
+                   trace.rail === "bank_rail" ? "scheduled (T+1)" : "scheduled (T+2)"}
                 </Badge>
               </div>
               <Separator className="my-1" />
