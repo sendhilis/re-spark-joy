@@ -10,18 +10,28 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/contexts/WalletContext";
 import { toast } from "sonner";
-import { Store, ArrowRight, CheckCircle2, Loader2, Network, Building2, Smartphone, Wallet, Search } from "lucide-react";
+import { Store, ArrowRight, CheckCircle2, Loader2, Network, Building2, Smartphone, Wallet, Search, Hash, Globe2, AlertCircle } from "lucide-react";
+
+type Corridor = "on_us" | "papss" | "correspondent";
 
 type Merchant = {
   id: string;
   merchant_name: string;
-  till_code: string;
+  till_code: string | null;
   lipafo_code: string;
   lmid: string | null;
   merchant_segment: "bank_linked" | "mobile_only";
   settlement_bank: string;
   contact_phone: string | null;
   category: string;
+  country_code: string;
+  corridor_type: Corridor;
+};
+
+const CORRIDOR_LABEL: Record<Corridor, string> = {
+  on_us: "On-Us (Domestic)",
+  papss: "PAPSS (Pan-African)",
+  correspondent: "Correspondent Banking",
 };
 
 interface Props {
