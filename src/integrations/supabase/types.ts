@@ -342,8 +342,10 @@ export type Database = {
           created_at: string
           id: string
           lipafo_code: string
+          lmid: string | null
           mcc: string | null
           merchant_name: string
+          merchant_segment: string
           monthly_volume: number
           settlement_account: string | null
           settlement_bank: string
@@ -360,8 +362,10 @@ export type Database = {
           created_at?: string
           id?: string
           lipafo_code: string
+          lmid?: string | null
           mcc?: string | null
           merchant_name: string
+          merchant_segment?: string
           monthly_volume?: number
           settlement_account?: string | null
           settlement_bank?: string
@@ -378,8 +382,10 @@ export type Database = {
           created_at?: string
           id?: string
           lipafo_code?: string
+          lmid?: string | null
           mcc?: string | null
           merchant_name?: string
+          merchant_segment?: string
           monthly_volume?: number
           settlement_account?: string | null
           settlement_bank?: string
