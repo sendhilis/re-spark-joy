@@ -363,6 +363,62 @@ export type Database = {
         }
         Relationships: []
       }
+      member_collateral: {
+        Row: {
+          agent_id: string
+          available_balance: number | null
+          cap_amount: number
+          collateral_account: string
+          created_at: string
+          currency: string
+          id: string
+          last_topup_at: string | null
+          member_bank: string
+          posted_balance: number
+          status: string
+          updated_at: string
+          utilised_amount: number
+        }
+        Insert: {
+          agent_id: string
+          available_balance?: number | null
+          cap_amount?: number
+          collateral_account: string
+          created_at?: string
+          currency?: string
+          id?: string
+          last_topup_at?: string | null
+          member_bank: string
+          posted_balance?: number
+          status?: string
+          updated_at?: string
+          utilised_amount?: number
+        }
+        Update: {
+          agent_id?: string
+          available_balance?: number | null
+          cap_amount?: number
+          collateral_account?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          last_topup_at?: string | null
+          member_bank?: string
+          posted_balance?: number
+          status?: string
+          updated_at?: string
+          utilised_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_collateral_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merchant_settlements: {
         Row: {
           created_at: string
@@ -608,6 +664,89 @@ export type Database = {
         }
         Relationships: []
       }
+      settlement_agents: {
+        Row: {
+          agent_code: string
+          agent_name: string
+          agent_type: string
+          bic: string | null
+          contact_email: string | null
+          created_at: string
+          cutoff_local: string
+          id: string
+          settlement_account: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_code: string
+          agent_name: string
+          agent_type?: string
+          bic?: string | null
+          contact_email?: string | null
+          created_at?: string
+          cutoff_local?: string
+          id?: string
+          settlement_account: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_code?: string
+          agent_name?: string
+          agent_type?: string
+          bic?: string | null
+          contact_email?: string | null
+          created_at?: string
+          cutoff_local?: string
+          id?: string
+          settlement_account?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      settlement_confirmations: {
+        Row: {
+          agent_reference: string
+          id: string
+          instruction_id: string
+          outcome: string
+          raw_payload: Json
+          reason: string | null
+          received_at: string
+          settled_amount: number | null
+        }
+        Insert: {
+          agent_reference: string
+          id?: string
+          instruction_id: string
+          outcome: string
+          raw_payload?: Json
+          reason?: string | null
+          received_at?: string
+          settled_amount?: number | null
+        }
+        Update: {
+          agent_reference?: string
+          id?: string
+          instruction_id?: string
+          outcome?: string
+          raw_payload?: Json
+          reason?: string | null
+          received_at?: string
+          settled_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_confirmations_instruction_id_fkey"
+            columns: ["instruction_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_instructions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settlement_dispatches: {
         Row: {
           amount: number
@@ -654,6 +793,74 @@ export type Database = {
             columns: ["position_id"]
             isOneToOne: false
             referencedRelation: "settlement_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_instructions: {
+        Row: {
+          agent_id: string
+          agent_reference: string | null
+          amount: number
+          confirmed_at: string | null
+          created_at: string
+          creditor_bank: string
+          currency: string
+          cycle_date: string
+          debtor_bank: string
+          dispatched_at: string | null
+          id: string
+          instruction_ref: string
+          message_type: string
+          payload: Json
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          agent_reference?: string | null
+          amount: number
+          confirmed_at?: string | null
+          created_at?: string
+          creditor_bank: string
+          currency?: string
+          cycle_date: string
+          debtor_bank: string
+          dispatched_at?: string | null
+          id?: string
+          instruction_ref: string
+          message_type?: string
+          payload?: Json
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          agent_reference?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          creditor_bank?: string
+          currency?: string
+          cycle_date?: string
+          debtor_bank?: string
+          dispatched_at?: string | null
+          id?: string
+          instruction_ref?: string
+          message_type?: string
+          payload?: Json
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_instructions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_agents"
             referencedColumns: ["id"]
           },
         ]
