@@ -59,7 +59,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
 
       // 1) Debit Jane's main wallet
       await addTransaction({
-        type: "payment",
+        type: "qr_payment",
         amount: -amt,
         description: `LipafoPay → ${selected.merchant_name} (Till ${selected.till_code})`,
         recipient: selected.merchant_name,
