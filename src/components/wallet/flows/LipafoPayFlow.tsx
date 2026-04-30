@@ -260,31 +260,36 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             <Network className="h-5 w-5 text-primary" /> LipafoPay
           </DialogTitle>
           <DialogDescription>
-            Pay bank-linked merchants by mobile number, or LMID merchants by Lipafo Merchant ID. No M-PESA in the loop.
+            Pay by mobile (bank-linked), LMID (mobile-only), or universal Lipafo Code — works across corridors. No M-PESA in the loop.
           </DialogDescription>
         </DialogHeader>
 
         {step === "select" && (
           <div className="space-y-3">
-            <Tabs value={segmentTab} onValueChange={(v) => setSegmentTab(v as any)}>
-              <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="bank_linked" className="gap-1.5">
-                  <Building2 className="h-3.5 w-3.5" /> Bank-linked
+            <Tabs value={segmentTab} onValueChange={(v) => { setSegmentTab(v as any); setCodeError(null); }}>
+              <TabsList className="grid grid-cols-3 w-full">
+                <TabsTrigger value="bank_linked" className="gap-1.5 text-xs">
+                  <Building2 className="h-3.5 w-3.5" /> Bank
                 </TabsTrigger>
-                <TabsTrigger value="mobile_only" className="gap-1.5">
-                  <Smartphone className="h-3.5 w-3.5" /> LMID merchants
+                <TabsTrigger value="mobile_only" className="gap-1.5 text-xs">
+                  <Smartphone className="h-3.5 w-3.5" /> LMID
+                </TabsTrigger>
+                <TabsTrigger value="lipafo_code" className="gap-1.5 text-xs">
+                  <Hash className="h-3.5 w-3.5" /> Lipafo Code
                 </TabsTrigger>
               </TabsList>
 
-              <div className="mt-3 relative">
-                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder={segmentTab === "bank_linked" ? "Search by name or mobile…" : "Search by name or LMID…"}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+              {segmentTab !== "lipafo_code" && (
+                <div className="mt-3 relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder={segmentTab === "bank_linked" ? "Search by name or mobile…" : "Search by name or LMID…"}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              )}
 
               <TabsContent value="bank_linked" className="mt-3">
                 <p className="text-xs text-muted-foreground mb-2">
@@ -296,41 +301,90 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
                   No bank account → Lipafo issues a <strong>LMID</strong>. Funds credit the merchant's Lipafo wallet instantly (on-us).
                 </p>
               </TabsContent>
+              <TabsContent value="lipafo_code" className="mt-3 space-y-3">
+                <div className="p-3 rounded-md border border-primary/30 bg-primary/5">
+                  <p className="text-xs text-foreground font-semibold flex items-center gap-1.5 mb-1">
+                    <Globe2 className="h-3.5 w-3.5 text-primary" /> Universal merchant address
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    The Lipafo Code works the same way across <strong>domestic</strong>, <strong>PAPSS</strong>, and <strong>correspondent</strong> corridors.
+                    Lipafo automatically routes to the right rail (MSISDN→bank, LMID→on-us, or cross-border partner bank).
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs">Enter Lipafo Code</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={codeInput}
+                      onChange={(e) => { setCodeInput(e.target.value); setCodeError(null); }}
+                      placeholder="LPF-MR-4521 · LPF-PA-NG-031 · LPF-CB-GB-007"
+                      className="font-mono"
+                      onKeyDown={(e) => { if (e.key === "Enter") resolveByCode(); }}
+                    />
+                    <Button onClick={resolveByCode} disabled={resolving || !codeInput.trim()} className="button-3d shrink-0">
+                      {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Resolve <ArrowRight className="h-4 w-4 ml-1" /></>}
+                    </Button>
+                  </div>
+                  {codeError && (
+                    <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> {codeError}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">Recently active codes you can try:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {merchants.slice(0, 6).map((m) => (
+                      <Badge
+                        key={m.id}
+                        variant="outline"
+                        className="text-[10px] cursor-pointer hover:bg-primary/10 font-mono"
+                        onClick={() => setCodeInput(m.lipafo_code)}
+                      >
+                        {m.lipafo_code}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
 
-            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-              {filtered.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">No merchants match.</p>
-              )}
-              {filtered.map((m) => (
-                <Card key={m.id}
-                  onClick={() => { setSelected(m); setStep("amount"); }}
-                  className="glass-card p-3 cursor-pointer hover:border-primary/50 transition-all">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-full bg-primary/15 shrink-0">
-                        {m.merchant_segment === "bank_linked"
-                          ? <Store className="h-4 w-4 text-primary" />
-                          : <Wallet className="h-4 w-4 text-primary" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm text-foreground truncate">{m.merchant_name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+            {segmentTab !== "lipafo_code" && (
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                {filtered.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-6">No merchants match.</p>
+                )}
+                {filtered.map((m) => (
+                  <Card key={m.id}
+                    onClick={() => { setSelected(m); setStep("amount"); }}
+                    className="glass-card p-3 cursor-pointer hover:border-primary/50 transition-all">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-full bg-primary/15 shrink-0">
                           {m.merchant_segment === "bank_linked"
-                            ? <>📱 {m.contact_phone || "—"} · {m.category}</>
-                            : <>🆔 {m.lmid} · {m.category}</>}
-                        </p>
+                            ? <Store className="h-4 w-4 text-primary" />
+                            : <Wallet className="h-4 w-4 text-primary" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{m.merchant_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {m.merchant_segment === "bank_linked"
+                              ? <>📱 {m.contact_phone || "—"} · {m.category}</>
+                              : <>🆔 {m.lmid} · {m.category}</>}
+                            <span className="ml-1 font-mono text-[10px] opacity-70">· {m.lipafo_code}</span>
+                          </p>
+                        </div>
                       </div>
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {m.merchant_segment === "bank_linked"
+                          ? <><Building2 className="h-3 w-3 mr-1" />{m.settlement_bank}</>
+                          : <><Smartphone className="h-3 w-3 mr-1" />Lipafo wallet</>}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">
-                      {m.merchant_segment === "bank_linked"
-                        ? <><Building2 className="h-3 w-3 mr-1" />{m.settlement_bank}</>
-                        : <><Smartphone className="h-3 w-3 mr-1" />Lipafo wallet</>}
-                    </Badge>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
