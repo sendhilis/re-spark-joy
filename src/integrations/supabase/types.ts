@@ -312,6 +312,135 @@ export type Database = {
         }
         Relationships: []
       }
+      lipafo_alias_registry: {
+        Row: {
+          account_name: string
+          account_ref: string | null
+          bank_code: string
+          created_at: string
+          entity_type: string | null
+          is_active: boolean | null
+          lmid: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_ref?: string | null
+          bank_code: string
+          created_at?: string
+          entity_type?: string | null
+          is_active?: boolean | null
+          lmid?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_ref?: string | null
+          bank_code?: string
+          created_at?: string
+          entity_type?: string | null
+          is_active?: boolean | null
+          lmid?: string | null
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lipafo_positions: {
+        Row: {
+          date: string
+          id: string
+          net_cents: number
+          receiving_bank: string
+          sending_bank: string
+          updated_at: string
+        }
+        Insert: {
+          date: string
+          id: string
+          net_cents?: number
+          receiving_bank: string
+          sending_bank: string
+          updated_at?: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          net_cents?: number
+          receiving_bank?: string
+          sending_bank?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lipafo_transactions: {
+        Row: {
+          amount_cents: number
+          completed_at: string | null
+          created_at: string
+          credit_ref: string | null
+          currency: string
+          debit_ref: string | null
+          error_code: string | null
+          fraud_score: number | null
+          id: string
+          idempotency_key: string
+          latency_ms: number | null
+          ltr: string | null
+          receiver_bank: string
+          receiver_name: string | null
+          receiver_phone: string
+          sender_bank: string
+          sender_phone: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          completed_at?: string | null
+          created_at?: string
+          credit_ref?: string | null
+          currency?: string
+          debit_ref?: string | null
+          error_code?: string | null
+          fraud_score?: number | null
+          id: string
+          idempotency_key: string
+          latency_ms?: number | null
+          ltr?: string | null
+          receiver_bank: string
+          receiver_name?: string | null
+          receiver_phone: string
+          sender_bank: string
+          sender_phone: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          completed_at?: string | null
+          created_at?: string
+          credit_ref?: string | null
+          currency?: string
+          debit_ref?: string | null
+          error_code?: string | null
+          fraud_score?: number | null
+          id?: string
+          idempotency_key?: string
+          latency_ms?: number | null
+          ltr?: string | null
+          receiver_bank?: string
+          receiver_name?: string | null
+          receiver_phone?: string
+          sender_bank?: string
+          sender_phone?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       loan_applications: {
         Row: {
           amount: number
