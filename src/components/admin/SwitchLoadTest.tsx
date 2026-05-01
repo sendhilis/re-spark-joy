@@ -174,8 +174,10 @@ export function SwitchLoadTest() {
     await refreshDbTps();
     setRunning(false);
     const elapsed = (Date.now() - startedAt) / 1000;
-    const observedTps = (statsRef.current.fired / elapsed).toFixed(1);
-    toast.success(`Load test complete: ${statsRef.current.fired} fired in ${elapsed.toFixed(1)}s (${observedTps} TPS observed)`);
+    const r = statsRef.current;
+    const observedTps = r.fired / elapsed;
+    setLastRun({ observedTps, targetTps: tps, fired: r.fired, elapsed, success: r.success, failed: r.failed, duplicates: r.duplicates });
+    toast.success(`Load test complete: ${r.fired} fired in ${elapsed.toFixed(1)}s (${observedTps.toFixed(1)} TPS observed)`);
   };
 
   const stopTest = () => { cancelRef.current = true; toast.info("Stopping load test..."); };
