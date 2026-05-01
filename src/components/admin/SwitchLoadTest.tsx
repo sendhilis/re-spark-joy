@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Activity, Play, Square, Zap, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
+import { Activity, Play, Square, Zap, AlertTriangle, CheckCircle2, RefreshCw, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const PHONES = ["0722000001", "0722000002", "0722000003", "0722000004", "0722000005"];
 const DUPLICATE_RATE = 0.05;
+const TICK_MS = 100;             // batch firing every 100ms
+const UI_REFRESH_MS = 250;       // throttle React renders to 4Hz
 
 interface Metrics {
   uptime_s: number;
@@ -36,6 +38,17 @@ interface Settlement {
 const callSwitch = async (action: string, payload?: any) =>
   supabase.functions.invoke("lipafo-switch", { body: { action, ...(payload ? { payload } : {}) } });
 
+// DB-derived TPS — survives edge isolate recycling and is the source of truth.
+const fetchDbTps = async (): Promise<{ tps10: number; tps60: number; total: number }> => {
+  const since60 = new Date(Date.now() - 60_000).toISOString();
+  const since10 = new Date(Date.now() - 10_000).toISOString();
+  const [{ count: c60 }, { count: c10 }] = await Promise.all([
+    supabase.from("lipafo_transactions").select("id", { count: "exact", head: true }).gte("created_at", since60),
+    supabase.from("lipafo_transactions").select("id", { count: "exact", head: true }).gte("created_at", since10),
+  ]);
+  return { tps10: (c10 ?? 0) / 10, tps60: (c60 ?? 0) / 60, total: c60 ?? 0 };
+};
+
 export function SwitchLoadTest() {
   const [tps, setTps] = useState(100);
   const [duration, setDuration] = useState(30);
@@ -43,7 +56,12 @@ export function SwitchLoadTest() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [progress, setProgress] = useState(0);
-  const [localStats, setLocalStats] = useState({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
+  const [dbTps, setDbTps] = useState({ tps10: 0, tps60: 0, total: 0 });
+  const [tabVisible, setTabVisible] = useState(typeof document !== "undefined" ? !document.hidden : true);
+
+  // Stats accumulated in refs (no per-call rerender), flushed to state on a timer.
+  const statsRef = useRef({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
+  const [stats, setStats] = useState({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
   const cancelRef = useRef(false);
   const recentKeysRef = useRef<string[]>([]);
 
@@ -55,15 +73,37 @@ export function SwitchLoadTest() {
     const { data } = await callSwitch("settlement");
     if (data) setSettlement(data as Settlement);
   };
+  const refreshDbTps = async () => {
+    try { setDbTps(await fetchDbTps()); } catch { /* ignore */ }
+  };
 
-  useEffect(() => { refreshMetrics(); refreshSettlement(); }, []);
+  useEffect(() => { refreshMetrics(); refreshSettlement(); refreshDbTps(); }, []);
+
+  // Tab visibility — browsers throttle setTimeout to ≥1s in background tabs.
+  useEffect(() => {
+    const onVis = () => setTabVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Live polling while running — DB TPS + edge metrics.
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(refreshMetrics, 1000);
+    const id = setInterval(() => { refreshMetrics(); refreshDbTps(); }, 1000);
     return () => clearInterval(id);
   }, [running]);
 
-  const fireOne = async () => {
+  // Throttled UI flush of client-side stats (4Hz instead of 100Hz).
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      const r = statsRef.current;
+      setStats({ fired: r.fired, success: r.success, failed: r.failed, duplicates: r.duplicates, latencies: r.latencies.slice(-1000) });
+    }, UI_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const fireOne = () => {
     const sender = PHONES[Math.floor(Math.random() * PHONES.length)];
     let receiver = PHONES[Math.floor(Math.random() * PHONES.length)];
     while (receiver === sender) receiver = PHONES[Math.floor(Math.random() * PHONES.length)];
@@ -78,50 +118,63 @@ export function SwitchLoadTest() {
     }
 
     const start = Date.now();
-    try {
-      const { data } = await callSwitch("payment", {
-        idempotency_key: key, sender_phone: sender, receiver_phone: receiver,
-        amount_cents: amountKES * 100, currency: "KES",
-      });
+    statsRef.current.fired += 1;
+    callSwitch("payment", {
+      idempotency_key: key, sender_phone: sender, receiver_phone: receiver,
+      amount_cents: amountKES * 100, currency: "KES",
+    }).then(({ data }) => {
       const lat = Date.now() - start;
-      setLocalStats(s => {
-        const next = { ...s, fired: s.fired + 1, latencies: [...s.latencies.slice(-999), lat] };
-        if (data?.duplicate) next.duplicates += 1;
-        else if (data?.success) next.success += 1;
-        else next.failed += 1;
-        return next;
-      });
-    } catch {
-      setLocalStats(s => ({ ...s, fired: s.fired + 1, failed: s.failed + 1 }));
-    }
+      const r = statsRef.current;
+      r.latencies.push(lat);
+      if (r.latencies.length > 1000) r.latencies.shift();
+      if (data?.duplicate) r.duplicates += 1;
+      else if (data?.success) r.success += 1;
+      else r.failed += 1;
+    }).catch(() => { statsRef.current.failed += 1; });
   };
 
   const runLoadTest = async () => {
     cancelRef.current = false;
     setRunning(true);
     setProgress(0);
-    setLocalStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] };
+    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
     recentKeysRef.current = [];
 
     const total = tps * duration;
-    const intervalMs = 1000 / tps;
+    // Batch firing: every TICK_MS, fire (tps * TICK_MS / 1000) requests at once.
+    const perTick = Math.max(1, Math.round(tps * TICK_MS / 1000));
+    const totalTicks = Math.ceil(total / perTick);
     const startedAt = Date.now();
-    toast.success(`Firing ${total.toLocaleString()} transactions at ${tps} TPS for ${duration}s`);
 
-    for (let i = 0; i < total; i++) {
+    toast.success(`Firing ${total.toLocaleString()} txns at ${tps} TPS (${perTick}/tick × ${totalTicks} ticks). Keep this tab visible!`);
+
+    let fired = 0;
+    for (let tick = 0; tick < totalTicks; tick++) {
       if (cancelRef.current) break;
-      fireOne(); // fire-and-forget: maintains TPS regardless of edge-function latency
-      setProgress(((i + 1) / total) * 100);
-      await new Promise(r => setTimeout(r, intervalMs));
+      const tickStart = Date.now();
+      const batch = Math.min(perTick, total - fired);
+      for (let i = 0; i < batch; i++) fireOne();
+      fired += batch;
+      setProgress((fired / total) * 100);
+
+      // Sleep the remainder of the tick so we hold cadence even if scheduling drifts.
+      const elapsed = Date.now() - tickStart;
+      const sleep = Math.max(0, TICK_MS - elapsed);
+      await new Promise(r => setTimeout(r, sleep));
     }
 
-    // wait for in-flight to settle
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for in-flight requests to settle, then refresh.
+    toast.info("All requests fired — waiting for in-flight to settle...");
+    await new Promise(r => setTimeout(r, 5000));
+    setStats({ ...statsRef.current, latencies: statsRef.current.latencies.slice(-1000) });
     await refreshMetrics();
     await refreshSettlement();
+    await refreshDbTps();
     setRunning(false);
     const elapsed = (Date.now() - startedAt) / 1000;
-    toast.success(`Load test complete: ${total} fired in ${elapsed.toFixed(1)}s`);
+    const observedTps = (statsRef.current.fired / elapsed).toFixed(1);
+    toast.success(`Load test complete: ${statsRef.current.fired} fired in ${elapsed.toFixed(1)}s (${observedTps} TPS observed)`);
   };
 
   const stopTest = () => { cancelRef.current = true; toast.info("Stopping load test..."); };
@@ -129,19 +182,21 @@ export function SwitchLoadTest() {
   const resetSwitch = async () => {
     await callSwitch("reset");
     setMetrics(null); setSettlement(null);
-    setLocalStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] };
+    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    setDbTps({ tps10: 0, tps60: 0, total: 0 });
     toast.success("Switch state reset");
-    setTimeout(() => { refreshMetrics(); refreshSettlement(); }, 500);
+    setTimeout(() => { refreshMetrics(); refreshSettlement(); refreshDbTps(); }, 500);
   };
 
   const localP = (p: number) => {
-    const s = [...localStats.latencies].sort((a, b) => a - b);
+    const s = [...stats.latencies].sort((a, b) => a - b);
     if (!s.length) return 0;
     return s[Math.max(0, Math.ceil(p / 100 * s.length) - 1)];
   };
 
   const challenges = [
-    { id: "C1", name: "Exactly-once (idempotency)", ok: localStats.duplicates > 0, hint: `${localStats.duplicates} duplicates returned cached results` },
+    { id: "C1", name: "Exactly-once (idempotency)", ok: stats.duplicates > 0, hint: `${stats.duplicates} duplicates returned cached results` },
     { id: "C2", name: "Event sourcing (FSM)",       ok: (metrics?.completed ?? 0) > 0, hint: "State machine transitions persisted" },
     { id: "C3", name: "Hot partition counters",     ok: (metrics?.completed ?? 0) > 0, hint: "Pre-computed positions, no row locks" },
     { id: "C4", name: "Settlement determinism",     ok: (settlement?.net_obligations?.length ?? 0) > 0, hint: "Multilateral netting from positions" },
@@ -164,6 +219,13 @@ export function SwitchLoadTest() {
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
+          {!tabVisible && running && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-warning/10 border border-warning/30 text-sm">
+              <Eye className="h-4 w-4 text-warning shrink-0" />
+              <span className="text-warning-foreground">Tab is in background — browser is throttling timers. TPS will be inaccurate. Bring this tab to the foreground.</span>
+            </div>
+          )}
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -196,7 +258,7 @@ export function SwitchLoadTest() {
                 <Square className="h-4 w-4" /> Stop
               </Button>
             )}
-            <Button onClick={refreshMetrics} variant="outline" className="glass-card gap-2" disabled={running}>
+            <Button onClick={() => { refreshMetrics(); refreshDbTps(); }} variant="outline" className="glass-card gap-2" disabled={running}>
               <RefreshCw className="h-4 w-4" /> Refresh metrics
             </Button>
             <Button onClick={resetSwitch} variant="outline" className="glass-card gap-2" disabled={running}>
@@ -216,20 +278,20 @@ export function SwitchLoadTest() {
       </Card>
 
       <div className="grid md:grid-cols-4 gap-4">
-        <StatCard label="Live TPS (10s)" value={metrics?.tps.last_10s ?? "0.0"} icon={<Activity className="h-4 w-4 text-primary" />} />
-        <StatCard label="Total processed" value={(metrics?.total_transactions ?? 0).toLocaleString()} />
+        <StatCard label="Live TPS (DB, 10s)" value={dbTps.tps10.toFixed(1)} icon={<Activity className="h-4 w-4 text-primary" />} accent="text-primary" />
+        <StatCard label="Live TPS (DB, 60s)" value={dbTps.tps60.toFixed(1)} />
         <StatCard label="Success rate" value={`${metrics?.success_rate_pct ?? "0.00"}%`} accent="text-success" />
-        <StatCard label="p99 latency" value={`${metrics?.latency_ms.p99 ?? 0} ms`} />
+        <StatCard label="p99 latency (switch)" value={`${metrics?.latency_ms.p99 ?? 0} ms`} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="glass-card">
           <CardHeader><CardTitle className="text-base">Client-side load stats</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm font-mono">
-            <Row k="Fired"      v={localStats.fired.toLocaleString()} />
-            <Row k="Success"    v={`${localStats.success} (${localStats.fired ? ((localStats.success/localStats.fired)*100).toFixed(1) : "0.0"}%)`} accent="text-success" />
-            <Row k="Failed"     v={localStats.failed.toString()} accent="text-destructive" />
-            <Row k="Duplicates" v={localStats.duplicates.toString()} accent="text-warning" />
+            <Row k="Fired"      v={stats.fired.toLocaleString()} />
+            <Row k="Success"    v={`${stats.success} (${stats.fired ? ((stats.success/stats.fired)*100).toFixed(1) : "0.0"}%)`} accent="text-success" />
+            <Row k="Failed"     v={stats.failed.toString()} accent="text-destructive" />
+            <Row k="Duplicates" v={stats.duplicates.toString()} accent="text-warning" />
             <Row k="p50" v={`${localP(50)} ms`} />
             <Row k="p95" v={`${localP(95)} ms`} />
             <Row k="p99" v={`${localP(99)} ms`} />
@@ -243,9 +305,9 @@ export function SwitchLoadTest() {
             <Row k="p95"  v={`${metrics?.latency_ms.p95 ?? 0} ms`} />
             <Row k="p99"  v={`${metrics?.latency_ms.p99 ?? 0} ms`} />
             <Row k="Last" v={`${metrics?.latency_ms.last ?? 0} ms`} />
-            <Row k="Completed"  v={(metrics?.completed ?? 0).toLocaleString()} accent="text-success" />
-            <Row k="Failed"     v={(metrics?.failed ?? 0).toString()} accent="text-destructive" />
-            <Row k="Duplicates" v={(metrics?.duplicates ?? 0).toString()} accent="text-warning" />
+            <Row k="Completed (DB, 60s)" v={dbTps.total.toLocaleString()} accent="text-success" />
+            <Row k="Failed (switch)"     v={(metrics?.failed ?? 0).toString()} accent="text-destructive" />
+            <Row k="Duplicates (switch)" v={(metrics?.duplicates ?? 0).toString()} accent="text-warning" />
           </CardContent>
         </Card>
       </div>
