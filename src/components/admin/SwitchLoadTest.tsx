@@ -57,6 +57,7 @@ export function SwitchLoadTest() {
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [progress, setProgress] = useState(0);
   const [dbTps, setDbTps] = useState({ tps10: 0, tps60: 0, total: 0 });
+  const [lastRun, setLastRun] = useState<{ observedTps: number; targetTps: number; fired: number; elapsed: number; success: number; failed: number; duplicates: number } | null>(null);
   const [tabVisible, setTabVisible] = useState(typeof document !== "undefined" ? !document.hidden : true);
 
   // Stats accumulated in refs (no per-call rerender), flushed to state on a timer.
