@@ -69,7 +69,7 @@ export function SwitchLoadTest() {
     while (receiver === sender) receiver = PHONES[Math.floor(Math.random() * PHONES.length)];
     const amountKES = Math.floor(Math.random() * 49500) + 500;
 
-    let key = crypto.randomUUID();
+    let key: string = crypto.randomUUID();
     if (recentKeysRef.current.length > 10 && Math.random() < DUPLICATE_RATE) {
       key = recentKeysRef.current[Math.floor(Math.random() * recentKeysRef.current.length)];
     } else {
