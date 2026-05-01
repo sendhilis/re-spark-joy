@@ -281,11 +281,42 @@ export function SwitchLoadTest() {
       </Card>
 
       <div className="grid md:grid-cols-4 gap-4">
-        <StatCard label="Live TPS (DB, 10s)" value={dbTps.tps10.toFixed(1)} icon={<Activity className="h-4 w-4 text-primary" />} accent="text-primary" />
-        <StatCard label="Live TPS (DB, 60s)" value={dbTps.tps60.toFixed(1)} />
+        <StatCard
+          label={running ? "Live TPS (DB, 10s)" : "Observed TPS (last run)"}
+          value={running ? dbTps.tps10.toFixed(1) : (lastRun ? lastRun.observedTps.toFixed(1) : dbTps.tps10.toFixed(1))}
+          icon={<Activity className="h-4 w-4 text-primary" />}
+          accent="text-primary"
+        />
+        <StatCard
+          label={running ? "Live TPS (DB, 60s)" : "Target TPS (last run)"}
+          value={running ? dbTps.tps60.toFixed(1) : (lastRun ? lastRun.targetTps.toString() : dbTps.tps60.toFixed(1))}
+        />
         <StatCard label="Success rate" value={`${metrics?.success_rate_pct ?? "0.00"}%`} accent="text-success" />
         <StatCard label="p99 latency (switch)" value={`${metrics?.latency_ms.p99 ?? 0} ms`} />
       </div>
+
+      {lastRun && !running && (
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" /> Last run summary
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Snapshot from the most recent test — persists after the rolling DB window expires.
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
+            <div><div className="text-muted-foreground text-xs">Target TPS</div><div className="font-bold text-lg">{lastRun.targetTps}</div></div>
+            <div><div className="text-muted-foreground text-xs">Observed TPS</div><div className="font-bold text-lg text-primary">{lastRun.observedTps.toFixed(1)}</div></div>
+            <div><div className="text-muted-foreground text-xs">Fired</div><div className="font-bold text-lg">{lastRun.fired.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Elapsed</div><div className="font-bold text-lg">{lastRun.elapsed.toFixed(1)}s</div></div>
+            <div><div className="text-muted-foreground text-xs">Success</div><div className="font-bold text-success">{lastRun.success}</div></div>
+            <div><div className="text-muted-foreground text-xs">Failed</div><div className="font-bold text-destructive">{lastRun.failed}</div></div>
+            <div><div className="text-muted-foreground text-xs">Duplicates</div><div className="font-bold text-warning">{lastRun.duplicates}</div></div>
+            <div><div className="text-muted-foreground text-xs">Efficiency</div><div className="font-bold">{((lastRun.observedTps / lastRun.targetTps) * 100).toFixed(0)}%</div></div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="glass-card">
