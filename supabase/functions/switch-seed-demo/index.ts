@@ -33,31 +33,61 @@ Deno.serve(async (req) => {
 
     const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/switch-process-intent`;
     const auth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
-    const results: any[] = [];
-
-    for (let i = 0; i < count; i++) {
+    // Build all request bodies up-front
+    const jobs = Array.from({ length: count }, (_, i) => {
       const bank = BANKS[Math.floor(Math.random() * BANKS.length)];
       const payee = PAYEES[Math.floor(Math.random() * PAYEES.length)];
       const amount = Math.round(100 + Math.random() * 25000);
-      const body = {
+      return {
         idempotency_key: `seed-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
         payer_identifier: `MSISDN+2547${Math.floor(10000000 + Math.random() * 89999999)}`,
         payee_identifier: payee,
         payee_bank: bank,
         amount, currency: "KES", rail: "bank_rail",
       };
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: auth },
-        body: JSON.stringify(body),
-      });
-      results.push({ status: r.status });
+    });
+
+    // Bounded-concurrency worker pool (CONCURRENCY in flight at any time).
+    // Prevents the seeder from exceeding the edge runtime wall-clock limit
+    // when many requests are slow (e.g. circuit-open fail-fast bursts).
+    const CONCURRENCY = 10;
+    const PER_REQUEST_TIMEOUT_MS = 8000;
+    const results: { status: number }[] = new Array(jobs.length);
+    let cursor = 0;
+
+    async function worker() {
+      while (true) {
+        const idx = cursor++;
+        if (idx >= jobs.length) return;
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), PER_REQUEST_TIMEOUT_MS);
+        try {
+          const r = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: auth },
+            body: JSON.stringify(jobs[idx]),
+            signal: ctrl.signal,
+          });
+          // Drain body to free the connection
+          await r.text().catch(() => {});
+          results[idx] = { status: r.status };
+        } catch (_e) {
+          results[idx] = { status: 0 }; // timeout / network error
+        } finally {
+          clearTimeout(t);
+        }
+      }
     }
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, jobs.length) }, worker));
 
     return new Response(JSON.stringify({
       ok: true, generated: count,
-      success: results.filter((r) => r.status === 200).length,
-      circuit_blocked: results.filter((r) => r.status === 503).length,
+      success: results.filter((r) => r?.status === 200).length,
+      circuit_blocked: results.filter((r) => r?.status === 503).length,
+      server_errors: results.filter((r) => r?.status >= 500 && r?.status !== 503).length,
+      timed_out: results.filter((r) => r?.status === 0).length,
+      concurrency: 10,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
