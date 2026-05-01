@@ -148,28 +148,28 @@ export function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="switch-ops" className="space-y-6">
-          <TabsList className="grid w-full glass-card" style={{ gridTemplateColumns: "repeat(21, minmax(0, 1fr))" }}>
-            <TabsTrigger value="switch-ops" className="flex items-center gap-2"><Cpu className="h-4 w-4" /><span className="hidden md:inline">Switch Ops</span></TabsTrigger>
-            <TabsTrigger value="load-test" className="flex items-center gap-2"><Zap className="h-4 w-4" /><span className="hidden md:inline">Load Test</span></TabsTrigger>
-            <TabsTrigger value="agents" className="flex items-center gap-2"><Store className="h-4 w-4" /><span className="hidden md:inline">{t('admin.agents')}</span></TabsTrigger>
-            <TabsTrigger value="strategic-gaps" className="flex items-center gap-2"><Target className="h-4 w-4" /><span className="hidden md:inline">Strategic Gaps</span></TabsTrigger>
-            <TabsTrigger value="diaspora" className="flex items-center gap-2"><Globe className="h-4 w-4" /><span className="hidden md:inline">{t('admin.diaspora')}</span></TabsTrigger>
-            <TabsTrigger value="accounting" className="flex items-center gap-2"><Calculator className="h-4 w-4" /><span className="hidden md:inline">{t('admin.accounting')}</span></TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2"><Users className="h-4 w-4" /><span className="hidden md:inline">{t('admin.users')}</span></TabsTrigger>
-            <TabsTrigger value="transactions" className="flex items-center gap-2"><BarChart3 className="h-4 w-4" /><span className="hidden md:inline">{t('admin.transactions')}</span></TabsTrigger>
-            <TabsTrigger value="loans" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /><span className="hidden md:inline">{t('admin.loans')}</span></TabsTrigger>
-            <TabsTrigger value="compliance" className="flex items-center gap-2"><Shield className="h-4 w-4" /><span className="hidden md:inline">{t('admin.compliance')}</span></TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2"><TrendingUp className="h-4 w-4" /><span className="hidden md:inline">{t('admin.analytics')}</span></TabsTrigger>
-            <TabsTrigger value="country-compliance" className="flex items-center gap-2"><FileCheck className="h-4 w-4" /><span className="hidden md:inline">{config.flag} {t('admin.regulatory')}</span></TabsTrigger>
-            <TabsTrigger value="country-fees" className="flex items-center gap-2"><Banknote className="h-4 w-4" /><span className="hidden md:inline">{config.flag} {t('admin.fees')}</span></TabsTrigger>
-            <TabsTrigger value="tariffs" className="flex items-center gap-2"><Receipt className="h-4 w-4" /><span className="hidden md:inline">Tariffs</span></TabsTrigger>
-            <TabsTrigger value="switch-fee" className="flex items-center gap-2"><Sigma className="h-4 w-4" /><span className="hidden md:inline">Switch Fee</span></TabsTrigger>
-            <TabsTrigger value="settlement" className="flex items-center gap-2"><Repeat className="h-4 w-4" /><span className="hidden md:inline">Settlement</span></TabsTrigger>
-            <TabsTrigger value="agent-console" className="flex items-center gap-2"><Shield className="h-4 w-4" /><span className="hidden md:inline">Agent (KCB)</span></TabsTrigger>
-            <TabsTrigger value="reconciliation" className="flex items-center gap-2"><ScanSearch className="h-4 w-4" /><span className="hidden md:inline">Live Recon</span></TabsTrigger>
-            <TabsTrigger value="merchants" className="flex items-center gap-2"><Briefcase className="h-4 w-4" /><span className="hidden md:inline">Merchants</span></TabsTrigger>
-            <TabsTrigger value="routing" className="flex items-center gap-2"><Network className="h-4 w-4" /><span className="hidden md:inline">Routing</span></TabsTrigger>
-            <TabsTrigger value="kcb-benefits" className="flex items-center gap-2"><Crown className="h-4 w-4" /><span className="hidden md:inline">KCB ROI</span></TabsTrigger>
+          <TabsList className="glass-card flex flex-wrap h-auto w-full justify-start gap-1 p-1.5">
+            <TabsTrigger value="switch-ops" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Cpu className="h-3.5 w-3.5" />Switch Ops</TabsTrigger>
+            <TabsTrigger value="load-test" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Zap className="h-3.5 w-3.5" />Load Test</TabsTrigger>
+            <TabsTrigger value="agents" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Store className="h-3.5 w-3.5" />{t('admin.agents')}</TabsTrigger>
+            <TabsTrigger value="strategic-gaps" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Target className="h-3.5 w-3.5" />Strategic Gaps</TabsTrigger>
+            <TabsTrigger value="diaspora" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Globe className="h-3.5 w-3.5" />{t('admin.diaspora')}</TabsTrigger>
+            <TabsTrigger value="accounting" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Calculator className="h-3.5 w-3.5" />{t('admin.accounting')}</TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Users className="h-3.5 w-3.5" />{t('admin.users')}</TabsTrigger>
+            <TabsTrigger value="transactions" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><BarChart3 className="h-3.5 w-3.5" />{t('admin.transactions')}</TabsTrigger>
+            <TabsTrigger value="loans" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><DollarSign className="h-3.5 w-3.5" />{t('admin.loans')}</TabsTrigger>
+            <TabsTrigger value="compliance" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Shield className="h-3.5 w-3.5" />{t('admin.compliance')}</TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><TrendingUp className="h-3.5 w-3.5" />{t('admin.analytics')}</TabsTrigger>
+            <TabsTrigger value="country-compliance" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><FileCheck className="h-3.5 w-3.5" />{config.flag} {t('admin.regulatory')}</TabsTrigger>
+            <TabsTrigger value="country-fees" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Banknote className="h-3.5 w-3.5" />{config.flag} {t('admin.fees')}</TabsTrigger>
+            <TabsTrigger value="tariffs" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Receipt className="h-3.5 w-3.5" />Tariffs</TabsTrigger>
+            <TabsTrigger value="switch-fee" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Sigma className="h-3.5 w-3.5" />Switch Fee</TabsTrigger>
+            <TabsTrigger value="settlement" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Repeat className="h-3.5 w-3.5" />Settlement</TabsTrigger>
+            <TabsTrigger value="agent-console" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Shield className="h-3.5 w-3.5" />Agent (KCB)</TabsTrigger>
+            <TabsTrigger value="reconciliation" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><ScanSearch className="h-3.5 w-3.5" />Live Recon</TabsTrigger>
+            <TabsTrigger value="merchants" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Briefcase className="h-3.5 w-3.5" />Merchants</TabsTrigger>
+            <TabsTrigger value="routing" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Network className="h-3.5 w-3.5" />Routing</TabsTrigger>
+            <TabsTrigger value="kcb-benefits" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Crown className="h-3.5 w-3.5" />KCB ROI</TabsTrigger>
           </TabsList>
 
           <TabsContent value="switch-ops"><SwitchOperations /></TabsContent>
