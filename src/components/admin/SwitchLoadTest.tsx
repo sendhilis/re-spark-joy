@@ -57,6 +57,7 @@ export function SwitchLoadTest() {
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [progress, setProgress] = useState(0);
   const [dbTps, setDbTps] = useState({ tps10: 0, tps60: 0, total: 0 });
+  const [lastRun, setLastRun] = useState<{ observedTps: number; targetTps: number; fired: number; elapsed: number; success: number; failed: number; duplicates: number } | null>(null);
   const [tabVisible, setTabVisible] = useState(typeof document !== "undefined" ? !document.hidden : true);
 
   // Stats accumulated in refs (no per-call rerender), flushed to state on a timer.
@@ -173,8 +174,10 @@ export function SwitchLoadTest() {
     await refreshDbTps();
     setRunning(false);
     const elapsed = (Date.now() - startedAt) / 1000;
-    const observedTps = (statsRef.current.fired / elapsed).toFixed(1);
-    toast.success(`Load test complete: ${statsRef.current.fired} fired in ${elapsed.toFixed(1)}s (${observedTps} TPS observed)`);
+    const r = statsRef.current;
+    const observedTps = r.fired / elapsed;
+    setLastRun({ observedTps, targetTps: tps, fired: r.fired, elapsed, success: r.success, failed: r.failed, duplicates: r.duplicates });
+    toast.success(`Load test complete: ${r.fired} fired in ${elapsed.toFixed(1)}s (${observedTps.toFixed(1)} TPS observed)`);
   };
 
   const stopTest = () => { cancelRef.current = true; toast.info("Stopping load test..."); };
@@ -278,11 +281,42 @@ export function SwitchLoadTest() {
       </Card>
 
       <div className="grid md:grid-cols-4 gap-4">
-        <StatCard label="Live TPS (DB, 10s)" value={dbTps.tps10.toFixed(1)} icon={<Activity className="h-4 w-4 text-primary" />} accent="text-primary" />
-        <StatCard label="Live TPS (DB, 60s)" value={dbTps.tps60.toFixed(1)} />
+        <StatCard
+          label={running ? "Live TPS (DB, 10s)" : "Observed TPS (last run)"}
+          value={running ? dbTps.tps10.toFixed(1) : (lastRun ? lastRun.observedTps.toFixed(1) : dbTps.tps10.toFixed(1))}
+          icon={<Activity className="h-4 w-4 text-primary" />}
+          accent="text-primary"
+        />
+        <StatCard
+          label={running ? "Live TPS (DB, 60s)" : "Target TPS (last run)"}
+          value={running ? dbTps.tps60.toFixed(1) : (lastRun ? lastRun.targetTps.toString() : dbTps.tps60.toFixed(1))}
+        />
         <StatCard label="Success rate" value={`${metrics?.success_rate_pct ?? "0.00"}%`} accent="text-success" />
         <StatCard label="p99 latency (switch)" value={`${metrics?.latency_ms.p99 ?? 0} ms`} />
       </div>
+
+      {lastRun && !running && (
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" /> Last run summary
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Snapshot from the most recent test — persists after the rolling DB window expires.
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
+            <div><div className="text-muted-foreground text-xs">Target TPS</div><div className="font-bold text-lg">{lastRun.targetTps}</div></div>
+            <div><div className="text-muted-foreground text-xs">Observed TPS</div><div className="font-bold text-lg text-primary">{lastRun.observedTps.toFixed(1)}</div></div>
+            <div><div className="text-muted-foreground text-xs">Fired</div><div className="font-bold text-lg">{lastRun.fired.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Elapsed</div><div className="font-bold text-lg">{lastRun.elapsed.toFixed(1)}s</div></div>
+            <div><div className="text-muted-foreground text-xs">Success</div><div className="font-bold text-success">{lastRun.success}</div></div>
+            <div><div className="text-muted-foreground text-xs">Failed</div><div className="font-bold text-destructive">{lastRun.failed}</div></div>
+            <div><div className="text-muted-foreground text-xs">Duplicates</div><div className="font-bold text-warning">{lastRun.duplicates}</div></div>
+            <div><div className="text-muted-foreground text-xs">Efficiency</div><div className="font-bold">{((lastRun.observedTps / lastRun.targetTps) * 100).toFixed(0)}%</div></div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="glass-card">
