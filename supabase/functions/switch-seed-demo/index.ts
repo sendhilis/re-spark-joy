@@ -83,8 +83,11 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       ok: true, generated: count,
-      success: results.filter((r) => r.status === 200).length,
-      circuit_blocked: results.filter((r) => r.status === 503).length,
+      success: results.filter((r) => r?.status === 200).length,
+      circuit_blocked: results.filter((r) => r?.status === 503).length,
+      server_errors: results.filter((r) => r?.status >= 500 && r?.status !== 503).length,
+      timed_out: results.filter((r) => r?.status === 0).length,
+      concurrency: 10,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
