@@ -28,13 +28,15 @@ Deno.serve(async (req) => {
     if (agentErr || !agent) throw new Error("KCB settlement agent not configured");
 
     if (action === "generate") {
-      // Pull today's pending net positions (Lipafo owes bank => negative net_position)
+      // Sweep ALL open pending net positions across cycles — an EOD run should
+      // never strand backlog from earlier dates that haven't yet been settled.
       const { data: positions } = await supabase
         .from("settlement_positions").select("*")
-        .eq("position_date", today).eq("status", "pending");
+        .eq("status", "pending")
+        .order("position_date", { ascending: true });
 
       if (!positions?.length) {
-        return json({ ok: true, message: "No pending positions for today", generated: 0 });
+        return json({ ok: true, message: "No pending positions to settle", generated: 0 });
       }
 
       // Load collateral for liquidity check (debtor side = Lipafo's pooled position via member banks owing)
@@ -69,10 +71,11 @@ Deno.serve(async (req) => {
           c.utilised_amount = Number(c.utilised_amount) + amount;
         }
 
-        const ref = `LPF-INSTR-${today.replace(/-/g, "")}-${String(seq++).padStart(4, "0")}`;
+        const cycleDate: string = (p.position_date as string).slice(0, 10);
+        const ref = `LPF-INSTR-${cycleDate.replace(/-/g, "")}-${String(seq++).padStart(4, "0")}`;
         instructions.push({
           instruction_ref: ref,
-          cycle_date: today,
+          cycle_date: cycleDate,
           agent_id: agent.id,
           debtor_bank: debtor,
           creditor_bank: creditor,
