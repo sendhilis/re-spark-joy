@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Activity, Play, Square, Zap, AlertTriangle, CheckCircle2, RefreshCw, Eye } from "lucide-react";
+import { Activity, Play, Square, Zap, AlertTriangle, CheckCircle2, RefreshCw, Eye, Repeat2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
