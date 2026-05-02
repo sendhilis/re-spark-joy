@@ -151,6 +151,7 @@ export function AdminDashboard() {
         <Tabs defaultValue="switch-ops" className="space-y-6">
           <TabsList className="glass-card flex flex-wrap h-auto w-full justify-start gap-1 p-1.5">
             <TabsTrigger value="switch-ops" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Cpu className="h-3.5 w-3.5" />Switch Ops</TabsTrigger>
+            <TabsTrigger value="bank-onboarding" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Building2 className="h-3.5 w-3.5" />Bank Onboarding</TabsTrigger>
             <TabsTrigger value="load-test" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Zap className="h-3.5 w-3.5" />Load Test</TabsTrigger>
             <TabsTrigger value="agents" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Store className="h-3.5 w-3.5" />{t('admin.agents')}</TabsTrigger>
             <TabsTrigger value="strategic-gaps" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Target className="h-3.5 w-3.5" />Strategic Gaps</TabsTrigger>
