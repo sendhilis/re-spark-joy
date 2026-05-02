@@ -359,19 +359,19 @@ function KYBPanel({ bank, onChanged }: { bank: Bank; onChanged: () => void }) {
       <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
         <b>KYB checklist:</b> Certificate of Incorporation · CBK Banking Licence · Board Resolution · AML/CFT Policy · Beneficial Ownership Declaration · Most recent audited financials.
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        {(bank.lifecycle_stage === "application") && (
+          <Button variant="secondary" onClick={async () => {
+            await supabase.from("bank_lifecycle_events").insert({ bank_id: bank.id, from_stage: "application", to_stage: "kyb_legal", actor_user_id: user?.id });
+            await supabase.from("participating_banks").update({ lifecycle_stage: "kyb_legal" }).eq("id", bank.id);
+            toast({ title: "Moved to KYB stage" }); onChanged();
+          }}>Start KYB process →</Button>
+        )}
         <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-        <Button onClick={advance} disabled={bank.lifecycle_stage !== "kyb_legal" && bank.lifecycle_stage !== "application"}>
+        <Button onClick={advance}>
           Advance to Technical Setup →
         </Button>
       </div>
-      {bank.lifecycle_stage === "application" && (
-        <Button variant="secondary" size="sm" onClick={async () => {
-          await supabase.from("bank_lifecycle_events").insert({ bank_id: bank.id, from_stage: "application", to_stage: "kyb_legal", actor_user_id: user?.id });
-          await supabase.from("participating_banks").update({ lifecycle_stage: "kyb_legal" }).eq("id", bank.id);
-          toast({ title: "Moved to KYB stage" }); onChanged();
-        }}>Start KYB process</Button>
-      )}
     </div>
   );
 }
