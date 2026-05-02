@@ -587,7 +587,7 @@ function SandboxCertPanel({ bank, onChanged }: { bank: Bank; onChanged: () => vo
         </Card>
       )}
 
-      {bank.sandbox_certified_at && bank.lifecycle_stage === "sandbox_certification" && (
+      {bank.sandbox_certified_at && bank.lifecycle_stage !== "production_live" && (
         <div className="flex justify-end">
           <Button onClick={advance}><Rocket className="h-4 w-4 mr-2" />Promote to Production</Button>
         </div>
