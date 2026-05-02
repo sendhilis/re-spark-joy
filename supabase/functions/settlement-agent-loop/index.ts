@@ -71,10 +71,11 @@ Deno.serve(async (req) => {
           c.utilised_amount = Number(c.utilised_amount) + amount;
         }
 
-        const ref = `LPF-INSTR-${today.replace(/-/g, "")}-${String(seq++).padStart(4, "0")}`;
+        const cycleDate: string = (p.position_date as string).slice(0, 10);
+        const ref = `LPF-INSTR-${cycleDate.replace(/-/g, "")}-${String(seq++).padStart(4, "0")}`;
         instructions.push({
           instruction_ref: ref,
-          cycle_date: today,
+          cycle_date: cycleDate,
           agent_id: agent.id,
           debtor_bank: debtor,
           creditor_bank: creditor,
