@@ -95,8 +95,8 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   SUPABASE EDGE FUNCTION                        │
-│                   supabase/functions/rukisha-ai/index.ts        │
+│                   BACKEND EDGE FUNCTION                        │
+│                   edge-functions/rukisha-ai/index.ts        │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐     │
 │  │ CORS Handler │  │ Payload      │  │ System Prompt     │     │
@@ -137,9 +137,9 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
 | `src/components/ai/RukishaAIWidget.tsx` | Frontend | Main widget: UI, state, streaming, persistence |
 | `src/contexts/WalletContext.tsx` | Frontend | Provides live balances & transaction data |
 | `src/contexts/AuthContext.tsx` | Frontend | Provides authenticated `user.id` for persistence |
-| `supabase/functions/rukisha-ai/index.ts` | Backend | Edge function: prompt assembly, AI gateway proxy |
-| `supabase/config.toml` | Config | Function registration, JWT verification settings |
-| `src/integrations/supabase/client.ts` | Frontend | Auto-generated Backend SDK client |
+| `edge-functions/rukisha-ai/index.ts` | Backend | Edge function: prompt assembly, AI gateway proxy |
+| `edge-functions/config.toml` | Config | Function registration, JWT verification settings |
+| `src/integrations/backend/client.ts` | Frontend | Auto-generated Backend SDK client |
 | Database: `public.chat_messages` | Database | Persistent conversation storage |
 
 ---
@@ -405,7 +405,7 @@ Shows only when `isLoading === true` AND the last message is NOT already an assi
 
 ### 5.1 Edge Function Overview
 
-**File:** `supabase/functions/rukisha-ai/index.ts`  
+**File:** `edge-functions/rukisha-ai/index.ts`  
 **Runtime:** Deno (Backend Edge Functions)  
 **Framework:** `std@0.168.0/http/server.ts`  
 **JWT Verification:** Disabled (`verify_jwt = false` in config.toml)
@@ -696,7 +696,7 @@ Clear History (user clicks Trash icon):
 
 ## 8. Configuration
 
-### supabase/config.toml
+### edge-functions/config.toml
 
 ```toml
 project_id = "ejrttghgscfhbezvobhv"
@@ -714,8 +714,8 @@ verify_jwt = false
 
 | Variable | Source | Used In |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `.env` (auto-generated) | Frontend: build CHAT_URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | `.env` (auto-generated) | Frontend: Authorization header |
+| `VITE_BACKEND_URL` | `.env` (auto-generated) | Frontend: build CHAT_URL |
+| `VITE_BACKEND_PUBLISHABLE_KEY` | `.env` (auto-generated) | Frontend: Authorization header |
 | `AI_GATEWAY_API_KEY` | Backend secret (auto-provisioned) | Edge function: AI gateway auth |
 
 ---
