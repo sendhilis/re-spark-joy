@@ -485,9 +485,9 @@ function TechnicalSetupPanel({ bank, onChanged }: { bank: Bank; onChanged: () =>
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Profile"}</Button>
-        {bank.lifecycle_stage === "technical_setup" && env === "sandbox" && (
+        {env === "sandbox" && bank.lifecycle_stage !== "sandbox_certification" && bank.lifecycle_stage !== "production_live" && (
           <Button onClick={advance}>Advance to Sandbox Certification →</Button>
         )}
       </div>
