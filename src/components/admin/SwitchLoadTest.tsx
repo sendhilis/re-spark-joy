@@ -347,7 +347,50 @@ export function SwitchLoadTest() {
             <Button onClick={resetSwitch} variant="outline" className="glass-card gap-2" disabled={running}>
               Reset switch state
             </Button>
+            <Button
+              onClick={runIdempotencyReplay}
+              variant="outline"
+              className="glass-card gap-2 border-primary/40"
+              disabled={running || replayRunning}
+              title="Fires 50 unique txns, then replays the same idempotency keys to verify every duplicate hits the cache."
+            >
+              <Repeat2 className="h-4 w-4" />
+              {replayRunning ? "Replaying..." : "Run idempotency replay"}
+            </Button>
           </div>
+
+          {replayResult && (
+            <div className={`rounded-lg p-4 border ${replayResult.verdict === "PASS" ? "bg-success/10 border-success/40" : "bg-destructive/10 border-destructive/40"}`}>
+              <div className="flex items-center gap-2 mb-3">
+                {replayResult.verdict === "PASS"
+                  ? <CheckCircle2 className="h-5 w-5 text-success" />
+                  : <AlertTriangle className="h-5 w-5 text-destructive" />}
+                <div className="font-semibold text-foreground">
+                  Idempotency replay: <span className={replayResult.verdict === "PASS" ? "text-success" : "text-destructive"}>{replayResult.verdict}</span>
+                </div>
+                <Badge variant="outline" className="ml-auto font-mono">{replayResult.sampleSize} keys</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs font-mono mb-3">
+                <div className="space-y-1">
+                  <div className="text-muted-foreground uppercase tracking-wider">Phase 1 — fresh keys</div>
+                  <div>Sent: <span className="font-bold">{replayResult.phase1.sent}</span></div>
+                  <div>Success: <span className="text-success font-bold">{replayResult.phase1.success}</span></div>
+                  <div>Failed: <span className="text-destructive font-bold">{replayResult.phase1.failed}</span></div>
+                  <div>Duplicates: <span className="text-warning font-bold">{replayResult.phase1.duplicates}</span></div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground uppercase tracking-wider">Phase 2 — replay same keys</div>
+                  <div>Sent: <span className="font-bold">{replayResult.phase2.sent}</span></div>
+                  <div>Cached hits: <span className="text-success font-bold">{replayResult.phase2.cachedHits}</span></div>
+                  <div>New-state leaks: <span className={replayResult.phase2.newStateLeaks === 0 ? "text-success font-bold" : "text-destructive font-bold"}>{replayResult.phase2.newStateLeaks}</span></div>
+                  <div>Errored: <span className="text-destructive font-bold">{replayResult.phase2.failed}</span></div>
+                </div>
+              </div>
+              <div className="space-y-1 text-xs">
+                {replayResult.notes.map((n, i) => <div key={i} className="text-muted-foreground">{n}</div>)}
+              </div>
+            </div>
+          )}
 
           {(running || progress > 0) && (
             <div className="space-y-2">
