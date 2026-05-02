@@ -55,12 +55,12 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
 
 | Property | Value |
 |---|---|
-| **Architecture** | 3-layer: React Widget → Supabase Edge Function → Lovable AI Gateway |
+| **Architecture** | 3-layer: React Widget → Backend Edge Function → Managed AI Gateway |
 | **AI Model** | `google/gemini-3-flash-preview` |
 | **Response Mode** | Server-Sent Events (SSE) streaming for chat; JSON for one-shot |
-| **Persistence** | PostgreSQL via Supabase (`chat_messages` table) |
+| **Persistence** | PostgreSQL via Backend (`chat_messages` table) |
 | **Auth Requirement** | Edge function: `verify_jwt = false`; Persistence: requires authenticated user |
-| **Deployment** | Auto-deployed via Lovable Cloud |
+| **Deployment** | Auto-deployed via the managed backend |
 
 ---
 
@@ -84,7 +84,7 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
 │  │  └──────────┘  └──────────────┘  └───────────────────┘  │   │
 │  │                                                          │   │
 │  │  ┌──────────────────────────────────────────────────┐    │   │
-│  │  │ Persistence Layer (Supabase JS SDK)              │    │   │
+│  │  │ Persistence Layer (Backend JS SDK)              │    │   │
 │  │  │ • loadHistory() • persistMessage() • clearHistory│    │   │
 │  │  └──────────────────────────────────────────────────┘    │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -95,8 +95,8 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   SUPABASE EDGE FUNCTION                        │
-│                   supabase/functions/rukisha-ai/index.ts        │
+│                   BACKEND EDGE FUNCTION                        │
+│                   edge-functions/rukisha-ai/index.ts        │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐     │
 │  │ CORS Handler │  │ Payload      │  │ System Prompt     │     │
@@ -113,17 +113,17 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
 │  │ • walletContext.recentTransactions → activity feed   │       │
 │  └──────────────────────────────────────────────────────┘       │
 │                              │                                   │
-│                    POST https://ai.gateway.lovable.dev/v1/...   │
-│                    Authorization: Bearer <LOVABLE_API_KEY>       │
+│                    POST https://ai.gateway.internal/v1/...   │
+│                    Authorization: Bearer <AI_GATEWAY_API_KEY>       │
 └──────────────────────────────────┬──────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   LOVABLE AI GATEWAY                            │
+│                   MANAGED AI GATEWAY                            │
 │                                                                 │
 │   Model: google/gemini-3-flash-preview                          │
 │   Protocol: OpenAI-compatible chat/completions                  │
-│   Auth: LOVABLE_API_KEY (auto-provisioned)                      │
+│   Auth: AI_GATEWAY_API_KEY (auto-provisioned)                      │
 │   Output: SSE stream or JSON (based on stream param)            │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -137,9 +137,9 @@ Lipafo AI is a conversational financial assistant embedded as a floating widget 
 | `src/components/ai/RukishaAIWidget.tsx` | Frontend | Main widget: UI, state, streaming, persistence |
 | `src/contexts/WalletContext.tsx` | Frontend | Provides live balances & transaction data |
 | `src/contexts/AuthContext.tsx` | Frontend | Provides authenticated `user.id` for persistence |
-| `supabase/functions/rukisha-ai/index.ts` | Backend | Edge function: prompt assembly, AI gateway proxy |
-| `supabase/config.toml` | Config | Function registration, JWT verification settings |
-| `src/integrations/supabase/client.ts` | Frontend | Auto-generated Supabase SDK client |
+| `edge-functions/rukisha-ai/index.ts` | Backend | Edge function: prompt assembly, AI gateway proxy |
+| `edge-functions/config.toml` | Config | Function registration, JWT verification settings |
+| `src/integrations/backend/client.ts` | Frontend | Auto-generated Backend SDK client |
 | Database: `public.chat_messages` | Database | Persistent conversation storage |
 
 ---
@@ -361,7 +361,7 @@ Shows only when `isLoading === true` AND the last message is NOT already an assi
 
 ### 4.8 Conversation Persistence Layer
 
-**Storage:** Supabase `public.chat_messages` table  
+**Storage:** Backend `public.chat_messages` table  
 **Scope:** Per authenticated user  
 **Limit:** Last 50 messages loaded on widget open
 
@@ -405,8 +405,8 @@ Shows only when `isLoading === true` AND the last message is NOT already an assi
 
 ### 5.1 Edge Function Overview
 
-**File:** `supabase/functions/rukisha-ai/index.ts`  
-**Runtime:** Deno (Supabase Edge Functions)  
+**File:** `edge-functions/rukisha-ai/index.ts`  
+**Runtime:** Deno (Backend Edge Functions)  
 **Framework:** `std@0.168.0/http/server.ts`  
 **JWT Verification:** Disabled (`verify_jwt = false` in config.toml)
 
@@ -507,10 +507,10 @@ When an `action` string is provided, an additional system message is injected wi
 
 ### 5.6 AI Gateway Integration
 
-**Endpoint:** `https://ai.gateway.lovable.dev/v1/chat/completions`  
+**Endpoint:** `https://ai.gateway.internal/v1/chat/completions`  
 **Protocol:** OpenAI Chat Completions API (compatible)  
-**Authentication:** `Authorization: Bearer ${LOVABLE_API_KEY}`  
-**Secret Source:** `Deno.env.get("LOVABLE_API_KEY")` — auto-provisioned by Lovable Cloud
+**Authentication:** `Authorization: Bearer ${AI_GATEWAY_API_KEY}`  
+**Secret Source:** `Deno.env.get("AI_GATEWAY_API_KEY")` — auto-provisioned by the managed backend
 
 **Request Payload:**
 
@@ -696,7 +696,7 @@ Clear History (user clicks Trash icon):
 
 ## 8. Configuration
 
-### supabase/config.toml
+### edge-functions/config.toml
 
 ```toml
 project_id = "ejrttghgscfhbezvobhv"
@@ -714,9 +714,9 @@ verify_jwt = false
 
 | Variable | Source | Used In |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `.env` (auto-generated) | Frontend: build CHAT_URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | `.env` (auto-generated) | Frontend: Authorization header |
-| `LOVABLE_API_KEY` | Supabase secret (auto-provisioned) | Edge function: AI gateway auth |
+| `VITE_BACKEND_URL` | `.env` (auto-generated) | Frontend: build CHAT_URL |
+| `VITE_BACKEND_PUBLISHABLE_KEY` | `.env` (auto-generated) | Frontend: Authorization header |
+| `AI_GATEWAY_API_KEY` | Backend secret (auto-provisioned) | Edge function: AI gateway auth |
 
 ---
 
@@ -725,7 +725,7 @@ verify_jwt = false
 | Layer | Protection |
 |---|---|
 | **Edge Function Access** | Anon key required (publishable, not secret) |
-| **AI Gateway** | `LOVABLE_API_KEY` server-side only, never exposed to client |
+| **AI Gateway** | `AI_GATEWAY_API_KEY` server-side only, never exposed to client |
 | **Chat Persistence** | RLS policies: `auth.uid() = user_id` for SELECT, INSERT, DELETE |
 | **Wallet Data** | Sent per-request from client memory; never stored server-side in edge function |
 | **No UPDATE policy** | Messages are immutable once persisted (no edit capability) |
