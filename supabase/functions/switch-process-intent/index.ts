@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
 
     // ── Pattern 1+2: Insert intent in NEW state, then drive state machine,
     //    appending an event at every transition (event log = source of truth).
+    //    UNIQUE(idempotency_key) makes this race-safe — duplicates collapse to a replay.
     const { data: intent, error: insErr } = await supabase
       .from("transaction_intents").insert({
         idempotency_key: body.idempotency_key,
@@ -108,7 +109,19 @@ Deno.serve(async (req) => {
         state: "NEW",
         attempt_count: 1,
       }).select().single();
-    if (insErr) throw insErr;
+    if (insErr) {
+      // 23505 = unique_violation → another concurrent request won the race.
+      if ((insErr as any).code === "23505") {
+        const { data: dup } = await supabase.from("transaction_intents")
+          .select("*").eq("idempotency_key", body.idempotency_key).maybeSingle();
+        if (dup) {
+          return new Response(JSON.stringify({ replayed: true, intent: dup }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+      throw insErr;
+    }
 
     const logEvent = async (event_type: string, from_state: string | null, to_state: string | null, payload: any = {}) => {
       await supabase.from("switch_events").insert({
@@ -133,13 +146,113 @@ Deno.serve(async (req) => {
     await supabase.from("transaction_intents").update({ state: "IN_FLIGHT" }).eq("id", intent.id);
     await logEvent("debit.requested", "NEW", "IN_FLIGHT");
 
-    // Simulate downstream bank latency for demo purposes.
-    const simLatency = bankConn ? Math.round(bankConn.p50_latency_ms * (0.5 + Math.random())) : 50;
-    await new Promise((r) => setTimeout(r, Math.min(simLatency, 300)));
+    // ── Real outbound pacs.008 to the bank (or simulator fallback).
+    // Look up the bank's active integration profile for endpoint + signing key.
+    let pacs008Url: string | null = null;
+    let timeoutMs = 2000;
+    let hmacSecret = Deno.env.get("BANK_SIM_HMAC_SECRET") ?? "lipafo-pilot-shared-secret";
+    if (body.payee_bank) {
+      const { data: bankRow } = await supabase
+        .from("participating_banks").select("id").eq("bank_code", body.payee_bank).maybeSingle();
+      if (bankRow?.id) {
+        const { data: profile } = await supabase
+          .from("bank_integration_profiles")
+          .select("pacs008_endpoint,timeout_ms,hmac_key_ref,is_active,environment")
+          .eq("bank_id", bankRow.id).eq("is_active", true).maybeSingle();
+        if (profile?.pacs008_endpoint) pacs008Url = profile.pacs008_endpoint;
+        if (profile?.timeout_ms) timeoutMs = profile.timeout_ms;
+      }
+    }
+    // Default to bank simulator if no endpoint configured (pilot behaviour).
+    if (!pacs008Url) {
+      pacs008Url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bank-simulator`;
+    }
 
-    // DEBITED
+    const pacs008Body = JSON.stringify({
+      message_type: "pacs.008",
+      trace_id,
+      idempotency_key: body.idempotency_key,
+      payer_identifier: body.payer_identifier,
+      payee_identifier: body.payee_identifier,
+      amount: body.amount,
+      currency: body.currency ?? "KES",
+    });
+    // HMAC-SHA256 of raw body
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw", enc.encode(hmacSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sigBytes = await crypto.subtle.sign("HMAC", key, enc.encode(pacs008Body));
+    const signature = Array.from(new Uint8Array(sigBytes))
+      .map((b) => b.toString(16).padStart(2, "0")).join("");
+
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const callStart = Date.now();
+    let bankStatus = "ACSC";
+    let bankRef: string | null = null;
+    let bankRejection: string | null = null;
+    try {
+      const resp = await fetch(pacs008Url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Lipafo-Signature": signature,
+          "X-Lipafo-Bank-Code": body.payee_bank ?? "UNKNOWN",
+          "X-Lipafo-Trace-Id": trace_id,
+          // bank-simulator is hosted on Supabase, so include service auth
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: pacs008Body,
+        signal: ctrl.signal,
+      });
+      const respJson = await resp.json().catch(() => ({}));
+      bankStatus = respJson.status ?? (resp.ok ? "ACSC" : "RJCT");
+      bankRef = respJson.bank_reference ?? null;
+      bankRejection = respJson.reason ?? null;
+    } catch (e) {
+      bankStatus = "TIMEOUT";
+      bankRejection = (e as Error).name === "AbortError" ? "timeout" : (e as Error).message;
+    } finally {
+      clearTimeout(t);
+    }
+    const callLatency = Date.now() - callStart;
+
+    if (bankStatus !== "ACSC") {
+      // Bank rejected or timed out — fail the intent, increment breaker stats.
+      await supabase.from("transaction_intents").update({
+        state: "FAILED",
+        last_error: `bank:${bankStatus}:${bankRejection ?? ""}`,
+        completed_at: new Date().toISOString(),
+      }).eq("id", intent.id);
+      await logEvent("bank.rejected", "IN_FLIGHT", "FAILED", {
+        status: bankStatus, reason: bankRejection, latency_ms: callLatency,
+      });
+      if (bankConn) {
+        const newFails = bankConn.failure_count + 1;
+        const open = newFails >= 5;
+        await supabase.from("bank_connectors").update({
+          failure_count: newFails,
+          last_failure_at: new Date().toISOString(),
+          circuit_state: open ? "OPEN" : bankConn.circuit_state,
+          opened_at: open ? new Date().toISOString() : bankConn.opened_at,
+        }).eq("id", bankConn.id);
+      }
+      await supabase.from("trace_spans").insert({
+        trace_id, span_id: newId(), service: "switch", operation: "pacs008_send",
+        status: "error", duration_ms: callLatency,
+        attributes: { bank: body.payee_bank, reason: bankRejection },
+      });
+      return new Response(JSON.stringify({
+        ok: false, trace_id, intent_id: intent.id, state: "FAILED",
+        bank_status: bankStatus, reason: bankRejection,
+      }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // DEBITED — bank accepted
     await supabase.from("transaction_intents").update({ state: "DEBITED" }).eq("id", intent.id);
-    await logEvent("debit.confirmed", "IN_FLIGHT", "DEBITED", { latency_ms: simLatency });
+    await logEvent("debit.confirmed", "IN_FLIGHT", "DEBITED", {
+      latency_ms: callLatency, bank_reference: bankRef,
+    });
 
     // ── Pattern 3: Hot-account sharding. Pick a shard for the payee account.
     const shardNo = hashShard(body.idempotency_key);
