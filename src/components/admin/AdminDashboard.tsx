@@ -175,6 +175,7 @@ export function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="switch-ops"><SwitchOperations /></TabsContent>
+          <TabsContent value="bank-onboarding"><BankOnboardingDashboard /></TabsContent>
           <TabsContent value="load-test"><SwitchLoadTest /></TabsContent>
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
           <TabsContent value="strategic-gaps"><StrategicGapsDashboard /></TabsContent>
