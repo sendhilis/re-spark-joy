@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Activity, Play, Square, Zap, AlertTriangle, CheckCircle2, RefreshCw, Eye } from "lucide-react";
+import { Activity, Play, Square, Zap, AlertTriangle, CheckCircle2, RefreshCw, Eye, Repeat2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -182,6 +182,86 @@ export function SwitchLoadTest() {
 
   const stopTest = () => { cancelRef.current = true; toast.info("Stopping load test..."); };
 
+  // ─── Idempotency replay mode ──────────────────────────────────────────────
+  const [replayRunning, setReplayRunning] = useState(false);
+  const [replayResult, setReplayResult] = useState<null | {
+    sampleSize: number;
+    phase1: { sent: number; success: number; failed: number; duplicates: number };
+    phase2: { sent: number; cachedHits: number; newStateLeaks: number; failed: number };
+    verdict: "PASS" | "FAIL";
+    notes: string[];
+  }>(null);
+
+  const runIdempotencyReplay = async () => {
+    setReplayRunning(true);
+    setReplayResult(null);
+    const SAMPLE = 50;
+    const keys: string[] = [];
+    const payloads: Array<{ key: string; sender: string; receiver: string; amount_cents: number }> = [];
+    for (let i = 0; i < SAMPLE; i++) {
+      const sender = PHONES[Math.floor(Math.random() * PHONES.length)];
+      let receiver = PHONES[Math.floor(Math.random() * PHONES.length)];
+      while (receiver === sender) receiver = PHONES[Math.floor(Math.random() * PHONES.length)];
+      const amount_cents = (Math.floor(Math.random() * 49500) + 500) * 100;
+      const key = crypto.randomUUID();
+      keys.push(key);
+      payloads.push({ key, sender, receiver, amount_cents });
+    }
+
+    toast.info(`Phase 1: firing ${SAMPLE} unique transactions...`);
+    const phase1 = { sent: 0, success: 0, failed: 0, duplicates: 0 };
+    const fire = async (p: typeof payloads[number]) => {
+      try {
+        const { data } = await callSwitch("payment", {
+          idempotency_key: p.key, sender_phone: p.sender, receiver_phone: p.receiver,
+          amount_cents: p.amount_cents, currency: "KES",
+        });
+        phase1.sent += 1;
+        if (data?.duplicate) phase1.duplicates += 1;
+        else if (data?.success) phase1.success += 1;
+        else phase1.failed += 1;
+      } catch { phase1.sent += 1; phase1.failed += 1; }
+    };
+    // Fire phase 1 with mild concurrency (10 at a time)
+    for (let i = 0; i < payloads.length; i += 10) {
+      await Promise.all(payloads.slice(i, i + 10).map(fire));
+    }
+
+    // Settle, then replay
+    await new Promise(r => setTimeout(r, 2000));
+    toast.info(`Phase 2: replaying the SAME ${SAMPLE} idempotency keys...`);
+    const phase2 = { sent: 0, cachedHits: 0, newStateLeaks: 0, failed: 0 };
+    const replay = async (p: typeof payloads[number]) => {
+      try {
+        const { data } = await callSwitch("payment", {
+          idempotency_key: p.key, sender_phone: p.sender, receiver_phone: p.receiver,
+          amount_cents: p.amount_cents, currency: "KES",
+        });
+        phase2.sent += 1;
+        if (data?.duplicate) phase2.cachedHits += 1;
+        else if (data?.success || data?.error) phase2.newStateLeaks += 1;
+        else phase2.failed += 1;
+      } catch { phase2.sent += 1; phase2.failed += 1; }
+    };
+    for (let i = 0; i < payloads.length; i += 10) {
+      await Promise.all(payloads.slice(i, i + 10).map(replay));
+    }
+
+    const notes: string[] = [];
+    if (phase2.cachedHits === SAMPLE) notes.push(`✓ All ${SAMPLE} replays returned cached results (duplicate:true).`);
+    if (phase2.newStateLeaks > 0) notes.push(`✗ ${phase2.newStateLeaks} replays produced NEW state — exactly-once VIOLATED.`);
+    if (phase2.failed > 0) notes.push(`⚠ ${phase2.failed} replays errored — investigate edge function.`);
+    if (phase1.duplicates > 0) notes.push(`ℹ ${phase1.duplicates} phase-1 collisions (UUID reuse, expected ~0).`);
+
+    const verdict: "PASS" | "FAIL" = phase2.cachedHits === SAMPLE && phase2.newStateLeaks === 0 ? "PASS" : "FAIL";
+    setReplayResult({ sampleSize: SAMPLE, phase1, phase2, verdict, notes });
+    setReplayRunning(false);
+    await refreshMetrics();
+    if (verdict === "PASS") toast.success(`Idempotency PASS — ${SAMPLE}/${SAMPLE} replays hit cache.`);
+    else toast.error(`Idempotency FAIL — ${phase2.newStateLeaks} new-state leaks.`);
+  };
+
+
   const resetSwitch = async () => {
     await callSwitch("reset");
     setMetrics(null); setSettlement(null);
@@ -267,7 +347,50 @@ export function SwitchLoadTest() {
             <Button onClick={resetSwitch} variant="outline" className="glass-card gap-2" disabled={running}>
               Reset switch state
             </Button>
+            <Button
+              onClick={runIdempotencyReplay}
+              variant="outline"
+              className="glass-card gap-2 border-primary/40"
+              disabled={running || replayRunning}
+              title="Fires 50 unique txns, then replays the same idempotency keys to verify every duplicate hits the cache."
+            >
+              <Repeat2 className="h-4 w-4" />
+              {replayRunning ? "Replaying..." : "Run idempotency replay"}
+            </Button>
           </div>
+
+          {replayResult && (
+            <div className={`rounded-lg p-4 border ${replayResult.verdict === "PASS" ? "bg-success/10 border-success/40" : "bg-destructive/10 border-destructive/40"}`}>
+              <div className="flex items-center gap-2 mb-3">
+                {replayResult.verdict === "PASS"
+                  ? <CheckCircle2 className="h-5 w-5 text-success" />
+                  : <AlertTriangle className="h-5 w-5 text-destructive" />}
+                <div className="font-semibold text-foreground">
+                  Idempotency replay: <span className={replayResult.verdict === "PASS" ? "text-success" : "text-destructive"}>{replayResult.verdict}</span>
+                </div>
+                <Badge variant="outline" className="ml-auto font-mono">{replayResult.sampleSize} keys</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs font-mono mb-3">
+                <div className="space-y-1">
+                  <div className="text-muted-foreground uppercase tracking-wider">Phase 1 — fresh keys</div>
+                  <div>Sent: <span className="font-bold">{replayResult.phase1.sent}</span></div>
+                  <div>Success: <span className="text-success font-bold">{replayResult.phase1.success}</span></div>
+                  <div>Failed: <span className="text-destructive font-bold">{replayResult.phase1.failed}</span></div>
+                  <div>Duplicates: <span className="text-warning font-bold">{replayResult.phase1.duplicates}</span></div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground uppercase tracking-wider">Phase 2 — replay same keys</div>
+                  <div>Sent: <span className="font-bold">{replayResult.phase2.sent}</span></div>
+                  <div>Cached hits: <span className="text-success font-bold">{replayResult.phase2.cachedHits}</span></div>
+                  <div>New-state leaks: <span className={replayResult.phase2.newStateLeaks === 0 ? "text-success font-bold" : "text-destructive font-bold"}>{replayResult.phase2.newStateLeaks}</span></div>
+                  <div>Errored: <span className="text-destructive font-bold">{replayResult.phase2.failed}</span></div>
+                </div>
+              </div>
+              <div className="space-y-1 text-xs">
+                {replayResult.notes.map((n, i) => <div key={i} className="text-muted-foreground">{n}</div>)}
+              </div>
+            </div>
+          )}
 
           {(running || progress > 0) && (
             <div className="space-y-2">
