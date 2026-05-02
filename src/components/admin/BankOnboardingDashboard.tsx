@@ -466,22 +466,44 @@ function TechnicalSetupPanel({ bank, onChanged }: { bank: Bank; onChanged: () =>
 
       <Card><CardHeader><CardTitle className="text-sm">ISO 20022 Endpoints</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div><Label>pacs.008 (Customer Credit Transfer) URL</Label><Input value={profile.pacs008_endpoint || ""} onChange={e => set("pacs008_endpoint", e.target.value)} placeholder="https://api.bank.co.ke/iso20022/pacs.008" /></div>
-          <div><Label>pacs.009 (Bank-to-Bank Settlement) URL</Label><Input value={profile.pacs009_endpoint || ""} onChange={e => set("pacs009_endpoint", e.target.value)} placeholder="https://api.bank.co.ke/iso20022/pacs.009" /></div>
-          <div><Label>pacs.002 (Status Report) URL</Label><Input value={profile.pacs002_endpoint || ""} onChange={e => set("pacs002_endpoint", e.target.value)} placeholder="https://api.bank.co.ke/iso20022/pacs.002" /></div>
-          <div><Label>Webhook Callback URL (Lipafo → Bank)</Label><Input value={profile.webhook_callback_url || ""} onChange={e => set("webhook_callback_url", e.target.value)} placeholder="https://webhooks.bank.co.ke/lipafo" /></div>
+          <div>
+            <HintLabel hint="HTTPS URL on the bank's core banking system that accepts pacs.008 (Customer Credit Transfer) XML messages — used for end-customer wallet↔bank credits. Lipafo POSTs signed XML here.">pacs.008 (Customer Credit Transfer) URL</HintLabel>
+            <Input value={profile.pacs008_endpoint || ""} onChange={e => set("pacs008_endpoint", e.target.value)} placeholder="https://api.bank.co.ke/iso20022/pacs.008" />
+          </div>
+          <div>
+            <HintLabel hint="HTTPS URL for pacs.009 (Financial Institution Credit Transfer). Used by Lipafo's settlement engine to push end-of-day net obligations bank-to-bank.">pacs.009 (Bank-to-Bank Settlement) URL</HintLabel>
+            <Input value={profile.pacs009_endpoint || ""} onChange={e => set("pacs009_endpoint", e.target.value)} placeholder="https://api.bank.co.ke/iso20022/pacs.009" />
+          </div>
+          <div>
+            <HintLabel hint="HTTPS URL for pacs.002 (Payment Status Report). Lipafo uses this to fetch / receive ACSC (accepted) or RJCT (rejected) status for a previously sent message.">pacs.002 (Status Report) URL</HintLabel>
+            <Input value={profile.pacs002_endpoint || ""} onChange={e => set("pacs002_endpoint", e.target.value)} placeholder="https://api.bank.co.ke/iso20022/pacs.002" />
+          </div>
+          <div>
+            <HintLabel hint="Bank-side inbound URL that Lipafo calls asynchronously to push status updates and unsolicited events (e.g. settlement completed, reversal). Must be reachable from Lipafo egress IPs.">Webhook Callback URL (Lipafo → Bank)</HintLabel>
+            <Input value={profile.webhook_callback_url || ""} onChange={e => set("webhook_callback_url", e.target.value)} placeholder="https://webhooks.bank.co.ke/lipafo" />
+          </div>
         </CardContent>
       </Card>
 
       <Card><CardHeader><CardTitle className="text-sm">Security</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>mTLS Client Cert Ref</Label><Input value={profile.mtls_client_cert_ref || ""} onChange={e => set("mtls_client_cert_ref", e.target.value)} placeholder="vault://certs/kcb-client" /></div>
-            <div><Label>mTLS Server CA Ref</Label><Input value={profile.mtls_server_ca_ref || ""} onChange={e => set("mtls_server_ca_ref", e.target.value)} placeholder="vault://ca/kcb-root" /></div>
+            <div>
+              <HintLabel hint="Vault URI of the X.509 client certificate Lipafo presents to the bank during the mTLS handshake. Format: vault://certs/<bank>-client. Stored as a reference, not the cert itself.">mTLS Client Cert Ref</HintLabel>
+              <Input value={profile.mtls_client_cert_ref || ""} onChange={e => set("mtls_client_cert_ref", e.target.value)} placeholder="vault://certs/kcb-client" />
+            </div>
+            <div>
+              <HintLabel hint="Vault URI of the CA bundle used to validate the bank's server certificate. Prevents man-in-the-middle attacks. Both sides must trust each other.">mTLS Server CA Ref</HintLabel>
+              <Input value={profile.mtls_server_ca_ref || ""} onChange={e => set("mtls_server_ca_ref", e.target.value)} placeholder="vault://ca/kcb-root" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>HMAC Key Reference</Label><Input value={profile.hmac_key_ref || ""} onChange={e => set("hmac_key_ref", e.target.value)} placeholder="vault://hmac/kcb-signing-v1" /></div>
-            <div><Label>HMAC Algorithm</Label>
+            <div>
+              <HintLabel hint="Vault URI of the shared HMAC secret used to sign the body of every request. The bank verifies the signature on receipt — guarantees integrity and authenticity. Rotated on schedule.">HMAC Key Reference</HintLabel>
+              <Input value={profile.hmac_key_ref || ""} onChange={e => set("hmac_key_ref", e.target.value)} placeholder="vault://hmac/kcb-signing-v1" />
+            </div>
+            <div>
+              <HintLabel hint="Hash algorithm used with the HMAC key. SHA-256 is the default and meets CBK guidance; SHA-512 may be required by some banks for stronger compliance.">HMAC Algorithm</HintLabel>
               <Select value={profile.hmac_algorithm} onValueChange={(v) => set("hmac_algorithm", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -492,7 +514,7 @@ function TechnicalSetupPanel({ bank, onChanged }: { bank: Bank; onChanged: () =>
             </div>
           </div>
           <div>
-            <Label>IP Allowlist (comma-separated CIDRs)</Label>
+            <HintLabel hint="Comma-separated CIDR ranges from which Lipafo is allowed to call the bank's endpoints. Mirrored on the bank's edge firewall — any other source IP is blocked at L3.">IP Allowlist (comma-separated CIDRs)</HintLabel>
             <Input value={profile.ip_allowlist.join(", ")} onChange={e => set("ip_allowlist", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="41.139.0.0/16, 196.201.0.0/16" />
           </div>
         </CardContent>
@@ -500,10 +522,22 @@ function TechnicalSetupPanel({ bank, onChanged }: { bank: Bank; onChanged: () =>
 
       <Card><CardHeader><CardTitle className="text-sm">Reliability & Limits</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><Label>Timeout (ms)</Label><Input type="number" value={profile.timeout_ms} onChange={e => set("timeout_ms", parseInt(e.target.value || "0"))} /></div>
-          <div><Label>Rate Limit (TPS)</Label><Input type="number" value={profile.rate_limit_tps} onChange={e => set("rate_limit_tps", parseInt(e.target.value || "0"))} /></div>
-          <div><Label>Breaker Threshold</Label><Input type="number" value={profile.breaker_failure_threshold} onChange={e => set("breaker_failure_threshold", parseInt(e.target.value || "0"))} /></div>
-          <div><Label>Recovery (ms)</Label><Input type="number" value={profile.breaker_recovery_ms} onChange={e => set("breaker_recovery_ms", parseInt(e.target.value || "0"))} /></div>
+          <div>
+            <HintLabel hint="Maximum time (milliseconds) Lipafo will wait for a single request to complete before aborting and counting it as a timeout error. Typical: 2000 ms.">Timeout (ms)</HintLabel>
+            <Input type="number" value={profile.timeout_ms} onChange={e => set("timeout_ms", parseInt(e.target.value || "0"))} />
+          </div>
+          <div>
+            <HintLabel hint="Maximum sustained transactions per second Lipafo will send to this bank. Must match the contracted capacity. Pilot starts at 10 TPS; raised after 7 green days.">Rate Limit (TPS)</HintLabel>
+            <Input type="number" value={profile.rate_limit_tps} onChange={e => set("rate_limit_tps", parseInt(e.target.value || "0"))} />
+          </div>
+          <div>
+            <HintLabel hint="Number of consecutive failures that will trip the circuit breaker open. While open, all traffic to this bank is rejected immediately, protecting both sides from cascading failure.">Breaker Threshold</HintLabel>
+            <Input type="number" value={profile.breaker_failure_threshold} onChange={e => set("breaker_failure_threshold", parseInt(e.target.value || "0"))} />
+          </div>
+          <div>
+            <HintLabel hint="Cooldown (milliseconds) the breaker stays open before entering half-open state. In half-open, one probe request is sent — success closes the breaker, failure re-opens it.">Recovery (ms)</HintLabel>
+            <Input type="number" value={profile.breaker_recovery_ms} onChange={e => set("breaker_recovery_ms", parseInt(e.target.value || "0"))} />
+          </div>
         </CardContent>
       </Card>
 
