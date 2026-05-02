@@ -219,9 +219,31 @@ function CreateBankDialog({ open, onClose, onCreated }: { open: boolean; onClose
 
 /* ───────────────────────── Bank Detail Dialog (5-stage tabs) ───────────────────────── */
 
+const STAGE_TO_TAB: Record<Stage, string> = {
+  application: "kyb",
+  kyb_legal: "kyb",
+  technical_setup: "tech",
+  sandbox_certification: "sandbox",
+  production_live: "observability",
+  suspended: "observability",
+  rejected: "kyb",
+};
+
 function BankDetailDialog({ bank, onClose, onChanged }: { bank: Bank; onClose: () => void; onChanged: () => void }) {
+  const { user } = useAuth();
   const stageIndex = STAGE_ORDER.indexOf(bank.lifecycle_stage);
   const progress = stageIndex >= 0 ? ((stageIndex + 1) / STAGE_ORDER.length) * 100 : 0;
+  const defaultTab = STAGE_TO_TAB[bank.lifecycle_stage] || "kyb";
+
+  const jumpToStage = async (target: Stage) => {
+    await supabase.from("bank_lifecycle_events").insert({
+      bank_id: bank.id, from_stage: bank.lifecycle_stage, to_stage: target,
+      actor_user_id: user?.id, notes: "Admin override — jumped stage",
+    });
+    await supabase.from("participating_banks").update({ lifecycle_stage: target }).eq("id", bank.id);
+    toast({ title: `Stage set to ${STAGE_LABEL[target]}` });
+    onChanged();
+  };
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -243,9 +265,24 @@ function BankDetailDialog({ bank, onClose, onChanged }: { bank: Bank; onClose: (
               <span key={s} className={i <= stageIndex ? "text-foreground font-medium" : ""}>{STAGE_LABEL[s]}</span>
             ))}
           </div>
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            <span className="text-[10px] text-muted-foreground self-center mr-1">Admin jump:</span>
+            {STAGE_ORDER.map(s => (
+              <Button
+                key={s}
+                size="sm"
+                variant={bank.lifecycle_stage === s ? "default" : "outline"}
+                className="h-6 px-2 text-[10px]"
+                onClick={() => jumpToStage(s)}
+                disabled={bank.lifecycle_stage === s}
+              >
+                {STAGE_LABEL[s]}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        <Tabs defaultValue="kyb" className="space-y-4">
+        <Tabs defaultValue={defaultTab} className="space-y-4">
           <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="kyb"><FileCheck2 className="h-4 w-4 mr-1.5" />KYB & Legal</TabsTrigger>
             <TabsTrigger value="tech"><Settings2 className="h-4 w-4 mr-1.5" />Technical Setup</TabsTrigger>
