@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
 
     // ── Pattern 1+2: Insert intent in NEW state, then drive state machine,
     //    appending an event at every transition (event log = source of truth).
+    //    UNIQUE(idempotency_key) makes this race-safe — duplicates collapse to a replay.
     const { data: intent, error: insErr } = await supabase
       .from("transaction_intents").insert({
         idempotency_key: body.idempotency_key,
@@ -108,7 +109,19 @@ Deno.serve(async (req) => {
         state: "NEW",
         attempt_count: 1,
       }).select().single();
-    if (insErr) throw insErr;
+    if (insErr) {
+      // 23505 = unique_violation → another concurrent request won the race.
+      if ((insErr as any).code === "23505") {
+        const { data: dup } = await supabase.from("transaction_intents")
+          .select("*").eq("idempotency_key", body.idempotency_key).maybeSingle();
+        if (dup) {
+          return new Response(JSON.stringify({ replayed: true, intent: dup }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+      throw insErr;
+    }
 
     const logEvent = async (event_type: string, from_state: string | null, to_state: string | null, payload: any = {}) => {
       await supabase.from("switch_events").insert({
