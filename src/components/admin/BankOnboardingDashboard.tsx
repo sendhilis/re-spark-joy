@@ -600,7 +600,7 @@ function SandboxCertPanel({ bank, onChanged }: { bank: Bank; onChanged: () => vo
 
 function GoLivePanel({ bank, onChanged, onClose }: { bank: Bank; onChanged: () => void; onClose: () => void }) {
   const { user } = useAuth();
-  const ready = bank.lifecycle_stage === "sandbox_certification" && !!bank.sandbox_certified_at;
+  const ready = !!bank.sandbox_certified_at && bank.lifecycle_stage !== "production_live";
   const live = bank.lifecycle_stage === "production_live";
 
   const goLive = async () => {
