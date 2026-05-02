@@ -9,10 +9,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Building2, Plus, ShieldCheck, Activity, FlaskConical, Rocket, FileCheck2, Settings2, RefreshCw, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
+import { Building2, Plus, ShieldCheck, Activity, FlaskConical, Rocket, FileCheck2, Settings2, RefreshCw, CheckCircle2, XCircle, AlertCircle, Clock, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+
+/** Inline label with hover/tap tooltip — used to explain integration fields. */
+function HintLabel({ children, hint }: { children: React.ReactNode; hint: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Label className="m-0">{children}</Label>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Field help">
+              <HelpCircle className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+            {hint}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+}
 
 type Stage = "application" | "kyb_legal" | "technical_setup" | "sandbox_certification" | "production_live" | "suspended" | "rejected";
 
