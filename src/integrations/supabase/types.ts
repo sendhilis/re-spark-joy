@@ -112,6 +112,62 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_certification_tests: {
+        Row: {
+          bank_id: string
+          created_at: string
+          environment: Database["public"]["Enums"]["bank_environment"]
+          error_message: string | null
+          id: string
+          is_required: boolean
+          latency_ms: number | null
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+          test_code: string
+          test_name: string
+          test_suite_run_id: string
+        }
+        Insert: {
+          bank_id: string
+          created_at?: string
+          environment?: Database["public"]["Enums"]["bank_environment"]
+          error_message?: string | null
+          id?: string
+          is_required?: boolean
+          latency_ms?: number | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status: string
+          test_code: string
+          test_name: string
+          test_suite_run_id: string
+        }
+        Update: {
+          bank_id?: string
+          created_at?: string
+          environment?: Database["public"]["Enums"]["bank_environment"]
+          error_message?: string | null
+          id?: string
+          is_required?: boolean
+          latency_ms?: number | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          test_code?: string
+          test_name?: string
+          test_suite_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_certification_tests_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "participating_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bank_connectors: {
         Row: {
           bank_code: string
@@ -124,6 +180,7 @@ export type Database = {
           opened_at: string | null
           p50_latency_ms: number
           p99_latency_ms: number
+          participating_bank_id: string | null
           success_count: number
           timeout_ms: number
           updated_at: string
@@ -139,6 +196,7 @@ export type Database = {
           opened_at?: string | null
           p50_latency_ms?: number
           p99_latency_ms?: number
+          participating_bank_id?: string | null
           success_count?: number
           timeout_ms?: number
           updated_at?: string
@@ -154,11 +212,136 @@ export type Database = {
           opened_at?: string | null
           p50_latency_ms?: number
           p99_latency_ms?: number
+          participating_bank_id?: string | null
           success_count?: number
           timeout_ms?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bank_connectors_participating_bank_id_fkey"
+            columns: ["participating_bank_id"]
+            isOneToOne: false
+            referencedRelation: "participating_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_integration_profiles: {
+        Row: {
+          bank_id: string
+          breaker_failure_threshold: number
+          breaker_recovery_ms: number
+          created_at: string
+          environment: Database["public"]["Enums"]["bank_environment"]
+          hmac_algorithm: string
+          hmac_key_ref: string | null
+          id: string
+          ip_allowlist: string[]
+          is_active: boolean
+          mtls_client_cert_ref: string | null
+          mtls_server_ca_ref: string | null
+          pacs002_endpoint: string | null
+          pacs008_endpoint: string | null
+          pacs009_endpoint: string | null
+          rate_limit_tps: number
+          timeout_ms: number
+          updated_at: string
+          webhook_callback_url: string | null
+        }
+        Insert: {
+          bank_id: string
+          breaker_failure_threshold?: number
+          breaker_recovery_ms?: number
+          created_at?: string
+          environment?: Database["public"]["Enums"]["bank_environment"]
+          hmac_algorithm?: string
+          hmac_key_ref?: string | null
+          id?: string
+          ip_allowlist?: string[]
+          is_active?: boolean
+          mtls_client_cert_ref?: string | null
+          mtls_server_ca_ref?: string | null
+          pacs002_endpoint?: string | null
+          pacs008_endpoint?: string | null
+          pacs009_endpoint?: string | null
+          rate_limit_tps?: number
+          timeout_ms?: number
+          updated_at?: string
+          webhook_callback_url?: string | null
+        }
+        Update: {
+          bank_id?: string
+          breaker_failure_threshold?: number
+          breaker_recovery_ms?: number
+          created_at?: string
+          environment?: Database["public"]["Enums"]["bank_environment"]
+          hmac_algorithm?: string
+          hmac_key_ref?: string | null
+          id?: string
+          ip_allowlist?: string[]
+          is_active?: boolean
+          mtls_client_cert_ref?: string | null
+          mtls_server_ca_ref?: string | null
+          pacs002_endpoint?: string | null
+          pacs008_endpoint?: string | null
+          pacs009_endpoint?: string | null
+          rate_limit_tps?: number
+          timeout_ms?: number
+          updated_at?: string
+          webhook_callback_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_integration_profiles_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "participating_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_lifecycle_events: {
+        Row: {
+          actor_user_id: string | null
+          bank_id: string
+          created_at: string
+          from_stage: Database["public"]["Enums"]["bank_lifecycle_stage"] | null
+          id: string
+          notes: string | null
+          to_stage: Database["public"]["Enums"]["bank_lifecycle_stage"]
+        }
+        Insert: {
+          actor_user_id?: string | null
+          bank_id: string
+          created_at?: string
+          from_stage?:
+            | Database["public"]["Enums"]["bank_lifecycle_stage"]
+            | null
+          id?: string
+          notes?: string | null
+          to_stage: Database["public"]["Enums"]["bank_lifecycle_stage"]
+        }
+        Update: {
+          actor_user_id?: string | null
+          bank_id?: string
+          created_at?: string
+          from_stage?:
+            | Database["public"]["Enums"]["bank_lifecycle_stage"]
+            | null
+          id?: string
+          notes?: string | null
+          to_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_lifecycle_events_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "participating_banks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_messages: {
         Row: {
@@ -730,6 +913,75 @@ export type Database = {
           id?: string
           snapshot_at?: string
           source_url?: string
+        }
+        Relationships: []
+      }
+      participating_banks: {
+        Row: {
+          bank_code: string
+          bank_name: string
+          bic: string | null
+          cbk_license_number: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          go_live_at: string | null
+          id: string
+          kyb_documents: Json
+          kyb_status: string
+          legal_entity_name: string | null
+          lifecycle_stage: Database["public"]["Enums"]["bank_lifecycle_stage"]
+          notes: string | null
+          registration_number: string | null
+          sandbox_certified_at: string | null
+          tech_contact_email: string | null
+          tech_contact_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_code: string
+          bank_name: string
+          bic?: string | null
+          cbk_license_number?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          go_live_at?: string | null
+          id?: string
+          kyb_documents?: Json
+          kyb_status?: string
+          legal_entity_name?: string | null
+          lifecycle_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
+          notes?: string | null
+          registration_number?: string | null
+          sandbox_certified_at?: string | null
+          tech_contact_email?: string | null
+          tech_contact_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_code?: string
+          bank_name?: string
+          bic?: string | null
+          cbk_license_number?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          go_live_at?: string | null
+          id?: string
+          kyb_documents?: Json
+          kyb_status?: string
+          legal_entity_name?: string | null
+          lifecycle_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
+          notes?: string | null
+          registration_number?: string | null
+          sandbox_certified_at?: string | null
+          tech_contact_email?: string | null
+          tech_contact_name?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1387,6 +1639,15 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      bank_environment: "sandbox" | "production"
+      bank_lifecycle_stage:
+        | "application"
+        | "kyb_legal"
+        | "technical_setup"
+        | "sandbox_certification"
+        | "production_live"
+        | "suspended"
+        | "rejected"
       transaction_status: "completed" | "pending" | "failed"
       transaction_type:
         | "sent"
@@ -1534,6 +1795,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      bank_environment: ["sandbox", "production"],
+      bank_lifecycle_stage: [
+        "application",
+        "kyb_legal",
+        "technical_setup",
+        "sandbox_certification",
+        "production_live",
+        "suspended",
+        "rejected",
+      ],
       transaction_status: ["completed", "pending", "failed"],
       transaction_type: [
         "sent",

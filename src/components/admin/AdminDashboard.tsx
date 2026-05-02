@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma, Repeat, Briefcase, Crown, Network, Target, Cpu, ScanSearch, Zap } from "lucide-react";
+import { BarChart3, Users, DollarSign, Shield, AlertTriangle, TrendingUp, LogOut, Globe, Store, Calculator, FileCheck, Banknote, Receipt, Sigma, Repeat, Briefcase, Crown, Network, Target, Cpu, ScanSearch, Zap, Building2 } from "lucide-react";
 import { SwitchOperations } from "./SwitchOperations";
+import { BankOnboardingDashboard } from "./BankOnboardingDashboard";
 import { StrategicGapsDashboard } from "./StrategicGapsDashboard";
 import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
@@ -150,6 +151,7 @@ export function AdminDashboard() {
         <Tabs defaultValue="switch-ops" className="space-y-6">
           <TabsList className="glass-card flex flex-wrap h-auto w-full justify-start gap-1 p-1.5">
             <TabsTrigger value="switch-ops" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Cpu className="h-3.5 w-3.5" />Switch Ops</TabsTrigger>
+            <TabsTrigger value="bank-onboarding" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Building2 className="h-3.5 w-3.5" />Bank Onboarding</TabsTrigger>
             <TabsTrigger value="load-test" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Zap className="h-3.5 w-3.5" />Load Test</TabsTrigger>
             <TabsTrigger value="agents" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Store className="h-3.5 w-3.5" />{t('admin.agents')}</TabsTrigger>
             <TabsTrigger value="strategic-gaps" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Target className="h-3.5 w-3.5" />Strategic Gaps</TabsTrigger>
@@ -173,6 +175,7 @@ export function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="switch-ops"><SwitchOperations /></TabsContent>
+          <TabsContent value="bank-onboarding"><BankOnboardingDashboard /></TabsContent>
           <TabsContent value="load-test"><SwitchLoadTest /></TabsContent>
           <TabsContent value="agents"><AgentNetworkDashboard /></TabsContent>
           <TabsContent value="strategic-gaps"><StrategicGapsDashboard /></TabsContent>
