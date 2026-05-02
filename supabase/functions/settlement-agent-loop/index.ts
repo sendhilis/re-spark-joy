@@ -136,51 +136,117 @@ Deno.serve(async (req) => {
       const colByBank = new Map(collat?.map((c) => [c.member_bank, c]) ?? []);
       const confs: any[] = [];
 
+      // Realistic agent-side outcome distribution (cumulative thresholds)
+      // settled 88% | rejected 5% | failed_insufficient_funds 4% | pending_late 3%
+      const pickOutcome = (): "settled" | "rejected" | "failed_insufficient_funds" | "pending_late" => {
+        const r = Math.random();
+        if (r < 0.88) return "settled";
+        if (r < 0.93) return "rejected";
+        if (r < 0.97) return "failed_insufficient_funds";
+        return "pending_late";
+      };
+
+      const rejectionReasons = [
+        "AC03 - Invalid creditor account",
+        "AG01 - Transaction forbidden on this account",
+        "RC01 - Bank identifier (BIC) incorrect",
+        "DUPL - Duplicate MsgId detected",
+        "FF01 - Invalid file format (pacs.009)",
+      ];
+
+      const tally = { settled: 0, rejected: 0, failed_insufficient_funds: 0, pending_late: 0 };
+      const settledPositionIds: string[] = [];
+
       for (const ins of dispatched) {
+        const outcome = pickOutcome();
+        tally[outcome]++;
+
         const agentRef = `KCB-CONF-${ins.instruction_ref.split("-").pop()}-${Math.floor(Math.random() * 9999)}`;
-        confs.push({
+        const amount = Number(ins.amount);
+
+        const conf: any = {
           instruction_id: ins.id,
           agent_reference: agentRef,
-          outcome: "settled",
-          settled_amount: ins.amount,
-          raw_payload: { ConfRef: agentRef, OrgnlMsgId: ins.instruction_ref, SttlmDt: new Date().toISOString() },
-        });
+          outcome,
+          settled_amount: outcome === "settled" ? amount : null,
+          raw_payload: {
+            ConfRef: agentRef,
+            OrgnlMsgId: ins.instruction_ref,
+            SttlmDt: new Date().toISOString(),
+            outcome,
+          },
+        };
 
-        // Release debtor utilisation, debit posted_balance (cash actually moved)
-        if (ins.debtor_bank !== "LIPAFO_POOL") {
-          const c = colByBank.get(ins.debtor_bank);
-          if (c) {
-            await supabase.from("member_collateral").update({
-              utilised_amount: Math.max(0, Number(c.utilised_amount) - Number(ins.amount)),
-              posted_balance: Number(c.posted_balance) - Number(ins.amount),
-            }).eq("id", c.id);
+        let newInstructionStatus = "confirmed";
+        let rejectionReason: string | null = null;
+
+        if (outcome === "settled") {
+          // Cash actually moved: debit debtor collateral, credit creditor collateral, release earmark
+          if (ins.debtor_bank !== "LIPAFO_POOL") {
+            const c = colByBank.get(ins.debtor_bank);
+            if (c) {
+              const newUtil = Math.max(0, Number(c.utilised_amount) - amount);
+              const newPosted = Number(c.posted_balance) - amount;
+              await supabase.from("member_collateral").update({
+                utilised_amount: newUtil,
+                posted_balance: newPosted,
+              }).eq("id", c.id);
+              c.utilised_amount = newUtil;
+              c.posted_balance = newPosted;
+            }
           }
-        }
-        // Credit creditor's collateral balance
-        if (ins.creditor_bank !== "LIPAFO_POOL") {
-          const c = colByBank.get(ins.creditor_bank);
-          if (c) {
-            await supabase.from("member_collateral").update({
-              posted_balance: Number(c.posted_balance) + Number(ins.amount),
-            }).eq("id", c.id);
+          if (ins.creditor_bank !== "LIPAFO_POOL") {
+            const c = colByBank.get(ins.creditor_bank);
+            if (c) {
+              const newPosted = Number(c.posted_balance) + amount;
+              await supabase.from("member_collateral").update({ posted_balance: newPosted }).eq("id", c.id);
+              c.posted_balance = newPosted;
+            }
           }
+          if (ins.payload?.position_id) settledPositionIds.push(ins.payload.position_id);
+        } else if (outcome === "rejected" || outcome === "failed_insufficient_funds") {
+          // No cash moves. Release the earmark so debtor's available_balance is restored.
+          newInstructionStatus = "rejected";
+          rejectionReason = outcome === "rejected"
+            ? rejectionReasons[Math.floor(Math.random() * rejectionReasons.length)]
+            : "AM04 - Insufficient funds at agent";
+          conf.reason = rejectionReason;
+          conf.raw_payload.RjctRsn = rejectionReason;
+          if (ins.debtor_bank !== "LIPAFO_POOL") {
+            const c = colByBank.get(ins.debtor_bank);
+            if (c) {
+              const newUtil = Math.max(0, Number(c.utilised_amount) - amount);
+              await supabase.from("member_collateral").update({ utilised_amount: newUtil }).eq("id", c.id);
+              c.utilised_amount = newUtil;
+            }
+          }
+        } else {
+          // pending_late: agent acknowledged but hasn't booked. Keep earmark; instruction stays dispatched.
+          newInstructionStatus = "dispatched";
+          conf.reason = "Acknowledged - awaiting next RTGS window";
+          conf.raw_payload.Status = "ACWP"; // AcceptedWithoutPosting
         }
 
-        await supabase.from("settlement_instructions").update({
-          status: "confirmed",
-          confirmed_at: new Date().toISOString(),
+        const updates: Record<string, unknown> = {
+          status: newInstructionStatus,
           agent_reference: agentRef,
-        }).eq("id", ins.id);
+        };
+        if (newInstructionStatus === "confirmed") updates.confirmed_at = new Date().toISOString();
+        if (rejectionReason) updates.rejection_reason = rejectionReason;
+        await supabase.from("settlement_instructions").update(updates).eq("id", ins.id);
+
+        confs.push(conf);
       }
+
       if (confs.length) await supabase.from("settlement_confirmations").insert(confs);
 
-      // Mark related positions as settled
-      const positionIds = dispatched.map((d) => d.payload?.position_id).filter(Boolean);
-      if (positionIds.length) {
+      // Only positions whose instruction actually settled flip to settled
+      if (settledPositionIds.length) {
         await supabase.from("settlement_positions")
-          .update({ status: "settled" }).in("id", positionIds);
+          .update({ status: "settled" }).in("id", settledPositionIds);
       }
-      return json({ ok: true, confirmed: confs.length, agent: agent.agent_name });
+
+      return json({ ok: true, processed: confs.length, breakdown: tally, agent: agent.agent_name });
     }
 
     if (action === "topup") {
