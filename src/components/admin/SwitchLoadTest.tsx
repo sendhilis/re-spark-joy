@@ -120,18 +120,39 @@ export function SwitchLoadTest() {
 
     const start = Date.now();
     statsRef.current.fired += 1;
-    callSwitch("payment", {
+
+    // Realistic client retry: same idempotency_key, up to 2 retries on transient
+    // failure (network error / timeout / 5xx). This is what a well-behaved
+    // mobile client must do — minting a fresh UUID on retry causes double-debits.
+    const payload = {
       idempotency_key: key, sender_phone: sender, receiver_phone: receiver,
       amount_cents: amountKES * 100, currency: "KES",
-    }).then(({ data }) => {
-      const lat = Date.now() - start;
-      const r = statsRef.current;
-      r.latencies.push(lat);
-      if (r.latencies.length > 1000) r.latencies.shift();
-      if (data?.duplicate) r.duplicates += 1;
-      else if (data?.success) r.success += 1;
-      else r.failed += 1;
-    }).catch(() => { statsRef.current.failed += 1; });
+    };
+    const MAX_ATTEMPTS = 3;
+    const attempt = async (n: number): Promise<void> => {
+      try {
+        const { data, error } = await callSwitch("payment", payload);
+        const transient = error || (data && data.success === false && (data.transient === true || data.status === 503 || data.error_code === "timeout"));
+        if (transient && n < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 100 * n)); // backoff
+          return attempt(n + 1);
+        }
+        const lat = Date.now() - start;
+        const r = statsRef.current;
+        r.latencies.push(lat);
+        if (r.latencies.length > 1000) r.latencies.shift();
+        if (data?.duplicate) r.duplicates += 1;
+        else if (data?.success) r.success += 1;
+        else r.failed += 1;
+      } catch {
+        if (n < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 100 * n));
+          return attempt(n + 1);
+        }
+        statsRef.current.failed += 1;
+      }
+    };
+    attempt(1);
   };
 
   const runLoadTest = async () => {
