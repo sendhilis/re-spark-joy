@@ -415,6 +415,16 @@ export function SwitchLoadTest() {
               <Repeat2 className="h-4 w-4" />
               {replayRunning ? "Replaying..." : "Run idempotency replay"}
             </Button>
+            <Button
+              onClick={loadFailureBreakdown}
+              variant="outline"
+              className="glass-card gap-2 border-warning/40"
+              disabled={running || failureLoading}
+              title="Group failed/reversed txns from the last hour by category (timeout, 503, 422, 500) with sample trace IDs."
+            >
+              <AlertTriangle className="h-4 w-4" />
+              {failureLoading ? "Loading..." : "Failure breakdown"}
+            </Button>
           </div>
 
           {replayResult && (
