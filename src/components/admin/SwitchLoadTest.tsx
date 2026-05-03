@@ -557,6 +557,63 @@ export function SwitchLoadTest() {
         </CardContent>
       </Card>
 
+      {failureBreakdown && (
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Failure breakdown — last hour
+              <Badge variant="outline" className="ml-auto font-mono">{failureTotal} failed</Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Failed/reversed transactions grouped by error class with the top 5 trace samples per category.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {failureBreakdown.map(b => (
+                <div key={b.category} className="glass-card p-3 rounded-lg">
+                  <div className="text-xs text-muted-foreground">{b.label}</div>
+                  <div className={`text-2xl font-bold font-mono ${categoryMeta[b.category].tone}`}>{b.count}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {failureTotal ? ((b.count / failureTotal) * 100).toFixed(1) : "0.0"}%
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {failureBreakdown.filter(b => b.count > 0).map(b => (
+              <div key={b.category} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className={`text-sm font-semibold ${categoryMeta[b.category].tone}`}>{b.label}</div>
+                  <Badge variant="outline" className="font-mono text-xs">{b.count}</Badge>
+                </div>
+                <div className="space-y-1">
+                  {b.samples.map(s => (
+                    <div key={s.id} className="glass-card p-2 rounded text-xs font-mono flex flex-col md:flex-row md:items-center md:gap-3">
+                      <span className="text-primary truncate" title={s.id}>trace: {s.id.slice(0, 8)}…{s.id.slice(-4)}</span>
+                      <span className="text-muted-foreground truncate" title={s.idempotency_key}>idem: {s.idempotency_key.slice(0, 8)}…</span>
+                      <span className="text-foreground">{s.receiver_bank}</span>
+                      <span className="text-muted-foreground">KES {(s.amount_cents / 100).toLocaleString()}</span>
+                      <span className="text-destructive truncate flex-1" title={s.error_code ?? ""}>
+                        {s.error_code ?? `(no code · state=${s.state})`}
+                      </span>
+                      <span className="text-muted-foreground">{new Date(s.created_at).toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {failureTotal === 0 && (
+              <div className="text-sm text-muted-foreground italic text-center py-4">
+                No failed transactions in the last hour. 🎉
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {metrics && Object.keys(metrics.error_breakdown).length > 0 && (
         <Card className="glass-card">
           <CardHeader><CardTitle className="text-base flex items-center gap-2">
