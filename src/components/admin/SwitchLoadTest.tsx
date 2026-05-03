@@ -262,6 +262,64 @@ export function SwitchLoadTest() {
   };
 
 
+  // ─── Failure breakdown ────────────────────────────────────────────────────
+  type FailCategory = "timeout" | "circuit_open_503" | "rejected_422" | "server_500" | "other";
+  interface FailRow { id: string; idempotency_key: string; error_code: string | null; state: string; created_at: string; amount_cents: number; receiver_bank: string; }
+  interface CategoryBucket { category: FailCategory; label: string; count: number; samples: FailRow[]; }
+  const [failureBreakdown, setFailureBreakdown] = useState<CategoryBucket[] | null>(null);
+  const [failureLoading, setFailureLoading] = useState(false);
+  const [failureTotal, setFailureTotal] = useState(0);
+
+  const categorize = (row: FailRow): FailCategory => {
+    const code = (row.error_code ?? "").toLowerCase();
+    if (code.includes("timeout") || code.includes("timed out") || code.includes("etimedout")) return "timeout";
+    if (code.includes("circuit") || code.includes("503") || code.includes("open")) return "circuit_open_503";
+    if (code.includes("422") || code.includes("rejected") || code.includes("reject") || code.includes("fraud") || code.includes("validation") || code.includes("insufficient")) return "rejected_422";
+    if (code.includes("500") || code.includes("internal") || code.includes("unhandled") || code.includes("crash")) return "server_500";
+    return "other";
+  };
+  const categoryMeta: Record<FailCategory, { label: string; tone: string }> = {
+    timeout:          { label: "Upstream timeouts",        tone: "text-warning" },
+    circuit_open_503: { label: "503 — circuit open",       tone: "text-destructive" },
+    rejected_422:     { label: "422 — rejected/validation", tone: "text-warning" },
+    server_500:       { label: "500 — server errors",      tone: "text-destructive" },
+    other:            { label: "Other / uncategorised",    tone: "text-muted-foreground" },
+  };
+
+  const loadFailureBreakdown = async () => {
+    setFailureLoading(true);
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // last hour
+    const { data, error } = await supabase
+      .from("lipafo_transactions")
+      .select("id, idempotency_key, error_code, state, created_at, amount_cents, receiver_bank")
+      .in("state", ["FAILED", "REVERSED"])
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (error) {
+      toast.error(`Failed to load breakdown: ${error.message}`);
+      setFailureLoading(false);
+      return;
+    }
+    const rows = (data ?? []) as FailRow[];
+    const buckets: Record<FailCategory, CategoryBucket> = {
+      timeout:          { category: "timeout",          label: categoryMeta.timeout.label,          count: 0, samples: [] },
+      circuit_open_503: { category: "circuit_open_503", label: categoryMeta.circuit_open_503.label, count: 0, samples: [] },
+      rejected_422:     { category: "rejected_422",     label: categoryMeta.rejected_422.label,     count: 0, samples: [] },
+      server_500:       { category: "server_500",       label: categoryMeta.server_500.label,       count: 0, samples: [] },
+      other:            { category: "other",            label: categoryMeta.other.label,            count: 0, samples: [] },
+    };
+    for (const r of rows) {
+      const c = categorize(r);
+      buckets[c].count += 1;
+      if (buckets[c].samples.length < 5) buckets[c].samples.push(r);
+    }
+    setFailureBreakdown(Object.values(buckets));
+    setFailureTotal(rows.length);
+    setFailureLoading(false);
+    toast.success(`Loaded ${rows.length} failed/reversed txns from the last hour.`);
+  };
+
   const resetSwitch = async () => {
     await callSwitch("reset");
     setMetrics(null); setSettlement(null);
