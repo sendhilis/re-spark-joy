@@ -110,6 +110,30 @@ export function SettlementAgentConsole() {
         <StatCard icon={<ShieldCheck className="h-4 w-4 text-primary" />} title="Currently Earmarked" value={fmt(totalUtilised)} sub="vs available collateral" />
       </div>
 
+      {rejected.length > 0 && (
+        <Card className="glass-card border-destructive/40">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-destructive">
+                {rejected.length} rejected instruction{rejected.length > 1 ? "s" : ""} · {fmt(rejected.reduce((s, r) => s + Number(r.amount), 0))} unsettled
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {rejected.slice(0, 6).map((r) => {
+                  const code = parseRejectCode(r.rejection_reason ?? confByInstruction.get(r.id)?.reason) ?? "UNK";
+                  return (
+                    <button key={r.id} onClick={() => setDrilldown(r)} className="text-[11px] px-2 py-1 rounded-md bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 font-mono text-destructive transition-colors">
+                      {code} · {r.instruction_ref}
+                    </button>
+                  );
+                })}
+                {rejected.length > 6 && <span className="text-[11px] text-muted-foreground self-center">+{rejected.length - 6} more</span>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="collateral" className="space-y-4">
         <TabsList className="glass-card flex-wrap h-auto">
           <TabsTrigger value="collateral">Member Collateral</TabsTrigger>
