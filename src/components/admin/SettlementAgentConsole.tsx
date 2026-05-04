@@ -5,14 +5,31 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Banknote, FileSignature, Send, CheckCircle2, ShieldCheck, Building2 } from "lucide-react";
+import { Banknote, FileSignature, Send, CheckCircle2, ShieldCheck, Building2, AlertTriangle, Search } from "lucide-react";
 
 type Agent = { id: string; agent_name: string; agent_code: string; bic: string | null; settlement_account: string; cutoff_local: string; status: string };
 type Collateral = { id: string; member_bank: string; collateral_account: string; posted_balance: number; utilised_amount: number; available_balance: number; cap_amount: number; currency: string; last_topup_at: string | null };
-type Instruction = { id: string; instruction_ref: string; cycle_date: string; debtor_bank: string; creditor_bank: string; amount: number; currency: string; message_type: string; status: string; dispatched_at: string | null; confirmed_at: string | null; agent_reference: string | null };
-type Confirmation = { id: string; instruction_id: string; agent_reference: string; outcome: string; settled_amount: number | null; received_at: string };
+type Instruction = { id: string; instruction_ref: string; cycle_date: string; debtor_bank: string; creditor_bank: string; amount: number; currency: string; message_type: string; status: string; dispatched_at: string | null; confirmed_at: string | null; agent_reference: string | null; rejection_reason: string | null; payload: any };
+type Confirmation = { id: string; instruction_id: string; agent_reference: string; outcome: string; settled_amount: number | null; received_at: string; reason: string | null; raw_payload: any };
+
+// ISO 20022 reject reason code → plain-English meaning + recommended ops action
+const REJECT_PLAYBOOK: Record<string, { title: string; meaning: string; remediation: string; owner: string; severity: "high" | "medium" | "low" }> = {
+  AC03: { title: "Invalid Creditor Account", meaning: "The creditor account number sent in the pacs.009 is not recognised by the beneficiary bank.", remediation: "Re-validate the beneficiary's settlement account in participating_banks. Re-issue pacs.009 with corrected CdtrAcct. Confirm via member-bank ops desk before retry.", owner: "Settlement Ops", severity: "high" },
+  AG01: { title: "Transaction Forbidden On Account", meaning: "Beneficiary account is blocked, dormant or restricted from receiving interbank credits.", remediation: "Contact creditor bank's ops to lift block or supply alternate settlement account. Hold instruction and re-instruct on next cycle.", owner: "Member Bank Ops", severity: "high" },
+  RC01: { title: "Bank Identifier Incorrect", meaning: "BIC of debtor or creditor agent failed validation at the agent.", remediation: "Reconcile bank_connectors.bank_code & participating_banks.bic. Update BIC, regenerate instruction, dispatch.", owner: "Switch Engineering", severity: "medium" },
+  DUPL: { title: "Duplicate MsgId", meaning: "Agent already booked an instruction with the same MsgId — likely retry without idempotency.", remediation: "Confirm original posting in settlement_confirmations. Mark this instruction as duplicate-resolved (no new cash movement). Investigate dispatcher retry logic.", owner: "Switch Engineering", severity: "low" },
+  FF01: { title: "Invalid File Format", meaning: "pacs.009 XML/JSON failed schema validation at agent gateway.", remediation: "Validate payload against ISO 20022 pacs.009.001.08 schema. Check mandatory fields (SttlmMtd, IntrBkSttlmAmt). Patch generator and redeploy.", owner: "Switch Engineering", severity: "high" },
+  AM04: { title: "Insufficient Funds At Agent", meaning: "Debtor's collateral position at the agent was insufficient when the instruction was booked.", remediation: "Trigger collateral top-up via settlement-agent-loop (action: topup) for the debtor bank. Re-instruct only after posted_balance ≥ amount.", owner: "Treasury", severity: "high" },
+};
+
+function parseRejectCode(reason: string | null | undefined): string | null {
+  if (!reason) return null;
+  const m = reason.match(/\b([A-Z]{2}\d{2}|DUPL)\b/);
+  return m ? m[1] : null;
+}
 
 const fmt = (n: number) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
