@@ -173,23 +173,40 @@ export function SettlementAgentConsole() {
                     <TableHead>Dispatched</TableHead>
                     <TableHead>Confirmed</TableHead>
                     <TableHead>Agent Ref</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {instructions.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell className="font-mono text-[11px]">{i.instruction_ref}</TableCell>
-                      <TableCell className="text-xs">{i.cycle_date}</TableCell>
-                      <TableCell className="text-xs">{i.debtor_bank} → {i.creditor_bank}</TableCell>
-                      <TableCell className="text-right text-xs font-semibold">{fmt(Number(i.amount))}</TableCell>
-                      <TableCell className="text-xs"><Badge variant="outline">{i.message_type}</Badge></TableCell>
-                      <TableCell>{statusBadge(i.status)}</TableCell>
-                      <TableCell className="text-[11px]">{i.dispatched_at ? new Date(i.dispatched_at).toLocaleTimeString("en-KE") : "—"}</TableCell>
-                      <TableCell className="text-[11px]">{i.confirmed_at ? new Date(i.confirmed_at).toLocaleTimeString("en-KE") : "—"}</TableCell>
-                      <TableCell className="font-mono text-[10px]">{i.agent_reference ?? "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                  {instructions.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No instructions yet — click <strong>Generate</strong> after the EOD cut-off.</TableCell></TableRow>}
+                  {instructions.map((i) => {
+                    const isRejected = i.status === "rejected";
+                    const code = isRejected ? parseRejectCode(i.rejection_reason ?? confByInstruction.get(i.id)?.reason) : null;
+                    return (
+                      <TableRow key={i.id} className={isRejected ? "bg-destructive/5" : ""}>
+                        <TableCell className="font-mono text-[11px]">{i.instruction_ref}</TableCell>
+                        <TableCell className="text-xs">{i.cycle_date}</TableCell>
+                        <TableCell className="text-xs">{i.debtor_bank} → {i.creditor_bank}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{fmt(Number(i.amount))}</TableCell>
+                        <TableCell className="text-xs"><Badge variant="outline">{i.message_type}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            {statusBadge(i.status)}
+                            {code && <span className="font-mono text-[10px] text-destructive">{code}</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-[11px]">{i.dispatched_at ? new Date(i.dispatched_at).toLocaleTimeString("en-KE") : "—"}</TableCell>
+                        <TableCell className="text-[11px]">{i.confirmed_at ? new Date(i.confirmed_at).toLocaleTimeString("en-KE") : "—"}</TableCell>
+                        <TableCell className="font-mono text-[10px]">{i.agent_reference ?? "—"}</TableCell>
+                        <TableCell className="text-right">
+                          {isRejected ? (
+                            <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" onClick={() => setDrilldown(i)}>
+                              <Search className="h-3 w-3" />Investigate
+                            </Button>
+                          ) : <span className="text-muted-foreground text-xs">—</span>}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {instructions.length === 0 && <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No instructions yet — click <strong>Generate</strong> after the EOD cut-off.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent>
