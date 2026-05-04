@@ -39,6 +39,10 @@ export function SettlementAgentConsole() {
   const [instructions, setInstructions] = useState<Instruction[]>([]);
   const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [drilldown, setDrilldown] = useState<Instruction | null>(null);
+
+  const confByInstruction = new Map(confirmations.map((c) => [c.instruction_id, c]));
+  const rejected = instructions.filter((i) => i.status === "rejected");
 
   const load = async () => {
     const [a, c, i, cf] = await Promise.all([
