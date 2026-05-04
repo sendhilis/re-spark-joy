@@ -270,6 +270,68 @@ export function SettlementAgentConsole() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!drilldown} onOpenChange={(o) => !o && setDrilldown(null)}>
+        <DialogContent className="max-w-2xl glass-card">
+          {drilldown && (() => {
+            const conf = confByInstruction.get(drilldown.id);
+            const reason = drilldown.rejection_reason ?? conf?.reason ?? null;
+            const code = parseRejectCode(reason);
+            const playbook = code ? REJECT_PLAYBOOK[code] : null;
+            const sevColor = playbook?.severity === "high" ? "text-destructive" : playbook?.severity === "medium" ? "text-warning" : "text-muted-foreground";
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    Rejection Drill-down
+                  </DialogTitle>
+                  <DialogDescription className="font-mono text-xs">{drilldown.instruction_ref} · {drilldown.debtor_bank} → {drilldown.creditor_bank} · {fmt(Number(drilldown.amount))}</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">pacs.002 Reject Code</div>
+                      <div className="text-2xl font-mono font-bold text-destructive">{code ?? "UNK"}</div>
+                    </div>
+                    <div className="p-3 rounded-lg glass-card">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Severity</div>
+                      <div className={`text-sm font-semibold capitalize ${sevColor}`}>{playbook?.severity ?? "unknown"}</div>
+                    </div>
+                    <div className="p-3 rounded-lg glass-card">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Owner</div>
+                      <div className="text-sm font-semibold">{playbook?.owner ?? "Unassigned"}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What it means</div>
+                    <p className="text-sm">{playbook?.meaning ?? "No playbook entry for this code. Escalate to Switch Engineering for triage."}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Suggested remediation</div>
+                    <p className="text-sm leading-relaxed p-3 rounded-lg bg-success/5 border border-success/20">{playbook?.remediation ?? "Open a ticket against the dispatcher service. Capture pacs.002 raw payload before re-instructing."}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Raw agent reason</div>
+                    <pre className="text-[11px] font-mono p-2 rounded bg-muted/30 overflow-x-auto">{reason ?? "—"}</pre>
+                  </div>
+
+                  {conf?.raw_payload && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">pacs.002 payload</div>
+                      <pre className="text-[10px] font-mono p-2 rounded bg-muted/30 overflow-x-auto max-h-40">{JSON.stringify(conf.raw_payload, null, 2)}</pre>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
