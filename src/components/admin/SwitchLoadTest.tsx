@@ -754,15 +754,56 @@ export function SwitchLoadTest() {
               Snapshot from the most recent test — persists after the rolling DB window expires.
             </p>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
-            <div><div className="text-muted-foreground text-xs">Target TPS</div><div className="font-bold text-lg">{lastRun.targetTps}</div></div>
-            <div><div className="text-muted-foreground text-xs">Observed TPS</div><div className="font-bold text-lg text-primary">{lastRun.observedTps.toFixed(1)}</div></div>
-            <div><div className="text-muted-foreground text-xs">Fired</div><div className="font-bold text-lg">{lastRun.fired.toLocaleString()}</div></div>
-            <div><div className="text-muted-foreground text-xs">Elapsed</div><div className="font-bold text-lg">{lastRun.elapsed.toFixed(1)}s</div></div>
-            <div><div className="text-muted-foreground text-xs">Success</div><div className="font-bold text-success">{lastRun.success}</div></div>
-            <div><div className="text-muted-foreground text-xs">Failed</div><div className="font-bold text-destructive">{lastRun.failed}</div></div>
-            <div><div className="text-muted-foreground text-xs">Duplicates</div><div className="font-bold text-warning">{lastRun.duplicates}</div></div>
-            <div><div className="text-muted-foreground text-xs">Efficiency</div><div className="font-bold">{((lastRun.observedTps / lastRun.targetTps) * 100).toFixed(0)}%</div></div>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
+              <div><div className="text-muted-foreground text-xs">Target TPS</div><div className="font-bold text-lg">{lastRun.targetTps}</div></div>
+              <div><div className="text-muted-foreground text-xs">Observed TPS</div><div className="font-bold text-lg text-primary">{lastRun.observedTps.toFixed(1)}</div></div>
+              <div><div className="text-muted-foreground text-xs">Fired</div><div className="font-bold text-lg">{lastRun.fired.toLocaleString()}</div></div>
+              <div><div className="text-muted-foreground text-xs">Elapsed</div><div className="font-bold text-lg">{lastRun.elapsed.toFixed(1)}s</div></div>
+              <div><div className="text-muted-foreground text-xs">Success</div><div className="font-bold text-success">{lastRun.success}</div></div>
+              <div><div className="text-muted-foreground text-xs">Client failed (total)</div><div className="font-bold text-destructive">{lastRun.failed}</div></div>
+              <div><div className="text-muted-foreground text-xs">Duplicates</div><div className="font-bold text-warning">{lastRun.duplicates}</div></div>
+              <div><div className="text-muted-foreground text-xs">Efficiency</div><div className="font-bold">{((lastRun.observedTps / lastRun.targetTps) * 100).toFixed(0)}%</div></div>
+            </div>
+
+            <div className="border-t border-border/50 pt-4">
+              <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Failure attribution — where each failed call ended up</div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm font-mono">
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Pre-insert rejects</div>
+                  <div className="font-bold text-lg text-warning">{lastRun.preInsertRejects}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">503 circuit-open · 400 validation — no DB row written</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Bank rejects (422)</div>
+                  <div className="font-bold text-lg text-destructive">{lastRun.bankRejects}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">DB row exists with state=FAILED + reject reason</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Network / timeout / 5xx</div>
+                  <div className="font-bold text-lg text-destructive">{lastRun.networkErrors}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">Fetch threw or unhandled — usually no DB row</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Persisted FAILED (DB)</div>
+                  <div className="font-bold text-lg text-destructive">{lastRun.persistedFailedDb ?? "—"}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">SELECT … WHERE state='FAILED' AND created_at ≥ run start. Matches the breakdown panel.</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Persisted total (DB)</div>
+                  <div className="font-bold text-lg">{lastRun.persistedTotalDb ?? "—"}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">All rows (COMPLETED + FAILED) since run start.</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Discrepancy explained</div>
+                  <div className="font-bold text-lg text-warning">{Math.max(0, lastRun.failed - (lastRun.persistedFailedDb ?? 0))}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">Client-failed minus persisted-FAILED ≈ pre-insert rejects + network errors.</div>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+                <strong className="text-foreground">Why client &gt; DB?</strong> The breakdown panel reads <code>lipafo_transactions</code> rows with <code>state=FAILED</code>. Failures the switch rejects <em>before</em> writing a row — circuit-open 503s, validation 400s, fetch timeouts — show up as client failures but never appear in the DB count. That's the gap. The numbers above let you reconcile the two sides.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
