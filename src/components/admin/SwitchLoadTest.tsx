@@ -57,12 +57,22 @@ export function SwitchLoadTest() {
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [progress, setProgress] = useState(0);
   const [dbTps, setDbTps] = useState({ tps10: 0, tps60: 0, total: 0 });
-  const [lastRun, setLastRun] = useState<{ observedTps: number; targetTps: number; fired: number; elapsed: number; success: number; failed: number; duplicates: number } | null>(null);
+  const [lastRun, setLastRun] = useState<{
+    observedTps: number; targetTps: number; fired: number; elapsed: number;
+    success: number; failed: number; duplicates: number;
+    preInsertRejects: number; bankRejects: number; networkErrors: number;
+    persistedFailedDb: number | null; persistedTotalDb: number | null;
+    runStartIso: string;
+  } | null>(null);
   const [tabVisible, setTabVisible] = useState(typeof document !== "undefined" ? !document.hidden : true);
 
   // Stats accumulated in refs (no per-call rerender), flushed to state on a timer.
-  const statsRef = useRef({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
-  const [stats, setStats] = useState({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
+  // failure subtypes:
+  //   preInsertRejects = HTTP 503 (circuit) / 400 (validation) — never written to DB
+  //   bankRejects      = HTTP 422 with reject reason — DB row exists, state=FAILED
+  //   networkErrors    = fetch threw / timeout / 5xx unhandled — usually no DB row
+  const statsRef = useRef({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] as number[] });
+  const [stats, setStats] = useState({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] as number[] });
   const cancelRef = useRef(false);
   const recentKeysRef = useRef<string[]>([]);
 
