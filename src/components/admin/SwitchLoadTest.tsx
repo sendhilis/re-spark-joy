@@ -109,7 +109,7 @@ export function SwitchLoadTest() {
     if (!running) return;
     const id = setInterval(() => {
       const r = statsRef.current;
-      setStats({ fired: r.fired, success: r.success, failed: r.failed, duplicates: r.duplicates, latencies: r.latencies.slice(-1000) });
+      setStats({ fired: r.fired, success: r.success, failed: r.failed, duplicates: r.duplicates, preInsertRejects: r.preInsertRejects, bankRejects: r.bankRejects, networkErrors: r.networkErrors, latencies: r.latencies.slice(-1000) });
     }, UI_REFRESH_MS);
     return () => clearInterval(id);
   }, [running]);
