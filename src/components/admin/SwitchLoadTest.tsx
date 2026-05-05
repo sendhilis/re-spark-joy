@@ -633,6 +633,55 @@ export function SwitchLoadTest() {
             </div>
           )}
 
+          {auditChecks && (
+            <div className="space-y-3 rounded-lg p-4 border bg-card/40 border-border">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-primary" />
+                <div className="font-semibold text-foreground">Post-run audit verdict matrix</div>
+                <Badge variant="outline" className="ml-auto font-mono text-xs">
+                  {auditChecks.filter(c => c.status === "PASS").length} PASS ·{" "}
+                  {auditChecks.filter(c => c.status === "WARN").length} WARN ·{" "}
+                  {auditChecks.filter(c => c.status === "FAIL").length} FAIL
+                </Badge>
+              </div>
+              {auditMeta && (
+                <div className="text-xs text-muted-foreground font-mono">
+                  Window: last {auditMeta.window_s}s · ran at {new Date(auditMeta.ran_at).toLocaleTimeString()}
+                </div>
+              )}
+              <div className="space-y-2">
+                {auditChecks.map(c => {
+                  const tone =
+                    c.status === "PASS" ? "bg-success/10 border-success/40"
+                    : c.status === "WARN" ? "bg-warning/10 border-warning/40"
+                    : "bg-destructive/10 border-destructive/40";
+                  const icon =
+                    c.status === "PASS" ? <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                    : c.status === "WARN" ? <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+                    : <XCircle className="h-5 w-5 text-destructive shrink-0" />;
+                  const label =
+                    c.status === "PASS" ? "text-success"
+                    : c.status === "WARN" ? "text-warning"
+                    : "text-destructive";
+                  return (
+                    <div key={c.id} className={`rounded-lg p-3 border ${tone} flex gap-3`}>
+                      {icon}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="font-semibold text-foreground text-sm">{c.label}</div>
+                          <Badge variant="outline" className={`font-mono text-xs ${label}`}>{c.status}</Badge>
+                        </div>
+                        <div className="text-xs font-mono text-foreground">{c.observed}</div>
+                        <div className="text-xs text-muted-foreground">Expected: {c.expected}</div>
+                        <div className="text-xs text-muted-foreground italic">{c.detail}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {(running || progress > 0) && (
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
