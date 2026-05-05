@@ -522,8 +522,8 @@ export function SwitchLoadTest() {
   const resetSwitch = async () => {
     await callSwitch("reset");
     setMetrics(null); setSettlement(null);
-    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] };
-    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] };
+    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] });
     setDbTps({ tps10: 0, tps60: 0, total: 0 });
     toast.success("Switch state reset");
     setTimeout(() => { refreshMetrics(); refreshSettlement(); refreshDbTps(); }, 500);
