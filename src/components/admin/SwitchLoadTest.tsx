@@ -588,6 +588,16 @@ export function SwitchLoadTest() {
               <AlertTriangle className="h-4 w-4" />
               {failureLoading ? "Loading..." : "Failure breakdown"}
             </Button>
+            <Button
+              onClick={runPostRunAudit}
+              variant="outline"
+              className="glass-card gap-2 border-success/40"
+              disabled={running || auditRunning}
+              title="Run SQL verification against the last load-test window: TPS, idempotency, breakers, settlement positions, latency."
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              {auditRunning ? "Auditing..." : "Post-run Audit"}
+            </Button>
           </div>
 
           {replayResult && (
