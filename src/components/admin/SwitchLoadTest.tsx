@@ -390,11 +390,13 @@ export function SwitchLoadTest() {
   const [auditRunning, setAuditRunning] = useState(false);
   const [auditChecks, setAuditChecks] = useState<AuditCheck[] | null>(null);
   const [auditMeta, setAuditMeta] = useState<{ window_s: number; ran_at: string } | null>(null);
+  // Configurable audit lookback in seconds (60s … 600s / 10m). Defaults to run duration + 30s.
+  const [auditWindowS, setAuditWindowS] = useState<number>(120);
 
   const runPostRunAudit = async () => {
     setAuditRunning(true);
     setAuditChecks(null);
-    const windowS = Math.max(60, duration + 30);
+    const windowS = Math.max(60, auditWindowS);
     const since = new Date(Date.now() - windowS * 1000).toISOString();
     const checks: AuditCheck[] = [];
 
