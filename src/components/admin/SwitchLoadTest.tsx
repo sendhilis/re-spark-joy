@@ -341,6 +341,148 @@ export function SwitchLoadTest() {
     toast.success(`Loaded ${rows.length} failed/reversed txns from the last hour.`);
   };
 
+  // ─── Post-run Audit ───────────────────────────────────────────────────────
+  type AuditStatus = "PASS" | "WARN" | "FAIL";
+  interface AuditCheck {
+    id: string;
+    label: string;
+    status: AuditStatus;
+    observed: string;
+    expected: string;
+    detail: string;
+  }
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditChecks, setAuditChecks] = useState<AuditCheck[] | null>(null);
+  const [auditMeta, setAuditMeta] = useState<{ window_s: number; ran_at: string } | null>(null);
+
+  const runPostRunAudit = async () => {
+    setAuditRunning(true);
+    setAuditChecks(null);
+    const windowS = Math.max(60, duration + 30);
+    const since = new Date(Date.now() - windowS * 1000).toISOString();
+    const checks: AuditCheck[] = [];
+
+    try {
+      // 1. Fired vs persisted (TPS sanity)
+      const { data: txnRows } = await supabase
+        .from("lipafo_transactions")
+        .select("id, idempotency_key, state, latency_ms, created_at, error_code")
+        .gte("created_at", since)
+        .limit(10000);
+      const rows = txnRows ?? [];
+      const persisted = rows.length;
+      const uniqueKeys = new Set(rows.map(r => r.idempotency_key)).size;
+      const completed = rows.filter(r => r.state === "COMPLETED").length;
+      const failed = rows.filter(r => r.state === "FAILED").length;
+      const reversed = rows.filter(r => r.state === "REVERSED").length;
+      const expectedFired = lastRun?.fired ?? tps * duration;
+      const persistRatio = expectedFired ? persisted / expectedFired : 0;
+      checks.push({
+        id: "tps",
+        label: "Fired TPS — rows actually persisted",
+        status: persistRatio >= 0.85 ? "PASS" : persistRatio >= 0.5 ? "WARN" : "FAIL",
+        observed: `${persisted.toLocaleString()} rows / ${expectedFired.toLocaleString()} fired (${(persistRatio * 100).toFixed(0)}%)`,
+        expected: "≥ 85% persisted (gap = idempotency cache hits + fraud blocks)",
+        detail: `Window: last ${windowS}s. COMPLETED=${completed}, FAILED=${failed}, REVERSED=${reversed}.`,
+      });
+
+      // 2. Idempotency — no duplicate keys with multiple rows
+      const keyCounts = new Map<string, number>();
+      for (const r of rows) keyCounts.set(r.idempotency_key, (keyCounts.get(r.idempotency_key) ?? 0) + 1);
+      const dupedKeys = Array.from(keyCounts.values()).filter(c => c > 1).length;
+      checks.push({
+        id: "idem",
+        label: "Idempotency — exactly-once enforcement",
+        status: dupedKeys === 0 ? "PASS" : "FAIL",
+        observed: `${dupedKeys} idempotency_keys with >1 persisted row · ${uniqueKeys} unique / ${persisted} total`,
+        expected: "Zero duplicate persistence — replays must hit cache",
+        detail: dupedKeys === 0
+          ? "Server-side dedup is intact. Duplicate harness fires returned cached results without inserting new rows."
+          : "VIOLATION: same idempotency_key wrote multiple rows. Risk of double-debit.",
+      });
+
+      // 3. Circuit breaker activity
+      const { data: connectors } = await supabase
+        .from("bank_connectors")
+        .select("bank_code, bank_name, circuit_state, failure_count, success_count");
+      const breakers = connectors ?? [];
+      const tripped = breakers.filter(b => b.circuit_state !== "CLOSED").length;
+      const stressed = breakers.filter(b => (b.failure_count ?? 0) > 0).length;
+      const circuitErrors = rows.filter(r => (r.error_code ?? "").toLowerCase().includes("circuit")).length;
+      const cbStatus: AuditStatus =
+        tripped > 0 || stressed > 0 || circuitErrors > 0 ? "PASS"
+        : (metrics?.circuit_breakers?.length ?? 0) > 0 ? "WARN" : "FAIL";
+      checks.push({
+        id: "circuit",
+        label: "Circuit breaker — per-bank isolation",
+        status: cbStatus,
+        observed: `${tripped} OPEN/HALF_OPEN · ${stressed} with failures · ${circuitErrors} txns blocked by open circuit`,
+        expected: "Failure_count > 0 on stressed banks OR txns failed with 'Circuit OPEN'",
+        detail: cbStatus === "WARN"
+          ? "Breakers exist but no recent activity — try opening KCB circuit via demo seed and re-run."
+          : `${breakers.length} bank connectors registered.`,
+      });
+
+      // 4. Settlement positions populated
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: positions } = await supabase
+        .from("lipafo_positions")
+        .select("sending_bank, receiving_bank, net_cents")
+        .eq("date", today);
+      const posRows = positions ?? [];
+      const posPairs = posRows.length;
+      const totalNet = posRows.reduce((s, p) => s + Math.abs(Number(p.net_cents) || 0), 0);
+      const setStatus: AuditStatus =
+        posPairs > 0 && completed > 0 ? "PASS"
+        : completed > 0 ? "FAIL"
+        : "WARN";
+      checks.push({
+        id: "settlement",
+        label: "Settlement — bilateral positions persisted",
+        status: setStatus,
+        observed: `${posPairs} bank-pair positions for ${today} · KES ${(totalNet / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} gross`,
+        expected: "Position rows > 0 when COMPLETED txns > 0 (else settlement is theatre)",
+        detail: setStatus === "FAIL"
+          ? `VIOLATION: ${completed} COMPLETED txns but zero positions — bumpPosition() not firing.`
+          : "Multilateral netting will compute KEPSS instructions from these rows.",
+      });
+
+      // 5. Latency percentiles (DB-derived, not in-memory)
+      const lats = rows
+        .filter(r => r.state === "COMPLETED" && typeof r.latency_ms === "number")
+        .map(r => r.latency_ms as number)
+        .sort((a, b) => a - b);
+      const pick = (p: number) => lats.length ? lats[Math.max(0, Math.ceil((p / 100) * lats.length) - 1)] : 0;
+      const p50 = pick(50), p95 = pick(95), p99 = pick(99);
+      const latStatus: AuditStatus =
+        lats.length === 0 ? "WARN"
+        : p99 < 2000 && p50 < 800 ? "PASS"
+        : p99 < 5000 ? "WARN" : "FAIL";
+      checks.push({
+        id: "latency",
+        label: "Latency — DB-measured percentiles",
+        status: latStatus,
+        observed: `n=${lats.length} · p50=${p50}ms · p95=${pick(95)}ms · p99=${p99}ms`,
+        expected: "p50 < 800ms, p99 < 2000ms (simulated bank legs 80–300ms each)",
+        detail: lats.length === 0
+          ? "No COMPLETED txns with latency in window — run a load test first."
+          : "Includes simulated bank debit + credit + persistence overhead.",
+      });
+
+      setAuditChecks(checks);
+      setAuditMeta({ window_s: windowS, ran_at: new Date().toISOString() });
+      const failCount = checks.filter(c => c.status === "FAIL").length;
+      const warnCount = checks.filter(c => c.status === "WARN").length;
+      if (failCount === 0 && warnCount === 0) toast.success(`Post-run audit: ALL ${checks.length} checks PASS`);
+      else if (failCount === 0) toast.message(`Post-run audit: ${checks.length - warnCount} PASS, ${warnCount} WARN`);
+      else toast.error(`Post-run audit: ${failCount} FAIL, ${warnCount} WARN`);
+    } catch (e) {
+      toast.error(`Audit failed: ${(e as Error).message}`);
+    } finally {
+      setAuditRunning(false);
+    }
+  };
+
   const resetSwitch = async () => {
     await callSwitch("reset");
     setMetrics(null); setSettlement(null);
