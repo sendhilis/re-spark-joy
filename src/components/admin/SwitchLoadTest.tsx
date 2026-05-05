@@ -151,15 +151,24 @@ export function SwitchLoadTest() {
         const r = statsRef.current;
         r.latencies.push(lat);
         if (r.latencies.length > 1000) r.latencies.shift();
-        if (data?.duplicate) r.duplicates += 1;
-        else if (data?.success) r.success += 1;
-        else r.failed += 1;
+        if (data?.duplicate) { r.duplicates += 1; }
+        else if (data?.success) { r.success += 1; }
+        else {
+          r.failed += 1;
+          // Categorise the failure for the post-run discrepancy explainer.
+          const status = (data && (data.status as number)) ?? (error ? 0 : 0);
+          const code = String(data?.error_code ?? "").toLowerCase();
+          if (status === 503 || code.includes("circuit") || status === 400 || code.includes("validation")) r.preInsertRejects += 1;
+          else if (status === 422 || code.includes("reject") || code.includes("fraud") || code.includes("insufficient") || code.includes("am04") || code.includes("be05")) r.bankRejects += 1;
+          else r.networkErrors += 1;
+        }
       } catch {
         if (n < MAX_ATTEMPTS) {
           await new Promise((r) => setTimeout(r, 100 * n));
           return attempt(n + 1);
         }
         statsRef.current.failed += 1;
+        statsRef.current.networkErrors += 1;
       }
     };
     attempt(1);
