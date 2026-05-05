@@ -626,16 +626,33 @@ export function SwitchLoadTest() {
               <AlertTriangle className="h-4 w-4" />
               {failureLoading ? "Loading..." : "Failure breakdown"}
             </Button>
-            <Button
-              onClick={runPostRunAudit}
-              variant="outline"
-              className="glass-card gap-2 border-success/40"
-              disabled={running || auditRunning}
-              title="Run SQL verification against the last load-test window: TPS, idempotency, breakers, settlement positions, latency."
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              {auditRunning ? "Auditing..." : "Post-run Audit"}
-            </Button>
+            <div className="flex flex-col gap-1 min-w-[220px] glass-card border border-success/40 rounded-md px-3 py-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Audit lookback</span>
+                <span className="font-mono font-semibold text-foreground">
+                  {auditWindowS < 60 ? `${auditWindowS}s` : auditWindowS < 600 ? `${Math.round(auditWindowS / 60 * 10) / 10}m` : "10m"}
+                </span>
+              </div>
+              <Slider
+                value={[auditWindowS]}
+                min={60}
+                max={600}
+                step={30}
+                onValueChange={(v) => setAuditWindowS(v[0])}
+                disabled={auditRunning}
+              />
+              <Button
+                onClick={runPostRunAudit}
+                variant="outline"
+                size="sm"
+                className="gap-2 border-success/40 mt-1"
+                disabled={running || auditRunning}
+                title="Run SQL verification against the configured lookback window: TPS, idempotency, breakers, settlement positions, latency."
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                {auditRunning ? "Auditing..." : "Post-run Audit"}
+              </Button>
+            </div>
           </div>
 
           {replayResult && (
