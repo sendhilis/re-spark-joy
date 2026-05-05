@@ -57,12 +57,22 @@ export function SwitchLoadTest() {
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [progress, setProgress] = useState(0);
   const [dbTps, setDbTps] = useState({ tps10: 0, tps60: 0, total: 0 });
-  const [lastRun, setLastRun] = useState<{ observedTps: number; targetTps: number; fired: number; elapsed: number; success: number; failed: number; duplicates: number } | null>(null);
+  const [lastRun, setLastRun] = useState<{
+    observedTps: number; targetTps: number; fired: number; elapsed: number;
+    success: number; failed: number; duplicates: number;
+    preInsertRejects: number; bankRejects: number; networkErrors: number;
+    persistedFailedDb: number | null; persistedTotalDb: number | null;
+    runStartIso: string;
+  } | null>(null);
   const [tabVisible, setTabVisible] = useState(typeof document !== "undefined" ? !document.hidden : true);
 
   // Stats accumulated in refs (no per-call rerender), flushed to state on a timer.
-  const statsRef = useRef({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
-  const [stats, setStats] = useState({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] as number[] });
+  // failure subtypes:
+  //   preInsertRejects = HTTP 503 (circuit) / 400 (validation) — never written to DB
+  //   bankRejects      = HTTP 422 with reject reason — DB row exists, state=FAILED
+  //   networkErrors    = fetch threw / timeout / 5xx unhandled — usually no DB row
+  const statsRef = useRef({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] as number[] });
+  const [stats, setStats] = useState({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] as number[] });
   const cancelRef = useRef(false);
   const recentKeysRef = useRef<string[]>([]);
 
@@ -99,7 +109,7 @@ export function SwitchLoadTest() {
     if (!running) return;
     const id = setInterval(() => {
       const r = statsRef.current;
-      setStats({ fired: r.fired, success: r.success, failed: r.failed, duplicates: r.duplicates, latencies: r.latencies.slice(-1000) });
+      setStats({ fired: r.fired, success: r.success, failed: r.failed, duplicates: r.duplicates, preInsertRejects: r.preInsertRejects, bankRejects: r.bankRejects, networkErrors: r.networkErrors, latencies: r.latencies.slice(-1000) });
     }, UI_REFRESH_MS);
     return () => clearInterval(id);
   }, [running]);
@@ -141,15 +151,24 @@ export function SwitchLoadTest() {
         const r = statsRef.current;
         r.latencies.push(lat);
         if (r.latencies.length > 1000) r.latencies.shift();
-        if (data?.duplicate) r.duplicates += 1;
-        else if (data?.success) r.success += 1;
-        else r.failed += 1;
+        if (data?.duplicate) { r.duplicates += 1; }
+        else if (data?.success) { r.success += 1; }
+        else {
+          r.failed += 1;
+          // Categorise the failure for the post-run discrepancy explainer.
+          const status = (data && (data.status as number)) ?? (error ? 0 : 0);
+          const code = String(data?.error_code ?? "").toLowerCase();
+          if (status === 503 || code.includes("circuit") || status === 400 || code.includes("validation")) r.preInsertRejects += 1;
+          else if (status === 422 || code.includes("reject") || code.includes("fraud") || code.includes("insufficient") || code.includes("am04") || code.includes("be05")) r.bankRejects += 1;
+          else r.networkErrors += 1;
+        }
       } catch {
         if (n < MAX_ATTEMPTS) {
           await new Promise((r) => setTimeout(r, 100 * n));
           return attempt(n + 1);
         }
         statsRef.current.failed += 1;
+        statsRef.current.networkErrors += 1;
       }
     };
     attempt(1);
@@ -159,8 +178,9 @@ export function SwitchLoadTest() {
     cancelRef.current = false;
     setRunning(true);
     setProgress(0);
-    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] };
-    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] };
+    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] });
+    const runStartIso = new Date().toISOString();
     recentKeysRef.current = [];
 
     const total = tps * duration;
@@ -197,7 +217,23 @@ export function SwitchLoadTest() {
     const elapsed = (Date.now() - startedAt) / 1000;
     const r = statsRef.current;
     const observedTps = r.fired / elapsed;
-    setLastRun({ observedTps, targetTps: tps, fired: r.fired, elapsed, success: r.success, failed: r.failed, duplicates: r.duplicates });
+    // Query the DB for persisted FAILED rows from this run window — this is the number the breakdown panel sees.
+    let persistedFailedDb: number | null = null;
+    let persistedTotalDb: number | null = null;
+    try {
+      const [{ count: failedCount }, { count: totalCount }] = await Promise.all([
+        supabase.from("lipafo_transactions").select("id", { count: "exact", head: true }).eq("state", "FAILED").gte("created_at", runStartIso),
+        supabase.from("lipafo_transactions").select("id", { count: "exact", head: true }).gte("created_at", runStartIso),
+      ]);
+      persistedFailedDb = failedCount ?? 0;
+      persistedTotalDb = totalCount ?? 0;
+    } catch { /* ignore — counters will show "—" */ }
+    setLastRun({
+      observedTps, targetTps: tps, fired: r.fired, elapsed,
+      success: r.success, failed: r.failed, duplicates: r.duplicates,
+      preInsertRejects: r.preInsertRejects, bankRejects: r.bankRejects, networkErrors: r.networkErrors,
+      persistedFailedDb, persistedTotalDb, runStartIso,
+    });
     toast.success(`Load test complete: ${r.fired} fired in ${elapsed.toFixed(1)}s (${observedTps.toFixed(1)} TPS observed)`);
   };
 
@@ -486,8 +522,8 @@ export function SwitchLoadTest() {
   const resetSwitch = async () => {
     await callSwitch("reset");
     setMetrics(null); setSettlement(null);
-    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] };
-    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] };
+    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] });
     setDbTps({ tps10: 0, tps60: 0, total: 0 });
     toast.success("Switch state reset");
     setTimeout(() => { refreshMetrics(); refreshSettlement(); refreshDbTps(); }, 500);
@@ -718,15 +754,56 @@ export function SwitchLoadTest() {
               Snapshot from the most recent test — persists after the rolling DB window expires.
             </p>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
-            <div><div className="text-muted-foreground text-xs">Target TPS</div><div className="font-bold text-lg">{lastRun.targetTps}</div></div>
-            <div><div className="text-muted-foreground text-xs">Observed TPS</div><div className="font-bold text-lg text-primary">{lastRun.observedTps.toFixed(1)}</div></div>
-            <div><div className="text-muted-foreground text-xs">Fired</div><div className="font-bold text-lg">{lastRun.fired.toLocaleString()}</div></div>
-            <div><div className="text-muted-foreground text-xs">Elapsed</div><div className="font-bold text-lg">{lastRun.elapsed.toFixed(1)}s</div></div>
-            <div><div className="text-muted-foreground text-xs">Success</div><div className="font-bold text-success">{lastRun.success}</div></div>
-            <div><div className="text-muted-foreground text-xs">Failed</div><div className="font-bold text-destructive">{lastRun.failed}</div></div>
-            <div><div className="text-muted-foreground text-xs">Duplicates</div><div className="font-bold text-warning">{lastRun.duplicates}</div></div>
-            <div><div className="text-muted-foreground text-xs">Efficiency</div><div className="font-bold">{((lastRun.observedTps / lastRun.targetTps) * 100).toFixed(0)}%</div></div>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
+              <div><div className="text-muted-foreground text-xs">Target TPS</div><div className="font-bold text-lg">{lastRun.targetTps}</div></div>
+              <div><div className="text-muted-foreground text-xs">Observed TPS</div><div className="font-bold text-lg text-primary">{lastRun.observedTps.toFixed(1)}</div></div>
+              <div><div className="text-muted-foreground text-xs">Fired</div><div className="font-bold text-lg">{lastRun.fired.toLocaleString()}</div></div>
+              <div><div className="text-muted-foreground text-xs">Elapsed</div><div className="font-bold text-lg">{lastRun.elapsed.toFixed(1)}s</div></div>
+              <div><div className="text-muted-foreground text-xs">Success</div><div className="font-bold text-success">{lastRun.success}</div></div>
+              <div><div className="text-muted-foreground text-xs">Client failed (total)</div><div className="font-bold text-destructive">{lastRun.failed}</div></div>
+              <div><div className="text-muted-foreground text-xs">Duplicates</div><div className="font-bold text-warning">{lastRun.duplicates}</div></div>
+              <div><div className="text-muted-foreground text-xs">Efficiency</div><div className="font-bold">{((lastRun.observedTps / lastRun.targetTps) * 100).toFixed(0)}%</div></div>
+            </div>
+
+            <div className="border-t border-border/50 pt-4">
+              <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Failure attribution — where each failed call ended up</div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm font-mono">
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Pre-insert rejects</div>
+                  <div className="font-bold text-lg text-warning">{lastRun.preInsertRejects}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">503 circuit-open · 400 validation — no DB row written</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Bank rejects (422)</div>
+                  <div className="font-bold text-lg text-destructive">{lastRun.bankRejects}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">DB row exists with state=FAILED + reject reason</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Network / timeout / 5xx</div>
+                  <div className="font-bold text-lg text-destructive">{lastRun.networkErrors}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">Fetch threw or unhandled — usually no DB row</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Persisted FAILED (DB)</div>
+                  <div className="font-bold text-lg text-destructive">{lastRun.persistedFailedDb ?? "—"}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">SELECT … WHERE state='FAILED' AND created_at ≥ run start. Matches the breakdown panel.</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Persisted total (DB)</div>
+                  <div className="font-bold text-lg">{lastRun.persistedTotalDb ?? "—"}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">All rows (COMPLETED + FAILED) since run start.</div>
+                </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <div className="text-muted-foreground text-xs">Discrepancy explained</div>
+                  <div className="font-bold text-lg text-warning">{Math.max(0, lastRun.failed - (lastRun.persistedFailedDb ?? 0))}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">Client-failed minus persisted-FAILED ≈ pre-insert rejects + network errors.</div>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+                <strong className="text-foreground">Why client &gt; DB?</strong> The breakdown panel reads <code>lipafo_transactions</code> rows with <code>state=FAILED</code>. Failures the switch rejects <em>before</em> writing a row — circuit-open 503s, validation 400s, fetch timeouts — show up as client failures but never appear in the DB count. That's the gap. The numbers above let you reconcile the two sides.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
