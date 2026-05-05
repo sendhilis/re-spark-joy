@@ -217,7 +217,23 @@ export function SwitchLoadTest() {
     const elapsed = (Date.now() - startedAt) / 1000;
     const r = statsRef.current;
     const observedTps = r.fired / elapsed;
-    setLastRun({ observedTps, targetTps: tps, fired: r.fired, elapsed, success: r.success, failed: r.failed, duplicates: r.duplicates });
+    // Query the DB for persisted FAILED rows from this run window — this is the number the breakdown panel sees.
+    let persistedFailedDb: number | null = null;
+    let persistedTotalDb: number | null = null;
+    try {
+      const [{ count: failedCount }, { count: totalCount }] = await Promise.all([
+        supabase.from("lipafo_transactions").select("id", { count: "exact", head: true }).eq("state", "FAILED").gte("created_at", runStartIso),
+        supabase.from("lipafo_transactions").select("id", { count: "exact", head: true }).gte("created_at", runStartIso),
+      ]);
+      persistedFailedDb = failedCount ?? 0;
+      persistedTotalDb = totalCount ?? 0;
+    } catch { /* ignore — counters will show "—" */ }
+    setLastRun({
+      observedTps, targetTps: tps, fired: r.fired, elapsed,
+      success: r.success, failed: r.failed, duplicates: r.duplicates,
+      preInsertRejects: r.preInsertRejects, bankRejects: r.bankRejects, networkErrors: r.networkErrors,
+      persistedFailedDb, persistedTotalDb, runStartIso,
+    });
     toast.success(`Load test complete: ${r.fired} fired in ${elapsed.toFixed(1)}s (${observedTps.toFixed(1)} TPS observed)`);
   };
 
