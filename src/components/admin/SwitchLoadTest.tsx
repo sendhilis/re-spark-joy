@@ -178,8 +178,9 @@ export function SwitchLoadTest() {
     cancelRef.current = false;
     setRunning(true);
     setProgress(0);
-    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] };
-    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, latencies: [] });
+    statsRef.current = { fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] };
+    setStats({ fired: 0, success: 0, failed: 0, duplicates: 0, preInsertRejects: 0, bankRejects: 0, networkErrors: 0, latencies: [] });
+    const runStartIso = new Date().toISOString();
     recentKeysRef.current = [];
 
     const total = tps * duration;
