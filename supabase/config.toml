@@ -2,3 +2,6 @@ project_id = "ejrttghgscfhbezvobhv"
 
 [functions.rukisha-ai]
 verify_jwt = false
+
+[functions.bank-merchant-sync]
+verify_jwt = false
