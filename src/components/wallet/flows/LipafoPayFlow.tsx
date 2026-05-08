@@ -10,7 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/contexts/WalletContext";
 import { toast } from "sonner";
-import { Store, ArrowRight, CheckCircle2, Loader2, Network, Building2, Search, Hash } from "lucide-react";
+import { Store, ArrowRight, CheckCircle2, Loader2, Network, Building2, Search, Hash, UtensilsCrossed, Truck, Smartphone, Pill, Shirt, Film, Sparkles, Wrench, Fuel, ShoppingCart, Heart, GraduationCap, Plane, Zap, Phone, Tag } from "lucide-react";
+
+const CATEGORY_META: Record<string, { label: string; icon: any }> = {
+  food_delivery: { label: "Food Delivery", icon: UtensilsCrossed },
+  food: { label: "Food & Dining", icon: UtensilsCrossed },
+  courier: { label: "Courier", icon: Truck },
+  electronics: { label: "Electronics", icon: Smartphone },
+  pharmacy: { label: "Pharmacy", icon: Pill },
+  fashion: { label: "Fashion", icon: Shirt },
+  entertainment: { label: "Entertainment", icon: Film },
+  beauty: { label: "Beauty", icon: Sparkles },
+  hardware: { label: "Hardware", icon: Wrench },
+  fuel: { label: "Fuel", icon: Fuel },
+  supermarket: { label: "Supermarket", icon: ShoppingCart },
+  retail: { label: "Retail", icon: Tag },
+  health: { label: "Health", icon: Heart },
+  education: { label: "Education", icon: GraduationCap },
+  travel: { label: "Travel", icon: Plane },
+  utility: { label: "Utility", icon: Zap },
+  telecoms: { label: "Telecoms", icon: Phone },
+};
 
 type BankMerchant = {
   id: string;
