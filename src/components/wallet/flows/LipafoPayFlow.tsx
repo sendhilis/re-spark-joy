@@ -184,7 +184,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
       const { data: disp } = await supabase.from("settlement_dispatches").insert({
         position_id: positionId, beneficiary_bank: sourceBank, amount: amt,
         scheduled_at: cutoff.toISOString(), reference: ref, status: "scheduled",
-        float_revenue: Math.round(amt * 0.0002),
+        float_revenue: fee + Math.round(amt * 0.0002),
       }).select().single();
 
       setTrace({ ref, positionId, dispatchId: disp?.id });
