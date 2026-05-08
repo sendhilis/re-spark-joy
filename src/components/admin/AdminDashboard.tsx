@@ -10,6 +10,7 @@ import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { SettlementEngine } from "./SettlementEngine";
 import { SettlementAgentConsole } from "./SettlementAgentConsole";
+import { SettlementCycleVisualizer } from "./SettlementCycleVisualizer";
 import { ReconciliationDashboard } from "./ReconciliationDashboard";
 import { SwitchLoadTest } from "./SwitchLoadTest";
 import { MerchantPortal } from "./MerchantPortal";
