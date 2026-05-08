@@ -49,6 +49,33 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
 const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
+/**
+ * Lipafo switch fee schedule (KES). Designed to undercut the legacy
+ * "Bank → M-PESA → Paybill" double-fee path by 60-80%.
+ * Legacy = Safaricom Bank-to-MPESA + MPESA Pay Bill (customer-to-business), 2024 published tariffs.
+ */
+const LIPAFO_FEE_BANDS: { min: number; max: number; fee: number }[] = [
+  { min: 0,       max: 100,     fee: 0  },
+  { min: 101,     max: 1500,    fee: 8  },
+  { min: 1501,    max: 5000,    fee: 15 },
+  { min: 5001,    max: 20000,   fee: 25 },
+  { min: 20001,   max: 70000,   fee: 40 },
+  { min: 70001,   max: 250000,  fee: 55 },
+  { min: 250001,  max: Infinity, fee: 75 },
+];
+const computeLipafoFee = (amt: number) =>
+  LIPAFO_FEE_BANDS.find(b => amt >= b.min && amt <= b.max)?.fee ?? 75;
+
+const computeLegacyDoubleFee = (amt: number) => {
+  const bankToMpesa =
+    amt <= 100 ? 0 : amt <= 1500 ? 30 : amt <= 5000 ? 55 :
+    amt <= 20000 ? 100 : 110;
+  const payBill =
+    amt <= 100 ? 0 : amt <= 1500 ? 12 : amt <= 5000 ? 41 :
+    amt <= 20000 ? 86 : 108;
+  return bankToMpesa + payBill;
+};
+
 const CATEGORIES = ["all", "food_delivery", "food", "courier", "electronics", "pharmacy", "fashion", "entertainment", "beauty", "hardware", "fuel", "supermarket", "retail", "health", "education", "travel", "utility", "telecoms"];
 
 export function LipafoPayFlow({ open, onOpenChange }: Props) {
@@ -112,18 +139,22 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
     if (!selected || !amount) return;
     const amt = Number(amount);
     if (amt <= 0) { toast.error("Enter a valid amount"); return; }
-    if (amt > balances.main) { toast.error("Insufficient main wallet balance"); return; }
+    const fee = computeLipafoFee(amt);
+    const totalDebit = amt + fee;
+    if (totalDebit > balances.main) { toast.error("Insufficient main wallet balance (incl. switch fee)"); return; }
     setStep("processing");
     try {
       const sourceBank = bankMap[selected.bank_id]?.bank_name || "Participating Bank";
       const ref = `LPF-P2B-${Date.now()}`;
       const today = new Date().toISOString().slice(0, 10);
       const cutoff = new Date(); cutoff.setHours(13, 0, 0, 0);
+      const legacy = computeLegacyDoubleFee(amt);
+      const savings = Math.max(0, legacy - fee);
 
       await addTransaction({
         type: "qr_payment",
-        amount: -amt,
-        description: `LipafoPay → ${selected.merchant_name} (Paybill ${selected.paybill_number}${selected.till_number ? ` · Till ${selected.till_number}` : ""}) · ${sourceBank} · No M-PESA`,
+        amount: -totalDebit,
+        description: `LipafoPay → ${selected.merchant_name} (Paybill ${selected.paybill_number}${selected.till_number ? ` · Till ${selected.till_number}` : ""}) · ${sourceBank} · fee ${fmtKES(fee)} · saved ${fmtKES(savings)} vs M-PESA · No M-PESA`,
         recipient: selected.merchant_name,
         status: "completed",
         walletType: "main",
@@ -153,7 +184,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
       const { data: disp } = await supabase.from("settlement_dispatches").insert({
         position_id: positionId, beneficiary_bank: sourceBank, amount: amt,
         scheduled_at: cutoff.toISOString(), reference: ref, status: "scheduled",
-        float_revenue: Math.round(amt * 0.0002),
+        float_revenue: fee + Math.round(amt * 0.0002),
       }).select().single();
 
       setTrace({ ref, positionId, dispatchId: disp?.id });
@@ -294,7 +325,21 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Lipafo switch · T+1 net</Badge></div>
               <Separator />
               <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-lg text-primary">{fmtKES(Number(amount))}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Switch fee</span><span className="text-success">Free</span></div>
+              {(() => {
+                const amt = Number(amount) || 0;
+                const fee = computeLipafoFee(amt);
+                const legacy = computeLegacyDoubleFee(amt);
+                const savings = Math.max(0, legacy - fee);
+                const pct = legacy > 0 ? Math.round((savings / legacy) * 100) : 0;
+                return (
+                  <>
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lipafo switch fee</span><span className="font-semibold text-foreground">{fee === 0 ? "Free" : fmtKES(fee)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground line-through opacity-70">M-PESA route (Bank→MPESA + Paybill)</span><span className="line-through opacity-70">{fmtKES(legacy)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-success">You save</span><span className="text-success font-semibold">{fmtKES(savings)} ({pct}%)</span></div>
+                    <div className="flex justify-between text-sm pt-1 border-t border-border/40"><span className="text-muted-foreground">Total debit</span><span className="font-bold text-foreground">{fmtKES(amt + fee)}</span></div>
+                  </>
+                );
+              })()}
               <div className="flex justify-between text-xs"><span className="text-muted-foreground">M-PESA involvement</span><span className="text-success font-semibold">ZERO</span></div>
             </Card>
             <Card className="glass-card p-3 bg-primary/5">
