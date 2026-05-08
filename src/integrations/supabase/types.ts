@@ -343,6 +343,97 @@ export type Database = {
           },
         ]
       }
+      bank_merchant_sync_logs: {
+        Row: {
+          bank_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          inserted_count: number
+          received_count: number
+          source_ip: string | null
+          status: string
+          updated_count: number
+        }
+        Insert: {
+          bank_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          inserted_count?: number
+          received_count?: number
+          source_ip?: string | null
+          status?: string
+          updated_count?: number
+        }
+        Update: {
+          bank_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          inserted_count?: number
+          received_count?: number
+          source_ip?: string | null
+          status?: string
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_merchant_sync_logs_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "participating_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_merchants: {
+        Row: {
+          bank_id: string
+          category: string
+          created_at: string
+          id: string
+          merchant_name: string
+          paybill_number: string
+          status: string
+          synced_at: string
+          till_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_id: string
+          category?: string
+          created_at?: string
+          id?: string
+          merchant_name: string
+          paybill_number: string
+          status?: string
+          synced_at?: string
+          till_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          merchant_name?: string
+          paybill_number?: string
+          status?: string
+          synced_at?: string
+          till_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_merchants_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "participating_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -930,11 +1021,14 @@ export type Database = {
           id: string
           kyb_documents: Json
           kyb_status: string
+          last_sync_at: string | null
           legal_entity_name: string | null
           lifecycle_stage: Database["public"]["Enums"]["bank_lifecycle_stage"]
           notes: string | null
+          paybill_prefix: string | null
           registration_number: string | null
           sandbox_certified_at: string | null
+          sync_api_key: string
           tech_contact_email: string | null
           tech_contact_name: string | null
           updated_at: string
@@ -952,11 +1046,14 @@ export type Database = {
           id?: string
           kyb_documents?: Json
           kyb_status?: string
+          last_sync_at?: string | null
           legal_entity_name?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
           notes?: string | null
+          paybill_prefix?: string | null
           registration_number?: string | null
           sandbox_certified_at?: string | null
+          sync_api_key?: string
           tech_contact_email?: string | null
           tech_contact_name?: string | null
           updated_at?: string
@@ -974,11 +1071,14 @@ export type Database = {
           id?: string
           kyb_documents?: Json
           kyb_status?: string
+          last_sync_at?: string | null
           legal_entity_name?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
           notes?: string | null
+          paybill_prefix?: string | null
           registration_number?: string | null
           sandbox_certified_at?: string | null
+          sync_api_key?: string
           tech_contact_email?: string | null
           tech_contact_name?: string | null
           updated_at?: string
