@@ -193,6 +193,7 @@ export function AdminDashboard() {
           <TabsContent value="tariffs"><TariffsPanel /></TabsContent>
           <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
           <TabsContent value="settlement"><SettlementEngine /></TabsContent>
+          <TabsContent value="settlement-cycle"><SettlementCycleVisualizer /></TabsContent>
           <TabsContent value="agent-console"><SettlementAgentConsole /></TabsContent>
           <TabsContent value="reconciliation"><ReconciliationDashboard /></TabsContent>
           <TabsContent value="merchants"><MerchantPortal /></TabsContent>
