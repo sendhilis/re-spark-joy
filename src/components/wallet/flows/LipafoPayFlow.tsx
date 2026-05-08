@@ -221,7 +221,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c === "all" ? "All categories" : c}</SelectItem>)}</SelectContent>
+                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c === "all" ? "All categories" : (CATEGORY_META[c]?.label || c)}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={bankFilter} onValueChange={setBankFilter}>
                 <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
