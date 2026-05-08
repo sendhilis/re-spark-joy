@@ -10,7 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useWallet } from "@/contexts/WalletContext";
 import { toast } from "sonner";
-import { Store, ArrowRight, CheckCircle2, Loader2, Network, Building2, Search, Hash } from "lucide-react";
+import { Store, ArrowRight, CheckCircle2, Loader2, Network, Building2, Search, Hash, UtensilsCrossed, Truck, Smartphone, Pill, Shirt, Film, Sparkles, Wrench, Fuel, ShoppingCart, Heart, GraduationCap, Plane, Zap, Phone, Tag } from "lucide-react";
+
+const CATEGORY_META: Record<string, { label: string; icon: any }> = {
+  food_delivery: { label: "Food Delivery", icon: UtensilsCrossed },
+  food: { label: "Food & Dining", icon: UtensilsCrossed },
+  courier: { label: "Courier", icon: Truck },
+  electronics: { label: "Electronics", icon: Smartphone },
+  pharmacy: { label: "Pharmacy", icon: Pill },
+  fashion: { label: "Fashion", icon: Shirt },
+  entertainment: { label: "Entertainment", icon: Film },
+  beauty: { label: "Beauty", icon: Sparkles },
+  hardware: { label: "Hardware", icon: Wrench },
+  fuel: { label: "Fuel", icon: Fuel },
+  supermarket: { label: "Supermarket", icon: ShoppingCart },
+  retail: { label: "Retail", icon: Tag },
+  health: { label: "Health", icon: Heart },
+  education: { label: "Education", icon: GraduationCap },
+  travel: { label: "Travel", icon: Plane },
+  utility: { label: "Utility", icon: Zap },
+  telecoms: { label: "Telecoms", icon: Phone },
+};
 
 type BankMerchant = {
   id: string;
@@ -29,7 +49,7 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
 const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
-const CATEGORIES = ["all", "retail", "food", "fuel", "health", "education", "travel", "utility", "supermarket", "telecoms"];
+const CATEGORIES = ["all", "food_delivery", "food", "courier", "electronics", "pharmacy", "fashion", "entertainment", "beauty", "hardware", "fuel", "supermarket", "retail", "health", "education", "travel", "utility", "telecoms"];
 
 export function LipafoPayFlow({ open, onOpenChange }: Props) {
   const { balances, addTransaction } = useWallet();
@@ -173,12 +193,35 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             </Card>
 
             <Separator />
-            <p className="text-xs text-muted-foreground">…or browse merchants pushed by participating banks:</p>
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-2">Browse by category</p>
+              <div className="grid grid-cols-4 gap-2">
+                {["food_delivery","courier","electronics","pharmacy","fashion","entertainment","beauty","hardware","fuel","supermarket","health","food"].map((c) => {
+                  const meta = CATEGORY_META[c];
+                  const Icon = meta?.icon || Tag;
+                  const count = merchants.filter(m => m.category === c).length;
+                  const active = category === c;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategory(active ? "all" : c)}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border transition-all text-[10px] ${active ? "bg-primary/15 border-primary text-primary" : "bg-card/40 border-border/50 hover:border-primary/40 text-muted-foreground"}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-center leading-tight">{meta?.label || c}</span>
+                      <span className="text-[9px] opacity-70">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">…or refine with filters:</p>
 
             <div className="grid grid-cols-2 gap-2">
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c === "all" ? "All categories" : c}</SelectItem>)}</SelectContent>
+                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c === "all" ? "All categories" : (CATEGORY_META[c]?.label || c)}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={bankFilter} onValueChange={setBankFilter}>
                 <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
