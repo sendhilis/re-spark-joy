@@ -308,6 +308,62 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
               <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="2,500" />
               <p className="text-xs text-muted-foreground mt-1">Available: {fmtKES(balances.main)}</p>
             </div>
+
+            {/* Live fee preview */}
+            {(() => {
+              const amt = Number(amount) || 0;
+              const fee = computeLipafoFee(amt);
+              const legacy = computeLegacyDoubleFee(amt);
+              const savings = Math.max(0, legacy - fee);
+              const pct = legacy > 0 ? Math.round((savings / legacy) * 100) : 0;
+              return (
+                <Card className="glass-card p-3 space-y-1.5 bg-primary/5 border-primary/20">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Lipafo switch fee</span>
+                    <span className="font-semibold text-foreground">{amt === 0 ? "—" : fee === 0 ? "Free" : fmtKES(fee)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground line-through opacity-70">M-PESA route (Bank→MPESA + Paybill)</span>
+                    <span className="line-through opacity-70">{amt === 0 ? "—" : fmtKES(legacy)}</span>
+                  </div>
+                  {amt > 0 && savings > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-success">You save</span>
+                      <span className="text-success font-semibold">{fmtKES(savings)} ({pct}%)</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground">Total debit</span>
+                    <span className="font-bold text-foreground">{amt === 0 ? "—" : fmtKES(amt + fee)}</span>
+                  </div>
+                </Card>
+              );
+            })()}
+
+            {/* Fee schedule (collapsible) */}
+            <details className="glass-card rounded-lg p-3 text-xs">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                View full Lipafo fee schedule (vs M-PESA double-fee)
+              </summary>
+              <div className="mt-2 space-y-1">
+                {LIPAFO_FEE_BANDS.map((b, i) => {
+                  const label = b.max === Infinity
+                    ? `Above ${fmtKES(b.min - 1)}`
+                    : `${fmtKES(b.min)} – ${fmtKES(b.max)}`;
+                  const active = Number(amount) >= b.min && Number(amount) <= b.max;
+                  return (
+                    <div key={i} className={`flex justify-between px-2 py-1 rounded ${active ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}>
+                      <span>{label}</span>
+                      <span className="font-mono font-semibold">{b.fee === 0 ? "Free" : fmtKES(b.fee)}</span>
+                    </div>
+                  );
+                })}
+                <p className="text-[10px] text-muted-foreground pt-1">
+                  Benchmarked to undercut Safaricom's Bank→M-PESA + Pay Bill stacked tariff by ~80%.
+                </p>
+              </div>
+            </details>
+
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep("select")}>Back</Button>
               <Button className="flex-1 button-3d" onClick={() => setStep("confirm")} disabled={!amount}>Continue <ArrowRight className="h-4 w-4 ml-1" /></Button>
