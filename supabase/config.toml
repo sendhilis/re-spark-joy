@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.bank-merchant-sync]
 verify_jwt = false
+
+[functions.settlement-midnight-run]
+verify_jwt = false
