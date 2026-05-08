@@ -139,18 +139,22 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
     if (!selected || !amount) return;
     const amt = Number(amount);
     if (amt <= 0) { toast.error("Enter a valid amount"); return; }
-    if (amt > balances.main) { toast.error("Insufficient main wallet balance"); return; }
+    const fee = computeLipafoFee(amt);
+    const totalDebit = amt + fee;
+    if (totalDebit > balances.main) { toast.error("Insufficient main wallet balance (incl. switch fee)"); return; }
     setStep("processing");
     try {
       const sourceBank = bankMap[selected.bank_id]?.bank_name || "Participating Bank";
       const ref = `LPF-P2B-${Date.now()}`;
       const today = new Date().toISOString().slice(0, 10);
       const cutoff = new Date(); cutoff.setHours(13, 0, 0, 0);
+      const legacy = computeLegacyDoubleFee(amt);
+      const savings = Math.max(0, legacy - fee);
 
       await addTransaction({
         type: "qr_payment",
-        amount: -amt,
-        description: `LipafoPay → ${selected.merchant_name} (Paybill ${selected.paybill_number}${selected.till_number ? ` · Till ${selected.till_number}` : ""}) · ${sourceBank} · No M-PESA`,
+        amount: -totalDebit,
+        description: `LipafoPay → ${selected.merchant_name} (Paybill ${selected.paybill_number}${selected.till_number ? ` · Till ${selected.till_number}` : ""}) · ${sourceBank} · fee ${fmtKES(fee)} · saved ${fmtKES(savings)} vs M-PESA · No M-PESA`,
         recipient: selected.merchant_name,
         status: "completed",
         walletType: "main",
