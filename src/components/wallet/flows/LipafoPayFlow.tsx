@@ -193,7 +193,30 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             </Card>
 
             <Separator />
-            <p className="text-xs text-muted-foreground">…or browse merchants pushed by participating banks:</p>
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-2">Browse by category</p>
+              <div className="grid grid-cols-4 gap-2">
+                {["food_delivery","courier","electronics","pharmacy","fashion","entertainment","beauty","hardware","fuel","supermarket","health","food"].map((c) => {
+                  const meta = CATEGORY_META[c];
+                  const Icon = meta?.icon || Tag;
+                  const count = merchants.filter(m => m.category === c).length;
+                  const active = category === c;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategory(active ? "all" : c)}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border transition-all text-[10px] ${active ? "bg-primary/15 border-primary text-primary" : "bg-card/40 border-border/50 hover:border-primary/40 text-muted-foreground"}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-center leading-tight">{meta?.label || c}</span>
+                      <span className="text-[9px] opacity-70">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">…or refine with filters:</p>
 
             <div className="grid grid-cols-2 gap-2">
               <Select value={category} onValueChange={setCategory}>
