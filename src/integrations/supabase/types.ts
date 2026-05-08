@@ -1145,6 +1145,75 @@ export type Database = {
         }
         Relationships: []
       }
+      settlement_advice_emails: {
+        Row: {
+          acknowledged_at: string | null
+          bank_email: string
+          bank_name: string
+          body: string
+          created_at: string
+          cycle_date: string
+          cycle_run_id: string | null
+          direction: string
+          id: string
+          inbound_volume: number
+          net_amount: number
+          outbound_volume: number
+          rtgs_completed_at: string | null
+          rtgs_reference: string | null
+          sent_at: string
+          squared_off_at: string | null
+          status: string
+          subject: string
+          transaction_count: number
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          bank_email: string
+          bank_name: string
+          body: string
+          created_at?: string
+          cycle_date: string
+          cycle_run_id?: string | null
+          direction: string
+          id?: string
+          inbound_volume?: number
+          net_amount?: number
+          outbound_volume?: number
+          rtgs_completed_at?: string | null
+          rtgs_reference?: string | null
+          sent_at?: string
+          squared_off_at?: string | null
+          status?: string
+          subject: string
+          transaction_count?: number
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          bank_email?: string
+          bank_name?: string
+          body?: string
+          created_at?: string
+          cycle_date?: string
+          cycle_run_id?: string | null
+          direction?: string
+          id?: string
+          inbound_volume?: number
+          net_amount?: number
+          outbound_volume?: number
+          rtgs_completed_at?: string | null
+          rtgs_reference?: string | null
+          sent_at?: string
+          squared_off_at?: string | null
+          status?: string
+          subject?: string
+          transaction_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       settlement_agents: {
         Row: {
           agent_code: string
