@@ -49,7 +49,7 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
 const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
-const CATEGORIES = ["all", "retail", "food", "fuel", "health", "education", "travel", "utility", "supermarket", "telecoms"];
+const CATEGORIES = ["all", "food_delivery", "food", "courier", "electronics", "pharmacy", "fashion", "entertainment", "beauty", "hardware", "fuel", "supermarket", "retail", "health", "education", "travel", "utility", "telecoms"];
 
 export function LipafoPayFlow({ open, onOpenChange }: Props) {
   const { balances, addTransaction } = useWallet();
