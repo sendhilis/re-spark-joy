@@ -49,6 +49,33 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
 const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
+/**
+ * Lipafo switch fee schedule (KES). Designed to undercut the legacy
+ * "Bank → M-PESA → Paybill" double-fee path by 60-80%.
+ * Legacy = Safaricom Bank-to-MPESA + MPESA Pay Bill (customer-to-business), 2024 published tariffs.
+ */
+const LIPAFO_FEE_BANDS: { min: number; max: number; fee: number }[] = [
+  { min: 0,       max: 100,     fee: 0  },
+  { min: 101,     max: 1500,    fee: 8  },
+  { min: 1501,    max: 5000,    fee: 15 },
+  { min: 5001,    max: 20000,   fee: 25 },
+  { min: 20001,   max: 70000,   fee: 40 },
+  { min: 70001,   max: 250000,  fee: 55 },
+  { min: 250001,  max: Infinity, fee: 75 },
+];
+const computeLipafoFee = (amt: number) =>
+  LIPAFO_FEE_BANDS.find(b => amt >= b.min && amt <= b.max)?.fee ?? 75;
+
+const computeLegacyDoubleFee = (amt: number) => {
+  const bankToMpesa =
+    amt <= 100 ? 0 : amt <= 1500 ? 30 : amt <= 5000 ? 55 :
+    amt <= 20000 ? 100 : 110;
+  const payBill =
+    amt <= 100 ? 0 : amt <= 1500 ? 12 : amt <= 5000 ? 41 :
+    amt <= 20000 ? 86 : 108;
+  return bankToMpesa + payBill;
+};
+
 const CATEGORIES = ["all", "food_delivery", "food", "courier", "electronics", "pharmacy", "fashion", "entertainment", "beauty", "hardware", "fuel", "supermarket", "retail", "health", "education", "travel", "utility", "telecoms"];
 
 export function LipafoPayFlow({ open, onOpenChange }: Props) {
