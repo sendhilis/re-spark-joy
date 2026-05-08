@@ -321,7 +321,21 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Lipafo switch · T+1 net</Badge></div>
               <Separator />
               <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-lg text-primary">{fmtKES(Number(amount))}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Switch fee</span><span className="text-success">Free</span></div>
+              {(() => {
+                const amt = Number(amount) || 0;
+                const fee = computeLipafoFee(amt);
+                const legacy = computeLegacyDoubleFee(amt);
+                const savings = Math.max(0, legacy - fee);
+                const pct = legacy > 0 ? Math.round((savings / legacy) * 100) : 0;
+                return (
+                  <>
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lipafo switch fee</span><span className="font-semibold text-foreground">{fee === 0 ? "Free" : fmtKES(fee)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground line-through opacity-70">M-PESA route (Bank→MPESA + Paybill)</span><span className="line-through opacity-70">{fmtKES(legacy)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-success">You save</span><span className="text-success font-semibold">{fmtKES(savings)} ({pct}%)</span></div>
+                    <div className="flex justify-between text-sm pt-1 border-t border-border/40"><span className="text-muted-foreground">Total debit</span><span className="font-bold text-foreground">{fmtKES(amt + fee)}</span></div>
+                  </>
+                );
+              })()}
               <div className="flex justify-between text-xs"><span className="text-muted-foreground">M-PESA involvement</span><span className="text-success font-semibold">ZERO</span></div>
             </Card>
             <Card className="glass-card p-3 bg-primary/5">
