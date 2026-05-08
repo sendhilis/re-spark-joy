@@ -10,6 +10,7 @@ import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { SettlementEngine } from "./SettlementEngine";
 import { SettlementAgentConsole } from "./SettlementAgentConsole";
+import { SettlementCycleVisualizer } from "./SettlementCycleVisualizer";
 import { ReconciliationDashboard } from "./ReconciliationDashboard";
 import { SwitchLoadTest } from "./SwitchLoadTest";
 import { MerchantPortal } from "./MerchantPortal";
@@ -167,6 +168,7 @@ export function AdminDashboard() {
             <TabsTrigger value="tariffs" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Receipt className="h-3.5 w-3.5" />Tariffs</TabsTrigger>
             <TabsTrigger value="switch-fee" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Sigma className="h-3.5 w-3.5" />Switch Fee</TabsTrigger>
             <TabsTrigger value="settlement" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Repeat className="h-3.5 w-3.5" />Settlement</TabsTrigger>
+            <TabsTrigger value="settlement-cycle" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Repeat className="h-3.5 w-3.5" />Cycle Viz</TabsTrigger>
             <TabsTrigger value="agent-console" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Shield className="h-3.5 w-3.5" />Agent (KCB)</TabsTrigger>
             <TabsTrigger value="reconciliation" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><ScanSearch className="h-3.5 w-3.5" />Live Recon</TabsTrigger>
             <TabsTrigger value="merchants" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Briefcase className="h-3.5 w-3.5" />Merchants</TabsTrigger>
@@ -191,6 +193,7 @@ export function AdminDashboard() {
           <TabsContent value="tariffs"><TariffsPanel /></TabsContent>
           <TabsContent value="switch-fee"><SwitchFeeExplainer /></TabsContent>
           <TabsContent value="settlement"><SettlementEngine /></TabsContent>
+          <TabsContent value="settlement-cycle"><SettlementCycleVisualizer /></TabsContent>
           <TabsContent value="agent-console"><SettlementAgentConsole /></TabsContent>
           <TabsContent value="reconciliation"><ReconciliationDashboard /></TabsContent>
           <TabsContent value="merchants"><MerchantPortal /></TabsContent>
