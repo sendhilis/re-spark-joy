@@ -349,6 +349,7 @@ export function SettlementCycleVisualizer() {
         <TabsList className="glass-card">
           <TabsTrigger value="advice"><Mail className="h-4 w-4 mr-2" />Bank Advice Emails</TabsTrigger>
           <TabsTrigger value="rtgs"><Banknote className="h-4 w-4 mr-2" />RTGS & Square-Off Tracker</TabsTrigger>
+          <TabsTrigger value="daraja"><Activity className="h-4 w-4 mr-2" />Daraja Flow ({timelines.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="advice">
