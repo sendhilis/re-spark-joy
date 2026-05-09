@@ -93,19 +93,10 @@ function lookupIdempotent(key: string) {
   return hit.response;
 }
 
-function verifyBearer(req: Request): { ok: boolean; reason?: string } {
+async function verifyBearer(req: Request): Promise<{ ok: boolean; reason?: string }> {
   const auth = req.headers.get("authorization") ?? "";
   if (!auth.toLowerCase().startsWith("bearer ")) return { ok: false, reason: "missing_bearer" };
-  const token = auth.slice(7).trim();
-  // Allow either an issued token from /lipafo/auth/token or the pilot service shortcut
-  if (token === CLIENT_SECRET) return { ok: true };
-  const exp = issuedTokens.get(token);
-  if (!exp) return { ok: false, reason: "invalid_token" };
-  if (Date.now() > exp) {
-    issuedTokens.delete(token);
-    return { ok: false, reason: "token_expired" };
-  }
-  return { ok: true };
+  return await verifyToken(auth.slice(7).trim());
 }
 
 // ── Daraja-style result codes ───────────────────────────────────────────────
