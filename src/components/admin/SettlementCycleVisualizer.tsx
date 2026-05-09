@@ -40,11 +40,78 @@ const fmtKES = (n: number) =>
 const STAGE_ORDER = ["sent", "acknowledged", "rtgs_completed", "squared_off"] as const;
 const stageIndex = (s: string) => STAGE_ORDER.indexOf(s as typeof STAGE_ORDER[number]);
 
+// Daraja-pattern lifecycle stages we project switch_events into.
+// Maps to FTS v3.0 §5 event names: intent.received → intent.authorized →
+// debit.posted → credit.confirmed (with intent.failed as a terminal branch).
+type DarajaStage = "received" | "authorized" | "debited" | "credited" | "failed";
+const DARAJA_FLOW: DarajaStage[] = ["received", "authorized", "debited", "credited"];
+
+type SwitchEvent = {
+  id: number;
+  intent_id: string | null;
+  event_type: string;
+  from_state: string | null;
+  to_state: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type IntentRow = {
+  id: string;
+  idempotency_key: string;
+  payer_identifier: string;
+  payee_identifier: string;
+  payee_bank: string | null;
+  amount: number;
+  currency: string;
+  state: string;
+  trace_id: string;
+  created_at: string;
+  completed_at: string | null;
+  last_error: string | null;
+};
+
+type IntentTimeline = {
+  intent: IntentRow;
+  events: SwitchEvent[];
+  reachedStages: Set<DarajaStage>;
+  finalResultCode: number | null;
+  finalResultDesc: string | null;
+  totalLatencyMs: number | null;
+};
+
+const EVENT_TO_STAGE: Record<string, DarajaStage> = {
+  "intent.received": "received",
+  "intent.authorized": "authorized",
+  "debit.posted": "debited",
+  "credit.confirmed": "credited",
+  "intent.failed": "failed",
+  // legacy event names (pre-v3.0) still seen in old rows
+  "intent.created": "received",
+  "debit.requested": "authorized",
+  "debit.confirmed": "debited",
+  "bank.rejected": "failed",
+};
+
+const stageColor = (s: DarajaStage) =>
+  s === "credited" ? "bg-emerald-500" :
+  s === "debited" ? "bg-blue-500" :
+  s === "authorized" ? "bg-amber-500" :
+  s === "received" ? "bg-primary" :
+  "bg-destructive";
+
+const resultCodeTone = (code: number | null) =>
+  code === null ? "secondary" :
+  code === 0 ? "default" :
+  code >= 500 ? "destructive" : "outline";
+
 export function SettlementCycleVisualizer() {
   const [advice, setAdvice] = useState<Advice[]>([]);
   const [loading, setLoading] = useState(false);
   const [cycleFilter, setCycleFilter] = useState<string>("");
   const [openEmail, setOpenEmail] = useState<Advice | null>(null);
+  const [timelines, setTimelines] = useState<IntentTimeline[]>([]);
+  const [openTimeline, setOpenTimeline] = useState<IntentTimeline | null>(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -59,7 +126,69 @@ export function SettlementCycleVisualizer() {
     }
   };
 
+  // Fetch the Daraja intent timelines that contributed to the active cycle.
+  const loadTimelines = async (cycleDate: string) => {
+    if (!cycleDate) { setTimelines([]); return; }
+    // Window = cycle date 00:00 EAT through next day 00:00 EAT.
+    const start = `${cycleDate}T00:00:00+03:00`;
+    const next = new Date(`${cycleDate}T00:00:00+03:00`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const end = next.toISOString();
+
+    const { data: intents } = await supabase
+      .from("transaction_intents")
+      .select("id,idempotency_key,payer_identifier,payee_identifier,payee_bank,amount,currency,state,trace_id,created_at,completed_at,last_error")
+      .gte("created_at", start)
+      .lt("created_at", end)
+      .order("created_at", { ascending: false })
+      .limit(150);
+
+    if (!intents || intents.length === 0) { setTimelines([]); return; }
+    const ids = intents.map((i) => i.id);
+    const { data: events } = await supabase
+      .from("switch_events")
+      .select("id,intent_id,event_type,from_state,to_state,payload,created_at")
+      .in("intent_id", ids)
+      .order("id", { ascending: true });
+
+    const eventsByIntent = new Map<string, SwitchEvent[]>();
+    (events ?? []).forEach((e) => {
+      if (!e.intent_id) return;
+      const list = eventsByIntent.get(e.intent_id) ?? [];
+      list.push(e as SwitchEvent);
+      eventsByIntent.set(e.intent_id, list);
+    });
+
+    const built: IntentTimeline[] = (intents as IntentRow[]).map((intent) => {
+      const evs = eventsByIntent.get(intent.id) ?? [];
+      const reachedStages = new Set<DarajaStage>();
+      let finalResultCode: number | null = null;
+      let finalResultDesc: string | null = null;
+      let totalLatencyMs: number | null = null;
+      evs.forEach((e) => {
+        const stg = EVENT_TO_STAGE[e.event_type];
+        if (stg) reachedStages.add(stg);
+        const p = e.payload ?? {};
+        if ("ResultCode" in p) {
+          finalResultCode = Number((p as any).ResultCode);
+          finalResultDesc = String((p as any).ResultDesc ?? "");
+        }
+        if ("latency_ms" in p && typeof (p as any).latency_ms === "number") {
+          totalLatencyMs = (totalLatencyMs ?? 0) + (p as any).latency_ms;
+        }
+      });
+      // Infer ResultCode from terminal state if not explicitly logged.
+      if (finalResultCode === null) {
+        if (intent.state === "COMPLETED") { finalResultCode = 0; finalResultDesc = "Success"; }
+        else if (intent.state === "FAILED") { finalResultCode = 1; finalResultDesc = intent.last_error ?? "bank_error"; }
+      }
+      return { intent, events: evs, reachedStages, finalResultCode, finalResultDesc, totalLatencyMs };
+    });
+    setTimelines(built);
+  };
+
   useEffect(() => { load(); }, []);
+  useEffect(() => { loadTimelines(cycleFilter); }, [cycleFilter]);
 
   const cycles = Array.from(new Set(advice.map((a) => a.cycle_date)));
   const current = advice.filter((a) => a.cycle_date === cycleFilter);
