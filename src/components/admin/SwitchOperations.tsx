@@ -242,6 +242,7 @@ export function SwitchOperations() {
           <TabsTrigger value="settlement"><Database className="h-4 w-4 mr-2" />Settlement checkpoints</TabsTrigger>
           <TabsTrigger value="trace"><Search className="h-4 w-4 mr-2" />Trace search</TabsTrigger>
           <TabsTrigger value="patterns"><Cpu className="h-4 w-4 mr-2" />8 patterns map</TabsTrigger>
+          <TabsTrigger value="fastify-sim"><Rocket className="h-4 w-4 mr-2" />Fastify sim</TabsTrigger>
         </TabsList>
 
         <TabsContent value="intents">
