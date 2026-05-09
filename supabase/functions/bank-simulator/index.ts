@@ -127,8 +127,7 @@ async function handleAuthToken(req: Request): Promise<Response> {
   if (clientId !== CLIENT_ID || clientSecret !== CLIENT_SECRET) {
     return json(401, buildResult(401, "invalid_client"));
   }
-  const access_token = newId() + newId();
-  issuedTokens.set(access_token, Date.now() + TOKEN_TTL_SEC * 1000);
+  const access_token = await issueToken();
   return json(200, { access_token, token_type: "Bearer", expires_in: TOKEN_TTL_SEC });
 }
 
