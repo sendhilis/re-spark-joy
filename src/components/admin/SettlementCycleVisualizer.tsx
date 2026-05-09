@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   Clock, PlayCircle, Mail, Banknote, CheckCircle2, Building2,
   ArrowDown, ArrowUp, MoonStar, Send, Landmark, Sparkles, RefreshCw,
+  Activity, ArrowRight, AlertTriangle, ShieldCheck,
 } from "lucide-react";
 
 type Advice = {
