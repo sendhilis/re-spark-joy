@@ -499,15 +499,29 @@ export function SettlementCycleVisualizer() {
               terminal Daraja ResultCode/ResultDesc returned by the bank connector. */}
           <Card className="glass-card mb-4">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Daraja Lifecycle — {cycleFilter || "select a cycle"}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Per-intent walk through the v3.0 REST flow:
-                <span className="font-mono"> /lipafo/payment/initiate → debit.posted → /lipafo/payment/credit → credit.confirmed</span>.
-                Terminal <span className="font-mono">ResultCode 0</span> = Success.
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    Daraja Lifecycle — {cycleFilter || "select a cycle"}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Per-intent walk through the v3.0 REST flow:
+                    <span className="font-mono"> /lipafo/payment/initiate → debit.posted → /lipafo/payment/credit → credit.confirmed</span>.
+                    Terminal <span className="font-mono">ResultCode 0</span> = Success.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={runLipafoPayTest}
+                  disabled={runningTest}
+                  className="shrink-0"
+                >
+                  {runningTest
+                    ? (<><RefreshCw className="h-3 w-3 mr-2 animate-spin" />Running…</>)
+                    : (<><PlayCircle className="h-3 w-3 mr-2" />Run LipafoPay test</>)}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {(() => {
