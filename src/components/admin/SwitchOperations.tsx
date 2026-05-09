@@ -497,7 +497,67 @@ export function SwitchOperations() {
                 token reuse, and idempotent replay (same key → identical bank reference, no double debit).
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="sim-amount" className="text-xs">Amount</Label>
+                  <Input id="sim-amount" type="number" min={1} value={simForm.amount}
+                    onChange={(e) => setSimForm((f) => ({ ...f, amount: Number(e.target.value) }))}
+                    disabled={simBusy} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-currency" className="text-xs">Currency</Label>
+                  <Select value={simForm.currency} disabled={simBusy}
+                    onValueChange={(v) => setSimForm((f) => ({ ...f, currency: v as any }))}>
+                    <SelectTrigger id="sim-currency"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="KES">KES</SelectItem>
+                      <SelectItem value="XOF">XOF</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-payee" className="text-xs">Payee identifier</Label>
+                  <Input id="sim-payee" value={simForm.payee_identifier}
+                    onChange={(e) => setSimForm((f) => ({ ...f, payee_identifier: e.target.value }))}
+                    disabled={simBusy} placeholder="e.g. 400200" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-bank" className="text-xs">Payee bank</Label>
+                  <Select value={simForm.payee_bank} disabled={simBusy}
+                    onValueChange={(v) => setSimForm((f) => ({ ...f, payee_bank: v }))}>
+                    <SelectTrigger id="sim-bank"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(banks.length > 0
+                        ? banks.map((b) => b.bank_code)
+                        : ["KCB", "COOP", "EQUITY", "ABSA", "DTB", "NCBA"]
+                      ).map((code) => (
+                        <SelectItem key={code} value={code}>{code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-rail" className="text-xs">Rail</Label>
+                  <Select value={simForm.rail} disabled={simBusy}
+                    onValueChange={(v) => setSimForm((f) => ({ ...f, rail: v }))}>
+                    <SelectTrigger id="sim-rail"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daraja">daraja</SelectItem>
+                      <SelectItem value="bank_rail">bank_rail</SelectItem>
+                      <SelectItem value="pesalink">pesalink</SelectItem>
+                      <SelectItem value="rtgs">rtgs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-payer" className="text-xs">Payer identifier</Label>
+                  <Input id="sim-payer" value={simForm.payer_identifier}
+                    onChange={(e) => setSimForm((f) => ({ ...f, payer_identifier: e.target.value }))}
+                    disabled={simBusy} placeholder="wallet id / msisdn" />
+                </div>
+              </div>
               <div className="flex gap-2 flex-wrap items-center">
                 <Button onClick={runFastifySim} disabled={simBusy} className="button-3d" size="sm">
                   {simBusy ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-2" />}
