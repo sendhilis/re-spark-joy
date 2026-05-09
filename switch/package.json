@@ -1,0 +1,26 @@
+{
+  "name": "lipafo-switch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reference Fastify switch service for Lipafo — ingress validation, bank connector stub, Redis idempotency. Benchmark target: 5k+ TPS.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "bench:autocannon": "autocannon -c 200 -d 30 -m POST -H 'content-type=application/json' -b '{\"idempotency_key\":\"bench-$(date +%s%N)\",\"payer_identifier\":\"MSISDN+254700000001\",\"payee_identifier\":\"NAIVAS-001\",\"payee_bank\":\"KCB\",\"amount\":1500,\"currency\":\"KES\"}' http://localhost:3000/v1/intents",
+    "bench:k6": "k6 run bench/k6-script.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "fastify": "^4.28.1",
+    "@fastify/sensible": "^5.6.0",
+    "@fastify/rate-limit": "^9.1.0",
+    "ioredis": "^5.4.1",
+    "pino-pretty": "^11.2.2",
+    "undici": "^6.19.8"
+  },
+  "devDependencies": {
+    "autocannon": "^7.15.0"
+  }
+}

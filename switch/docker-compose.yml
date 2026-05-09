@@ -1,0 +1,14 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+
+  switch:
+    build: .
+    depends_on: [redis]
+    environment:
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: info
+      BANK_SIM_URL: http://bank-sim:8787/pacs008
+    ports: ["3000:3000"]
