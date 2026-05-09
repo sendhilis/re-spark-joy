@@ -27,8 +27,48 @@ const CLIENT_ID = Deno.env.get("BANK_SIM_CLIENT_ID") ?? "lipafo-pilot-client";
 const CLIENT_SECRET = Deno.env.get("BANK_SIM_CLIENT_SECRET") ?? "lipafo-pilot-secret";
 const TOKEN_TTL_SEC = 3600;
 
-// In-memory token cache (fine for the simulator — production banks use Redis/DB).
-const issuedTokens = new Map<string, number>(); // token -> expires_at (ms)
+// Stateless HMAC-signed tokens (edge isolates don't share memory, so an
+// in-memory Map causes spurious "invalid_token" when /auth/token and
+// /payment/initiate land on different workers).
+const enc = new TextEncoder();
+async function hmacKey(): Promise<CryptoKey> {
+  return await crypto.subtle.importKey(
+    "raw", enc.encode(CLIENT_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"],
+  );
+}
+function b64u(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  let s = ""; for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64uDecode(s: string): Uint8Array {
+  const pad = s.length % 4 ? "=".repeat(4 - (s.length % 4)) : "";
+  const b = atob(s.replace(/-/g, "+").replace(/_/g, "/") + pad);
+  const out = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) out[i] = b.charCodeAt(i);
+  return out;
+}
+async function issueToken(): Promise<string> {
+  const exp = Date.now() + TOKEN_TTL_SEC * 1000;
+  const payload = b64u(enc.encode(`${CLIENT_ID}.${exp}`));
+  const sig = b64u(await crypto.subtle.sign("HMAC", await hmacKey(), enc.encode(payload)));
+  return `${payload}.${sig}`;
+}
+async function verifyToken(token: string): Promise<{ ok: boolean; reason?: string }> {
+  if (token === CLIENT_SECRET) return { ok: true }; // pilot shortcut
+  const parts = token.split(".");
+  if (parts.length !== 2) return { ok: false, reason: "invalid_token" };
+  const [payload, sig] = parts;
+  const valid = await crypto.subtle.verify(
+    "HMAC", await hmacKey(), b64uDecode(sig), enc.encode(payload),
+  );
+  if (!valid) return { ok: false, reason: "invalid_token" };
+  const decoded = new TextDecoder().decode(b64uDecode(payload));
+  const exp = Number(decoded.split(".")[1]);
+  if (!exp || Date.now() > exp) return { ok: false, reason: "token_expired" };
+  return { ok: true };
+}
 
 const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 const json = (status: number, body: unknown) =>
@@ -53,19 +93,10 @@ function lookupIdempotent(key: string) {
   return hit.response;
 }
 
-function verifyBearer(req: Request): { ok: boolean; reason?: string } {
+async function verifyBearer(req: Request): Promise<{ ok: boolean; reason?: string }> {
   const auth = req.headers.get("authorization") ?? "";
   if (!auth.toLowerCase().startsWith("bearer ")) return { ok: false, reason: "missing_bearer" };
-  const token = auth.slice(7).trim();
-  // Allow either an issued token from /lipafo/auth/token or the pilot service shortcut
-  if (token === CLIENT_SECRET) return { ok: true };
-  const exp = issuedTokens.get(token);
-  if (!exp) return { ok: false, reason: "invalid_token" };
-  if (Date.now() > exp) {
-    issuedTokens.delete(token);
-    return { ok: false, reason: "token_expired" };
-  }
-  return { ok: true };
+  return await verifyToken(auth.slice(7).trim());
 }
 
 // ── Daraja-style result codes ───────────────────────────────────────────────
@@ -96,8 +127,7 @@ async function handleAuthToken(req: Request): Promise<Response> {
   if (clientId !== CLIENT_ID || clientSecret !== CLIENT_SECRET) {
     return json(401, buildResult(401, "invalid_client"));
   }
-  const access_token = newId() + newId();
-  issuedTokens.set(access_token, Date.now() + TOKEN_TTL_SEC * 1000);
+  const access_token = await issueToken();
   return json(200, { access_token, token_type: "Bearer", expires_in: TOKEN_TTL_SEC });
 }
 
@@ -115,7 +145,7 @@ interface PaymentBody {
 }
 
 async function handlePayment(req: Request, leg: "initiate" | "credit"): Promise<Response> {
-  const auth = verifyBearer(req);
+  const auth = await verifyBearer(req);
   if (!auth.ok) return json(401, buildResult(401, auth.reason ?? "unauthorized"));
 
   const intentKey =
@@ -179,7 +209,7 @@ async function handlePayment(req: Request, leg: "initiate" | "credit"): Promise<
 }
 
 async function handleStatus(req: Request, url: URL): Promise<Response> {
-  const auth = verifyBearer(req);
+  const auth = await verifyBearer(req);
   if (!auth.ok) return json(401, buildResult(401, auth.reason ?? "unauthorized"));
   const key = url.searchParams.get("intent_key") ?? url.searchParams.get("bank_reference") ?? "";
   if (!key) return json(400, buildResult(400, "missing_intent_key_or_reference"));

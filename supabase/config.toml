@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.settlement-midnight-run]
 verify_jwt = false
+
+[functions.bank-simulator]
+verify_jwt = false
+
+[functions.switch-process-intent]
+verify_jwt = false
