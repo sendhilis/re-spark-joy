@@ -456,6 +456,152 @@ export function SettlementCycleVisualizer() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="daraja">
+          {/* Daraja-pattern intent lifecycle for the active cycle: initiate → debit → credit → confirmed.
+              Each row collapses the switch_events stream into the FTS v3.0 stages and surfaces the
+              terminal Daraja ResultCode/ResultDesc returned by the bank connector. */}
+          <Card className="glass-card mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Daraja Lifecycle — {cycleFilter || "select a cycle"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Per-intent walk through the v3.0 REST flow:
+                <span className="font-mono"> /lipafo/payment/initiate → debit.posted → /lipafo/payment/credit → credit.confirmed</span>.
+                Terminal <span className="font-mono">ResultCode 0</span> = Success.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const ok = timelines.filter((t) => t.finalResultCode === 0).length;
+                const fail = timelines.filter((t) => t.finalResultCode !== null && t.finalResultCode !== 0).length;
+                const inflight = timelines.length - ok - fail;
+                const reach = (s: DarajaStage) => timelines.filter((t) => t.reachedStages.has(s)).length;
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+                    {DARAJA_FLOW.map((s, i) => (
+                      <div key={s} className="rounded-lg border bg-card/40 p-2">
+                        <div className={`h-1.5 w-full rounded ${stageColor(s)}`} />
+                        <div className="mt-2 text-[11px] uppercase font-semibold text-foreground">{s}</div>
+                        <div className="text-lg font-bold text-foreground">{reach(s)}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {i === 0 ? "POST /payment/initiate" :
+                           i === 1 ? "bank ResultCode 0" :
+                           i === 2 ? "debit posted" :
+                           "credit.confirmed"}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="rounded-lg border bg-card/40 p-2">
+                      <div className="flex items-center justify-center gap-1 text-[11px] uppercase font-semibold text-foreground">
+                        <ShieldCheck className="h-3 w-3 text-emerald-400" /> Outcome
+                      </div>
+                      <div className="text-xs mt-1">
+                        <Badge variant="default" className="mr-1">RC 0 · {ok}</Badge>
+                        <Badge variant="destructive" className="mr-1">≠0 · {fail}</Badge>
+                        {inflight > 0 && <Badge variant="secondary">in-flight · {inflight}</Badge>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Intent</TableHead>
+                    <TableHead>Payer → Paybill/Till</TableHead>
+                    <TableHead>Bank</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Daraja Flow</TableHead>
+                    <TableHead>ResultCode</TableHead>
+                    <TableHead className="text-right">Latency</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {timelines.map((t) => {
+                    const code = t.finalResultCode;
+                    return (
+                      <TableRow key={t.intent.id}>
+                        <TableCell className="font-mono text-[10px] text-muted-foreground" title={t.intent.idempotency_key}>
+                          {t.intent.idempotency_key.slice(0, 10)}…
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {t.intent.payer_identifier}
+                          <ArrowRight className="inline h-3 w-3 mx-1 text-muted-foreground" />
+                          <span className="font-mono">{t.intent.payee_identifier}</span>
+                        </TableCell>
+                        <TableCell className="text-xs">{t.intent.payee_bank ?? "—"}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold">
+                          {fmtKES(Number(t.intent.amount))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {DARAJA_FLOW.map((s, i) => {
+                              const reached = t.reachedStages.has(s);
+                              const failedHere = t.reachedStages.has("failed") && !reached;
+                              return (
+                                <div key={s} className="flex items-center gap-1">
+                                  <div
+                                    className={`h-2 w-6 rounded-full ${
+                                      reached ? stageColor(s) :
+                                      failedHere ? "bg-destructive/40" : "bg-muted"
+                                    }`}
+                                    title={s}
+                                  />
+                                  {i < DARAJA_FLOW.length - 1 && (
+                                    <span className="text-muted-foreground text-[8px]">→</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground capitalize mt-0.5">
+                            {t.intent.state.toLowerCase()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {code === null ? (
+                            <Badge variant="secondary">pending</Badge>
+                          ) : (
+                            <Badge variant={resultCodeTone(code) as any} className="font-mono">
+                              {code === 0 ? "0 · OK" : `${code}`}
+                            </Badge>
+                          )}
+                          <div className="text-[10px] text-muted-foreground truncate max-w-[140px]" title={t.finalResultDesc ?? ""}>
+                            {t.finalResultDesc ?? ""}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-[11px] font-mono">
+                          {t.totalLatencyMs ? `${t.totalLatencyMs} ms` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="ghost" onClick={() => setOpenTimeline(t)}>
+                            View Events
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {timelines.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        No Daraja intents recorded for this cycle date.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Email preview dialog */}
