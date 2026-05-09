@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Activity, AlertTriangle, CircuitBoard, Database, GitBranch,
-  PlayCircle, Search, ShieldAlert, Zap, RefreshCw, Cpu,
+  PlayCircle, Search, ShieldAlert, Zap, RefreshCw, Cpu, Rocket,
 } from "lucide-react";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-KE").format(n);
@@ -46,6 +46,15 @@ export function SwitchOperations() {
   const [spans, setSpans] = useState<Span[]>([]);
   const [traceQuery, setTraceQuery] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Fastify sim state
+  type SimRow = {
+    label: string; latency_ms: number; replayed: boolean;
+    state: string; bank_status?: string; bank_reference?: string | null;
+    trace_id?: string; ok: boolean; error?: string;
+  };
+  const [simRows, setSimRows] = useState<SimRow[]>([]);
+  const [simBusy, setSimBusy] = useState(false);
 
   const load = async () => {
     const [iRes, bRes, rRes, sRes] = await Promise.all([
@@ -123,6 +132,57 @@ export function SwitchOperations() {
   const circuitColor = (s: string) =>
     s === "CLOSED" ? "default" : s === "HALF_OPEN" ? "secondary" : "destructive";
 
+  // Fires the same request shape Fastify /v1/intents would handle, against the
+  // switch-process-intent edge fn. Demonstrates cold OAuth handshake, warm
+  // token reuse, and idempotent replay (same key => identical bank_reference).
+  const runFastifySim = async () => {
+    setSimBusy(true);
+    setSimRows([]);
+    const idem = `fastify-sim-${Date.now()}`;
+    const trace = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    const body = {
+      idempotency_key: idem,
+      trace_id: trace,
+      payer_identifier: "fastify-sim-wallet",
+      payee_identifier: "400200",
+      payee_bank: "COOP",
+      amount: 1500,
+      currency: "KES",
+      rail: "daraja",
+    };
+    const fire = async (label: string, payload: typeof body) => {
+      const t0 = performance.now();
+      try {
+        const { data, error } = await supabase.functions.invoke("switch-process-intent", { body: payload });
+        const latency_ms = Math.round(performance.now() - t0);
+        if (error) {
+          setSimRows((r) => [...r, { label, latency_ms, replayed: false, state: "ERROR", ok: false, error: error.message }]);
+          return;
+        }
+        setSimRows((r) => [...r, {
+          label, latency_ms,
+          replayed: !!data?.replayed,
+          state: data?.state ?? "—",
+          bank_status: data?.bank_status,
+          bank_reference: data?.bank_reference ?? null,
+          trace_id: data?.trace_id,
+          ok: !!data?.ok,
+        }]);
+      } catch (e) {
+        setSimRows((r) => [...r, { label, latency_ms: Math.round(performance.now() - t0), replayed: false, state: "ERROR", ok: false, error: (e as Error).message }]);
+      }
+    };
+    // Cold (new key, OAuth handshake)
+    await fire("Cold (new idempotency key)", body);
+    // Warm (different key, token cached)
+    await fire("Warm (new key, token cached)", { ...body, idempotency_key: `${idem}-warm`, amount: 1700 });
+    // Replay (same key as cold)
+    await fire("Replay (same key as cold)", body);
+    setSimBusy(false);
+    await load();
+    toast.success("Fastify sim complete — see latency & replay column");
+  };
+
   return (
     <div className="space-y-6">
       <Alert className="glass-card border-warning/40">
@@ -182,6 +242,7 @@ export function SwitchOperations() {
           <TabsTrigger value="settlement"><Database className="h-4 w-4 mr-2" />Settlement checkpoints</TabsTrigger>
           <TabsTrigger value="trace"><Search className="h-4 w-4 mr-2" />Trace search</TabsTrigger>
           <TabsTrigger value="patterns"><Cpu className="h-4 w-4 mr-2" />8 patterns map</TabsTrigger>
+          <TabsTrigger value="fastify-sim"><Rocket className="h-4 w-4 mr-2" />Fastify sim</TabsTrigger>
         </TabsList>
 
         <TabsContent value="intents">
@@ -400,6 +461,79 @@ export function SwitchOperations() {
                       <TableCell className="text-xs text-primary">{prod}</TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="fastify-sim">
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Rocket className="h-4 w-4 text-primary" /> Fastify request-shape simulator
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Fires the same JSON body Fastify <code className="font-mono">POST /v1/intents</code> would handle, against
+                the <code className="font-mono">switch-process-intent</code> edge function. Demonstrates cold OAuth, warm
+                token reuse, and idempotent replay (same key → identical bank reference, no double debit).
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2 flex-wrap items-center">
+                <Button onClick={runFastifySim} disabled={simBusy} className="button-3d" size="sm">
+                  {simBusy ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-2" />}
+                  Run Fastify sim (3 calls)
+                </Button>
+                <Button onClick={() => setSimRows([])} variant="ghost" size="sm" disabled={simBusy || simRows.length === 0}>
+                  Clear
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Cold → Warm (token cache) → Replay (idempotency)
+                </span>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Step</TableHead>
+                    <TableHead className="text-right">Latency</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>Bank status</TableHead>
+                    <TableHead>Bank reference</TableHead>
+                    <TableHead>Replayed</TableHead>
+                    <TableHead>Trace</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {simRows.map((r, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="text-xs font-medium">{r.label}</TableCell>
+                      <TableCell className="text-right text-xs font-mono">{r.latency_ms}ms</TableCell>
+                      <TableCell>
+                        <Badge variant={r.ok ? "default" : "destructive"}>{r.state}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{r.bank_status ?? r.error ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-[10px]">{r.bank_reference ?? "—"}</TableCell>
+                      <TableCell>
+                        {r.replayed
+                          ? <Badge variant="secondary">replayed</Badge>
+                          : <Badge variant="outline">fresh</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        {r.trace_id && (
+                          <button className="font-mono text-[10px] text-primary underline"
+                            onClick={() => setTraceQuery(r.trace_id!)}>
+                            {r.trace_id.slice(0, 8)}
+                          </button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {simRows.length === 0 && (
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      Click "Run Fastify sim" to fire 3 intents. Expected: cold ~1s, warm ~150ms, replay matches cold's bank reference.
+                    </TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
