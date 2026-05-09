@@ -47,6 +47,15 @@ export function SwitchOperations() {
   const [traceQuery, setTraceQuery] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Fastify sim state
+  type SimRow = {
+    label: string; latency_ms: number; replayed: boolean;
+    state: string; bank_status?: string; bank_reference?: string | null;
+    trace_id?: string; ok: boolean; error?: string;
+  };
+  const [simRows, setSimRows] = useState<SimRow[]>([]);
+  const [simBusy, setSimBusy] = useState(false);
+
   const load = async () => {
     const [iRes, bRes, rRes, sRes] = await Promise.all([
       supabase.from("transaction_intents").select("*").order("created_at", { ascending: false }).limit(50),
