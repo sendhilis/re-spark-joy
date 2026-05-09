@@ -145,7 +145,7 @@ interface PaymentBody {
 }
 
 async function handlePayment(req: Request, leg: "initiate" | "credit"): Promise<Response> {
-  const auth = verifyBearer(req);
+  const auth = await verifyBearer(req);
   if (!auth.ok) return json(401, buildResult(401, auth.reason ?? "unauthorized"));
 
   const intentKey =
