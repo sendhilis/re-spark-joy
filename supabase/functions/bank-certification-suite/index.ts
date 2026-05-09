@@ -64,81 +64,106 @@ Deno.serve(async (req) => {
     const runId = crypto.randomUUID();
     const timeout = profile?.timeout_ms ?? 2000;
 
+    // FTS v3.0: Bank protocol is REST/JSON Daraja-pattern. ISO 20022 removed.
     const tests: TestDef[] = [
       {
-        code: "PING", name: "Connectivity ping", required: true,
+        code: "PING", name: "Connectivity ping (HTTPS reachability)", required: true,
         simulate: async () => {
           const r = await simulateRealCall(profile?.pacs008_endpoint ?? null, { ping: true, ts: Date.now() }, timeout);
           return { status: r.ok ? "pass" : "fail", latency_ms: r.latency_ms, request: { ping: true }, response: r.response, error: r.error };
         },
       },
       {
-        code: "AUTH", name: "mTLS / HMAC handshake", required: true,
+        code: "OAUTH2", name: "POST /lipafo/auth/token (OAuth2 client credentials)", required: true,
         simulate: async () => {
           await new Promise(r => setTimeout(r, rand(30, 120)));
-          const hasAuth = !!(profile?.hmac_key_ref || profile?.mtls_client_cert_ref);
-          const ok = hasAuth ? Math.random() > 0.05 : Math.random() > 0.4;
+          const hasCreds = !!(profile?.hmac_key_ref || profile?.mtls_client_cert_ref);
+          const ok = hasCreds ? Math.random() > 0.05 : Math.random() > 0.4;
           return {
             status: ok ? "pass" : "fail", latency_ms: rand(30, 120),
-            request: { algorithm: profile?.hmac_algorithm ?? "HMAC-SHA256" },
-            response: { authenticated: ok, principal: ok ? `${bank.bank_code}-svc` : null },
-            error: ok ? undefined : "Auth handshake rejected",
+            request: { grant_type: "client_credentials", client_id: `${bank.bank_code}-svc` },
+            response: ok
+              ? { access_token: "redacted.eyJ...", token_type: "Bearer", expires_in: 3599 }
+              : { ResultCode: 401, ResultDesc: "invalid_client" },
+            error: ok ? undefined : "OAuth2 token endpoint rejected client credentials",
           };
         },
       },
       {
-        code: "PACS008_ECHO", name: "pacs.008 customer credit transfer (echo)", required: true,
+        code: "PAYMENT_INITIATE", name: "POST /lipafo/payment/initiate (debit leg)", required: true,
         simulate: async () => {
-          const payload = { MsgId: `MSG-${runId.slice(0, 8)}`, CdtTrfTxInf: [{ Amt: 1000, Ccy: "KES", Dbtr: "TEST", Cdtr: bank.bank_code }] };
+          const payload = {
+            intent_key: runId,
+            payer_msisdn: "0722000001",
+            paybill_or_till: "512345",
+            amount: 1000, currency: "KES",
+          };
           const r = await simulateRealCall(profile?.pacs008_endpoint ?? null, payload, timeout);
-          return { status: r.ok ? "pass" : "fail", latency_ms: r.latency_ms, request: payload, response: r.response, error: r.error };
+          return {
+            status: r.ok ? "pass" : "fail", latency_ms: r.latency_ms, request: payload,
+            response: r.ok
+              ? { ResultCode: 0, ResultDesc: "debit_accepted", bank_reference: `${bank.bank_code}-${runId.slice(0,8)}` }
+              : r.response,
+            error: r.error,
+          };
         },
       },
       {
-        code: "PACS002_RESP", name: "pacs.002 status response parsing", required: true,
+        code: "PAYMENT_STATUS", name: "GET /lipafo/payment/status (idempotency probe)", required: true,
         simulate: async () => {
           await new Promise(r => setTimeout(r, rand(60, 200)));
           const ok = Math.random() > 0.1;
           return {
             status: ok ? "pass" : "fail", latency_ms: rand(60, 200),
-            request: { OrgnlMsgId: `MSG-${runId.slice(0, 8)}` },
-            response: { GrpSts: ok ? "ACSC" : "RJCT", reason: ok ? null : "FF01" },
-            error: ok ? undefined : "Reject code FF01 returned",
+            request: { intent_key: runId },
+            response: ok
+              ? { ResultCode: 0, ResultDesc: "debit_accepted", replayed: true }
+              : { ResultCode: 404, ResultDesc: "unknown_transaction" },
+            error: ok ? undefined : "Status probe returned 404",
           };
         },
       },
       {
-        code: "SETTLEMENT_RT", name: "pacs.009 settlement instruction round-trip", required: true,
+        code: "PAYMENT_CREDIT", name: "POST /lipafo/payment/credit (terminating leg)", required: true,
         simulate: async () => {
-          const payload = { MsgId: `STL-${runId.slice(0, 8)}`, IntrBkSttlmAmt: 250000, Ccy: "KES", DbtrAgt: bank.bank_code, CdtrAgt: "KCB" };
+          const payload = {
+            credit_key: `CRD-${runId.slice(0, 8)}`,
+            merchant_account_ref: `${bank.bank_code}-MERCH-001`,
+            amount: 250000, currency: "KES",
+          };
           const r = await simulateRealCall(profile?.pacs009_endpoint ?? null, payload, timeout);
-          return { status: r.ok ? "pass" : "fail", latency_ms: r.latency_ms, request: payload, response: r.response, error: r.error };
+          return {
+            status: r.ok ? "pass" : "fail", latency_ms: r.latency_ms, request: payload,
+            response: r.ok
+              ? { ResultCode: 0, ResultDesc: "credit_accepted", bank_reference: `${bank.bank_code}-${runId.slice(0,8)}` }
+              : r.response,
+            error: r.error,
+          };
         },
       },
       {
-        code: "FAILURE_SIM", name: "Failure & timeout handling", required: true,
+        code: "FAILURE_SIM", name: "Failure & timeout handling (Daraja ResultCode != 0)", required: true,
         simulate: async () => {
-          // We expect the bank to gracefully reject a malformed message
           await new Promise(r => setTimeout(r, rand(80, 250)));
           const ok = Math.random() > 0.15;
           return {
             status: ok ? "pass" : "fail", latency_ms: rand(80, 250),
-            request: { malformed: true, MsgId: null },
-            response: { GrpSts: "RJCT", reason: "FF01 — malformed message" },
-            error: ok ? undefined : "Bank did not return graceful reject in time",
+            request: { intent_key: null, amount: -1 },
+            response: { ResultCode: 400, ResultDesc: "invalid_amount" },
+            error: ok ? undefined : "Bank did not return graceful Daraja error envelope",
           };
         },
       },
       {
-        code: "WEBHOOK", name: "Webhook callback reachability", required: false,
+        code: "WEBHOOK", name: "POST /lipafo/callbacks/credit (async credit confirmation)", required: false,
         simulate: async () => {
           await new Promise(r => setTimeout(r, rand(40, 150)));
           const ok = profile?.webhook_callback_url ? Math.random() > 0.1 : false;
           return {
             status: ok ? "pass" : "fail", latency_ms: rand(40, 150),
             request: { webhook: profile?.webhook_callback_url },
-            response: { reachable: ok },
-            error: ok ? undefined : "Webhook not reachable or not configured",
+            response: ok ? { ResultCode: 0, ResultDesc: "callback_received" } : { reachable: false },
+            error: ok ? undefined : "Callback URL not reachable or not configured",
           };
         },
       },
