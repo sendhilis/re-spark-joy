@@ -627,6 +627,83 @@ export function SettlementCycleVisualizer() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Daraja per-intent event stream */}
+      <Dialog open={!!openTimeline} onOpenChange={(o) => !o && setOpenTimeline(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Daraja Event Stream
+            </DialogTitle>
+          </DialogHeader>
+          {openTimeline && (
+            <div className="space-y-3">
+              <div className="text-xs grid grid-cols-2 gap-2 border-b pb-2">
+                <div><span className="text-muted-foreground">Intent ID:</span> <span className="font-mono">{openTimeline.intent.id.slice(0, 8)}…</span></div>
+                <div><span className="text-muted-foreground">Trace:</span> <span className="font-mono">{openTimeline.intent.trace_id}</span></div>
+                <div><span className="text-muted-foreground">Idempotency Key:</span> <span className="font-mono">{openTimeline.intent.idempotency_key}</span></div>
+                <div><span className="text-muted-foreground">Bank:</span> {openTimeline.intent.payee_bank ?? "—"}</div>
+                <div><span className="text-muted-foreground">Payer:</span> {openTimeline.intent.payer_identifier}</div>
+                <div><span className="text-muted-foreground">Paybill/Till:</span> <span className="font-mono">{openTimeline.intent.payee_identifier}</span></div>
+                <div><span className="text-muted-foreground">Amount:</span> {fmtKES(Number(openTimeline.intent.amount))}</div>
+                <div>
+                  <span className="text-muted-foreground">Final ResultCode:</span>{" "}
+                  <Badge variant={resultCodeTone(openTimeline.finalResultCode) as any} className="font-mono">
+                    {openTimeline.finalResultCode === null ? "pending" : openTimeline.finalResultCode}
+                  </Badge>
+                </div>
+              </div>
+              <div className="max-h-[55vh] overflow-y-auto space-y-2">
+                {openTimeline.events.length === 0 && (
+                  <div className="text-center text-muted-foreground text-sm py-4">No events recorded.</div>
+                )}
+                {openTimeline.events.map((e, i) => {
+                  const stage = EVENT_TO_STAGE[e.event_type];
+                  const p = (e.payload ?? {}) as Record<string, unknown>;
+                  const rc = "ResultCode" in p ? Number((p as any).ResultCode) : null;
+                  const desc = "ResultDesc" in p ? String((p as any).ResultDesc) : null;
+                  const lat = "latency_ms" in p ? Number((p as any).latency_ms) : null;
+                  const isFail = e.event_type === "intent.failed" || e.event_type === "bank.rejected";
+                  return (
+                    <div key={e.id} className="border rounded-md p-2 text-xs bg-card/40">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${stage ? stageColor(stage) : "bg-muted"}`}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <div className="font-mono font-semibold text-foreground">{e.event_type}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {e.from_state ?? "—"} → {e.to_state ?? "—"} · {new Date(e.created_at).toLocaleTimeString("en-KE")}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {rc !== null && (
+                            <Badge variant={resultCodeTone(rc) as any} className="font-mono">
+                              RC {rc}
+                            </Badge>
+                          )}
+                          {lat !== null && (
+                            <Badge variant="outline" className="font-mono">{lat} ms</Badge>
+                          )}
+                          {isFail && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                        </div>
+                      </div>
+                      {(desc || Object.keys(p).length > 0) && (
+                        <pre className="mt-1.5 text-[10px] font-mono bg-muted/40 p-1.5 rounded max-h-24 overflow-y-auto">
+{JSON.stringify(p, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
