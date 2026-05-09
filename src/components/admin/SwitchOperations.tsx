@@ -57,6 +57,14 @@ export function SwitchOperations() {
   };
   const [simRows, setSimRows] = useState<SimRow[]>([]);
   const [simBusy, setSimBusy] = useState(false);
+  const [simForm, setSimForm] = useState({
+    amount: 1500,
+    payee_identifier: "400200",
+    payee_bank: "COOP",
+    rail: "daraja",
+    currency: "KES" as "KES" | "XOF" | "USD",
+    payer_identifier: "fastify-sim-wallet",
+  });
 
   const load = async () => {
     const [iRes, bRes, rRes, sRes] = await Promise.all([
