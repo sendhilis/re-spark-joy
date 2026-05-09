@@ -1,48 +1,88 @@
-// Reference bank connector stub.
-// Mirrors the contract used by `supabase/functions/bank-simulator/index.ts`:
-//   POST <endpoint> with HMAC-SHA256 signature in X-Lipafo-Signature.
-// Replace `endpoint` with the real KCB pacs.008 receiver in production
-// (typically loaded from a per-bank integration profile in Postgres).
+// Reference bank connector stub — FTS v3.0 (Daraja-pattern REST/JSON).
+// ISO 20022 / pacs.008 / HMAC has been removed entirely per FTS v3.0 §2.3.
+// Auth: OAuth2 client-credentials → Bearer access_token (cached per-process).
+// Idempotency: forward the X-Lipafo-Intent-Key header to the bank.
+// Mirrors the Lipafo Switch behaviour and matches `bank-simulator` edge fn.
 import { request } from "undici";
-import { hmacSha256Hex } from "../lib/hmac.js";
 import { config } from "../config.js";
+
+let cachedToken = null; // { token, expires_at }
+
+async function getAccessToken(baseUrl) {
+  if (cachedToken && cachedToken.expires_at - 30_000 > Date.now()) {
+    return cachedToken.token;
+  }
+  const tokenUrl = `${baseUrl.replace(/\/$/, "")}/lipafo/auth/token`;
+  const basic = Buffer.from(`${config.bankClientId}:${config.bankClientSecret}`).toString("base64");
+  try {
+    const { statusCode, body } = await request(tokenUrl, {
+      method: "POST",
+      headers: {
+        "authorization": `Basic ${basic}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: config.bankClientId,
+        client_secret: config.bankClientSecret,
+      }),
+    });
+    if (statusCode !== 200) throw new Error(`token_status_${statusCode}`);
+    const j = await body.json();
+    cachedToken = {
+      token: j.access_token,
+      expires_at: Date.now() + ((Number(j.expires_in) || 3600) * 1000),
+    };
+    return cachedToken.token;
+  } catch {
+    // Pilot fallback: bank-simulator accepts the raw client secret as a Bearer.
+    return config.bankClientSecret;
+  }
+}
 
 export const kcbConnector = {
   bank_code: "KCB",
   bank_name: "Kenya Commercial Bank",
 
   async send({ body, traceId, bank }) {
-    const endpoint = process.env.KCB_PACS008_URL ?? config.bankSimUrl;
+    const baseUrl = process.env.KCB_BASE_URL ?? config.bankBaseUrl;
+    const accessToken = await getAccessToken(baseUrl);
+
     const payload = JSON.stringify({
-      message_type: "pacs.008",
-      trace_id: traceId,
-      idempotency_key: body.idempotency_key,
-      payer_identifier: body.payer_identifier,
-      payee_identifier: body.payee_identifier,
+      intent_key: body.idempotency_key,
+      payer_msisdn: body.payer_identifier,
+      paybill_or_till: body.payee_identifier,
       amount: body.amount,
       currency: body.currency ?? "KES",
     });
-    const signature = await hmacSha256Hex(config.hmacSecret, payload);
 
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), config.bankCallTimeoutMs);
     try {
-      const { statusCode, body: respBody } = await request(endpoint, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-lipafo-signature": signature,
-          "x-lipafo-bank-code": bank,
-          "x-lipafo-trace-id": traceId,
+      const { statusCode, body: respBody } = await request(
+        `${baseUrl.replace(/\/$/, "")}/lipafo/payment/initiate`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "authorization": `Bearer ${accessToken}`,
+            "x-lipafo-intent-key": body.idempotency_key,
+            "x-lipafo-timestamp": new Date().toISOString(),
+            "x-lipafo-bank-code": bank,
+            "x-lipafo-trace-id": traceId,
+          },
+          body: payload,
+          signal: ctrl.signal,
         },
-        body: payload,
-        signal: ctrl.signal,
-      });
+      );
       const json = await respBody.json().catch(() => ({}));
+      const ResultCode = Number(json.ResultCode ?? (statusCode === 200 ? 0 : 1));
       return {
-        status: json.status ?? (statusCode === 200 ? "ACSC" : "RJCT"),
+        // Daraja ResultCode 0 == success → map to ACSC for the existing FSM.
+        status: ResultCode === 0 ? "ACSC" : "RJCT",
+        result_code: ResultCode,
+        result_desc: json.ResultDesc ?? null,
         bank_reference: json.bank_reference ?? null,
-        reason: json.reason ?? null,
+        reason: json.ResultDesc ?? null,
       };
     } finally {
       clearTimeout(t);
