@@ -111,6 +111,42 @@ export function SettlementCycleVisualizer() {
   const [cycleFilter, setCycleFilter] = useState<string>("");
   const [openEmail, setOpenEmail] = useState<Advice | null>(null);
   const [timelines, setTimelines] = useState<IntentTimeline[]>([]);
+  const [runningTest, setRunningTest] = useState(false);
+
+  const runLipafoPayTest = async () => {
+    setRunningTest(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const idem = `ui-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const trace = `trace-ui-${Date.now().toString(36)}`;
+    try {
+      const { data, error } = await supabase.functions.invoke("switch-process-intent", {
+        body: {
+          idempotency_key: idem,
+          trace_id: trace,
+          payer_identifier: "lipafopay-wallet",
+          payee_identifier: "400200",
+          payee_bank: "COOP",
+          amount: 3000,
+          currency: "KES",
+          rail: "daraja",
+        },
+      });
+      if (error) throw error;
+      const rc = (data as any)?.ResultCode;
+      const desc = (data as any)?.ResultDesc ?? "";
+      if (rc === 0) {
+        toast.success(`LipafoPay OK · RC 0 · ${desc}`);
+      } else {
+        toast.error(`LipafoPay failed · RC ${rc} · ${desc}`);
+      }
+      if (cycleFilter !== today) setCycleFilter(today);
+      else await loadTimelines(today);
+    } catch (e: any) {
+      toast.error(`Test invocation error: ${e.message ?? e}`);
+    } finally {
+      setRunningTest(false);
+    }
+  };
   const [openTimeline, setOpenTimeline] = useState<IntentTimeline | null>(null);
 
   const load = async () => {
