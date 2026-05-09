@@ -92,7 +92,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
   const [resolving, setResolving] = useState(false);
   const [selected, setSelected] = useState<BankMerchant | null>(null);
   const [amount, setAmount] = useState("");
-  const [trace, setTrace] = useState<{ ref: string; positionId?: string; dispatchId?: string } | null>(null);
+  const [trace, setTrace] = useState<{ ref: string; positionId?: string; dispatchId?: string; intentId?: string; traceId?: string; resultCode?: number; resultDesc?: string } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -187,7 +187,36 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
         float_revenue: fee + Math.round(amt * 0.0002),
       }).select().single();
 
-      setTrace({ ref, positionId, dispatchId: disp?.id });
+      // Drive the Daraja FTS v3.0 switch FSM so the Admin → Daraja Flow tab
+      // shows intent.received → authorized → debited → credited for this payment.
+      const idempotencyKey = (crypto as any).randomUUID?.() ?? `lpf-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const traceId = `trace-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      let intentId: string | undefined;
+      let resultCode: number | undefined;
+      let resultDesc: string | undefined;
+      try {
+        const { data: switchResp, error: switchErr } = await supabase.functions.invoke("switch-process-intent", {
+          body: {
+            idempotency_key: idempotencyKey,
+            trace_id: traceId,
+            payer_identifier: "lipafopay-wallet",
+            payee_identifier: selected.paybill_number,
+            payee_bank: bankMap[selected.bank_id]?.bank_code ?? sourceBank,
+            amount: amt,
+            currency: "KES",
+            rail: "bank_rail",
+          },
+        });
+        if (switchErr) throw switchErr;
+        intentId = switchResp?.intent_id ?? switchResp?.id;
+        resultCode = switchResp?.ResultCode ?? switchResp?.result_code;
+        resultDesc = switchResp?.ResultDesc ?? switchResp?.result_desc;
+      } catch (switchErr) {
+        // Switch trace is best-effort visualisation; settlement already recorded.
+        console.warn("switch-process-intent invoke failed", switchErr);
+      }
+
+      setTrace({ ref, positionId, dispatchId: disp?.id, intentId, traceId, resultCode, resultDesc });
       setStep("done");
       toast.success(`Paid via Lipafo switch → ${sourceBank} · settles T+1 · No M-PESA`);
     } catch (e) {
