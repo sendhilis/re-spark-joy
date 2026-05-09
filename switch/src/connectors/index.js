@@ -9,7 +9,7 @@ const REGISTRY = {
   // COOP:   coopConnector,
 };
 
-// Default fallback uses the same HMAC contract as the bank-simulator edge fn.
+// Default fallback uses the same Daraja REST contract as the bank-simulator edge fn.
 import { kcbConnector as defaultConnector } from "./kcb.js";
 
 // Redis-backed circuit breaker. Keys:
