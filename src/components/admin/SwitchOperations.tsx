@@ -168,11 +168,6 @@ export function SwitchOperations() {
       currency: simForm.currency,
       rail: simForm.rail,
     };
-      payee_bank: "COOP",
-      amount: 1500,
-      currency: "KES",
-      rail: "daraja",
-    };
     const fire = async (label: string, payload: typeof body) => {
       const t0 = performance.now();
       try {
