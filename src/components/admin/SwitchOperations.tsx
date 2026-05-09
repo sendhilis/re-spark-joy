@@ -132,6 +132,57 @@ export function SwitchOperations() {
   const circuitColor = (s: string) =>
     s === "CLOSED" ? "default" : s === "HALF_OPEN" ? "secondary" : "destructive";
 
+  // Fires the same request shape Fastify /v1/intents would handle, against the
+  // switch-process-intent edge fn. Demonstrates cold OAuth handshake, warm
+  // token reuse, and idempotent replay (same key => identical bank_reference).
+  const runFastifySim = async () => {
+    setSimBusy(true);
+    setSimRows([]);
+    const idem = `fastify-sim-${Date.now()}`;
+    const trace = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    const body = {
+      idempotency_key: idem,
+      trace_id: trace,
+      payer_identifier: "fastify-sim-wallet",
+      payee_identifier: "400200",
+      payee_bank: "COOP",
+      amount: 1500,
+      currency: "KES",
+      rail: "daraja",
+    };
+    const fire = async (label: string, payload: typeof body) => {
+      const t0 = performance.now();
+      try {
+        const { data, error } = await supabase.functions.invoke("switch-process-intent", { body: payload });
+        const latency_ms = Math.round(performance.now() - t0);
+        if (error) {
+          setSimRows((r) => [...r, { label, latency_ms, replayed: false, state: "ERROR", ok: false, error: error.message }]);
+          return;
+        }
+        setSimRows((r) => [...r, {
+          label, latency_ms,
+          replayed: !!data?.replayed,
+          state: data?.state ?? "—",
+          bank_status: data?.bank_status,
+          bank_reference: data?.bank_reference ?? null,
+          trace_id: data?.trace_id,
+          ok: !!data?.ok,
+        }]);
+      } catch (e) {
+        setSimRows((r) => [...r, { label, latency_ms: Math.round(performance.now() - t0), replayed: false, state: "ERROR", ok: false, error: (e as Error).message }]);
+      }
+    };
+    // Cold (new key, OAuth handshake)
+    await fire("Cold (new idempotency key)", body);
+    // Warm (different key, token cached)
+    await fire("Warm (new key, token cached)", { ...body, idempotency_key: `${idem}-warm`, amount: 1700 });
+    // Replay (same key as cold)
+    await fire("Replay (same key as cold)", body);
+    setSimBusy(false);
+    await load();
+    toast.success("Fastify sim complete — see latency & replay column");
+  };
+
   return (
     <div className="space-y-6">
       <Alert className="glass-card border-warning/40">
