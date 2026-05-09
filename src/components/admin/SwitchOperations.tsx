@@ -146,6 +146,14 @@ export function SwitchOperations() {
   // switch-process-intent edge fn. Demonstrates cold OAuth handshake, warm
   // token reuse, and idempotent replay (same key => identical bank_reference).
   const runFastifySim = async () => {
+    if (!simForm.amount || simForm.amount <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
+    if (!simForm.payee_identifier.trim()) {
+      toast.error("Payee identifier is required");
+      return;
+    }
     setSimBusy(true);
     setSimRows([]);
     const idem = `fastify-sim-${Date.now()}`;
@@ -153,8 +161,13 @@ export function SwitchOperations() {
     const body = {
       idempotency_key: idem,
       trace_id: trace,
-      payer_identifier: "fastify-sim-wallet",
-      payee_identifier: "400200",
+      payer_identifier: simForm.payer_identifier.trim() || "fastify-sim-wallet",
+      payee_identifier: simForm.payee_identifier.trim(),
+      payee_bank: simForm.payee_bank,
+      amount: Number(simForm.amount),
+      currency: simForm.currency,
+      rail: simForm.rail,
+    };
       payee_bank: "COOP",
       amount: 1500,
       currency: "KES",
