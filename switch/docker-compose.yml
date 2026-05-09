@@ -10,5 +10,5 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       LOG_LEVEL: info
-      BANK_SIM_URL: http://bank-sim:8787/pacs008
+      BANK_SIM_URL: http://bank-sim:8787
     ports: ["3000:3000"]

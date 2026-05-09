@@ -51,7 +51,7 @@ export default async function intentRoutes(app) {
       return { ok: false, error: "in_flight", trace_id: claim.cached?.trace_id ?? traceId };
     }
 
-    // 2. Dispatch to bank connector (HMAC-signed pacs.008)
+    // 2. Dispatch to bank connector (Daraja REST: OAuth2 Bearer + X-Lipafo-Intent-Key)
     const result = await dispatch({ app, body, traceId });
 
     const latency_ms = Number(process.hrtime.bigint() - startedAt) / 1e6;

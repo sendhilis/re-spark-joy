@@ -1,7 +1,10 @@
-// LipafoPay Switch — reference processor.
-// Demonstrates: idempotency, state machine, event sourcing, sharded ledger,
-// circuit breaker, fraud velocity check, distributed tracing.
-// NOT a 5,000 TPS production switch — see /admin Switch Ops banner.
+// LipafoPay Switch — reference processor (FTS v3.0).
+// Bank protocol: REST/JSON Daraja-pattern (OAuth2 Bearer + intent-key headers).
+// ISO 20022 / pacs.008 / HMAC has been removed entirely per FTS v3.0 §2.3.
+//
+// Patterns demonstrated: idempotency, FSM, event sourcing, sharded ledger,
+// circuit breaker, network-level structural limits (no AML — banks own that),
+// distributed tracing.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -18,14 +21,50 @@ const hashShard = (key: string): number => {
 const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 
 interface IntentReq {
-  idempotency_key: string;
-  payer_identifier: string;
-  payee_identifier: string;
+  idempotency_key: string;     // == X-Lipafo-Intent-Key (UUID v4)
+  payer_identifier: string;    // payer MSISDN or account
+  payee_identifier: string;    // Paybill or Till number
   payee_bank?: string;
   amount: number;
   currency?: string;
   rail?: string;
   trace_id?: string;
+}
+
+// Per-bank OAuth2 token cache. Tokens TTL ~1h; we refresh slightly early.
+interface CachedToken { token: string; expires_at: number }
+const tokenCache = new Map<string, CachedToken>();
+
+async function getBankToken(
+  bankCode: string,
+  baseUrl: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  const cached = tokenCache.get(bankCode);
+  if (cached && cached.expires_at - 30_000 > Date.now()) return cached.token;
+
+  const tokenUrl = `${baseUrl.replace(/\/$/, "")}/lipafo/auth/token`;
+  const basic = btoa(`${clientId}:${clientSecret}`);
+  const resp = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${basic}`,
+      "Content-Type": "application/json",
+      // Bank-simulator runs on Supabase, so we still need the platform auth.
+      "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    },
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
+  });
+  if (!resp.ok) {
+    // Fallback for the pilot: use the shared secret directly as a Bearer.
+    return clientSecret;
+  }
+  const j = await resp.json().catch(() => ({} as any));
+  const token = j.access_token ?? clientSecret;
+  const ttl = (Number(j.expires_in) || 3600) * 1000;
+  tokenCache.set(bankCode, { token, expires_at: Date.now() + ttl });
+  return token;
 }
 
 Deno.serve(async (req) => {
@@ -47,7 +86,7 @@ Deno.serve(async (req) => {
     const trace_id = body.trace_id ?? newId();
     const startedAt = Date.now();
 
-    // ── Pattern 1: Idempotency. Same key => return existing intent, do not double-process.
+    // ── C1: Idempotency. Same intent_key => return existing intent.
     const { data: existing } = await supabase
       .from("transaction_intents")
       .select("*")
@@ -60,7 +99,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Pattern 5: Circuit breaker — refuse if downstream bank is OPEN.
+    // ── C4: Circuit breaker — refuse if downstream bank is OPEN.
     let bankConn: any = null;
     if (body.payee_bank) {
       const { data: bc } = await supabase
@@ -79,23 +118,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Pattern 7: Fraud velocity check (pre-aggregated 60s bucket).
-    const windowStart = new Date(Math.floor(Date.now() / 60000) * 60000).toISOString();
-    const { data: vel } = await supabase
-      .from("velocity_counters")
-      .select("count,total_amount")
-      .eq("subject", body.payer_identifier).eq("bucket", "1m")
-      .eq("window_start", windowStart).maybeSingle();
-    const velCount = (vel?.count ?? 0) + 1;
-    const velAmt = Number(vel?.total_amount ?? 0) + Number(body.amount);
+    // ── C5 (v3.0): Network-level structural cap only. AML/fraud is the bank's job.
+    if (Number(body.amount) > 10_000_000) {
+      await supabase.from("trace_spans").insert({
+        trace_id, span_id: newId(), service: "switch", operation: "structural_cap",
+        status: "rejected", duration_ms: 1,
+        attributes: { reason: "amount_above_network_cap", amount: body.amount },
+      });
+      return new Response(JSON.stringify({
+        error: "amount_above_network_cap",
+        ResultCode: 400, ResultDesc: "Amount exceeds Lipafo network structural cap",
+      }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    let fraudFlag: string | null = null;
-    if (velCount > 10) fraudFlag = "VEL_TXN_1M";
-    if (Number(body.amount) > 1_000_000) fraudFlag = "AMT_SINGLE";
-
-    // ── Pattern 1+2: Insert intent in NEW state, then drive state machine,
-    //    appending an event at every transition (event log = source of truth).
-    //    UNIQUE(idempotency_key) makes this race-safe — duplicates collapse to a replay.
+    // ── Insert intent in NEW state, then drive FSM and append events.
+    //    UNIQUE(idempotency_key) makes this race-safe.
     const { data: intent, error: insErr } = await supabase
       .from("transaction_intents").insert({
         idempotency_key: body.idempotency_key,
@@ -110,7 +147,6 @@ Deno.serve(async (req) => {
         attempt_count: 1,
       }).select().single();
     if (insErr) {
-      // 23505 = unique_violation → another concurrent request won the race.
       if ((insErr as any).code === "23505") {
         const { data: dup } = await supabase.from("transaction_intents")
           .select("*").eq("idempotency_key", body.idempotency_key).maybeSingle();
@@ -130,102 +166,91 @@ Deno.serve(async (req) => {
       });
     };
 
-    await logEvent("intent.created", null, "NEW", { amount: body.amount });
-
-    if (fraudFlag) {
-      await supabase.from("transaction_intents").update({
-        state: "FAILED", last_error: `fraud_flag:${fraudFlag}`, completed_at: new Date().toISOString(),
-      }).eq("id", intent.id);
-      await logEvent("fraud.blocked", "NEW", "FAILED", { rule: fraudFlag });
-      return new Response(JSON.stringify({ error: "fraud_blocked", rule: fraudFlag }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    await logEvent("intent.received", null, "NEW", { amount: body.amount });
 
     // Move to IN_FLIGHT
     await supabase.from("transaction_intents").update({ state: "IN_FLIGHT" }).eq("id", intent.id);
-    await logEvent("debit.requested", "NEW", "IN_FLIGHT");
+    await logEvent("intent.authorized", "NEW", "IN_FLIGHT");
 
-    // ── Real outbound pacs.008 to the bank (or simulator fallback).
-    // Look up the bank's active integration profile for endpoint + signing key.
-    let pacs008Url: string | null = null;
-    let timeoutMs = 2000;
-    let hmacSecret = Deno.env.get("BANK_SIM_HMAC_SECRET") ?? "lipafo-pilot-shared-secret";
+    // ── Look up the bank's Daraja-style integration profile.
+    let baseUrl: string | null = null;
+    let timeoutMs = 8000;  // FTS v3.0 §5: 8s hard timeout on credit leg
+    let clientId = Deno.env.get("BANK_SIM_CLIENT_ID") ?? "lipafo-pilot-client";
+    let clientSecret = Deno.env.get("BANK_SIM_CLIENT_SECRET") ?? "lipafo-pilot-secret";
     if (body.payee_bank) {
       const { data: bankRow } = await supabase
         .from("participating_banks").select("id").eq("bank_code", body.payee_bank).maybeSingle();
       if (bankRow?.id) {
         const { data: profile } = await supabase
           .from("bank_integration_profiles")
+          // pacs008_endpoint column re-purposed as the bank's Daraja base URL during pilot.
           .select("pacs008_endpoint,timeout_ms,hmac_key_ref,is_active,environment")
           .eq("bank_id", bankRow.id).eq("is_active", true).maybeSingle();
-        if (profile?.pacs008_endpoint) pacs008Url = profile.pacs008_endpoint;
+        if (profile?.pacs008_endpoint) baseUrl = profile.pacs008_endpoint;
         if (profile?.timeout_ms) timeoutMs = profile.timeout_ms;
       }
     }
     // Default to bank simulator if no endpoint configured (pilot behaviour).
-    if (!pacs008Url) {
-      pacs008Url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bank-simulator`;
+    if (!baseUrl) {
+      baseUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bank-simulator`;
     }
 
-    const pacs008Body = JSON.stringify({
-      message_type: "pacs.008",
-      trace_id,
-      idempotency_key: body.idempotency_key,
-      payer_identifier: body.payer_identifier,
-      payee_identifier: body.payee_identifier,
+    // ── OAuth2 token (Daraja-pattern). Cached per-bank with TTL.
+    const accessToken = await getBankToken(body.payee_bank ?? "DEFAULT", baseUrl, clientId, clientSecret);
+
+    // ── Daraja-style payment initiate (debit leg).
+    const initiateBody = JSON.stringify({
+      intent_key: body.idempotency_key,
+      payer_msisdn: body.payer_identifier,
+      paybill_or_till: body.payee_identifier,
       amount: body.amount,
       currency: body.currency ?? "KES",
+      intent_id: intent.id,
     });
-    // HMAC-SHA256 of raw body
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw", enc.encode(hmacSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const sigBytes = await crypto.subtle.sign("HMAC", key, enc.encode(pacs008Body));
-    const signature = Array.from(new Uint8Array(sigBytes))
-      .map((b) => b.toString(16).padStart(2, "0")).join("");
 
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs);
     const callStart = Date.now();
-    let bankStatus = "ACSC";
+    let resultCode = -1;
+    let resultDesc = "no_response";
     let bankRef: string | null = null;
-    let bankRejection: string | null = null;
     try {
-      const resp = await fetch(pacs008Url, {
+      const resp = await fetch(`${baseUrl.replace(/\/$/, "")}/lipafo/payment/initiate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Lipafo-Signature": signature,
+          "Authorization": `Bearer ${accessToken}`,
+          "X-Lipafo-Intent-Key": body.idempotency_key,
+          "X-Lipafo-Timestamp": new Date().toISOString(),
           "X-Lipafo-Bank-Code": body.payee_bank ?? "UNKNOWN",
           "X-Lipafo-Trace-Id": trace_id,
-          // bank-simulator is hosted on Supabase, so include service auth
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          // Bank simulator runs on Supabase platform, so include service auth.
+          "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
         },
-        body: pacs008Body,
+        body: initiateBody,
         signal: ctrl.signal,
       });
-      const respJson = await resp.json().catch(() => ({}));
-      bankStatus = respJson.status ?? (resp.ok ? "ACSC" : "RJCT");
+      const respJson = await resp.json().catch(() => ({} as any));
+      resultCode = Number(respJson.ResultCode ?? (resp.ok ? 0 : 1));
+      resultDesc = String(respJson.ResultDesc ?? (resp.ok ? "ok" : "bank_error"));
       bankRef = respJson.bank_reference ?? null;
-      bankRejection = respJson.reason ?? null;
     } catch (e) {
-      bankStatus = "TIMEOUT";
-      bankRejection = (e as Error).name === "AbortError" ? "timeout" : (e as Error).message;
+      resultCode = 504;
+      resultDesc = (e as Error).name === "AbortError" ? "timeout" : (e as Error).message;
     } finally {
       clearTimeout(t);
     }
     const callLatency = Date.now() - callStart;
 
-    if (bankStatus !== "ACSC") {
-      // Bank rejected or timed out — fail the intent, increment breaker stats.
+    if (resultCode !== 0) {
+      // Bank rejected or timed out.
       await supabase.from("transaction_intents").update({
         state: "FAILED",
-        last_error: `bank:${bankStatus}:${bankRejection ?? ""}`,
+        last_error: `bank:ResultCode=${resultCode}:${resultDesc}`,
         completed_at: new Date().toISOString(),
       }).eq("id", intent.id);
-      await logEvent("bank.rejected", "IN_FLIGHT", "FAILED", {
-        status: bankStatus, reason: bankRejection, latency_ms: callLatency,
+      await logEvent("intent.failed", "IN_FLIGHT", "FAILED", {
+        ResultCode: resultCode, ResultDesc: resultDesc, latency_ms: callLatency,
       });
       if (bankConn) {
         const newFails = bankConn.failure_count + 1;
@@ -238,23 +263,23 @@ Deno.serve(async (req) => {
         }).eq("id", bankConn.id);
       }
       await supabase.from("trace_spans").insert({
-        trace_id, span_id: newId(), service: "switch", operation: "pacs008_send",
+        trace_id, span_id: newId(), service: "switch", operation: "daraja_initiate",
         status: "error", duration_ms: callLatency,
-        attributes: { bank: body.payee_bank, reason: bankRejection },
+        attributes: { bank: body.payee_bank, ResultCode: resultCode, ResultDesc: resultDesc },
       });
       return new Response(JSON.stringify({
         ok: false, trace_id, intent_id: intent.id, state: "FAILED",
-        bank_status: bankStatus, reason: bankRejection,
+        ResultCode: resultCode, ResultDesc: resultDesc,
       }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // DEBITED — bank accepted
+    // DEBITED — bank accepted (Daraja ResultCode=0).
     await supabase.from("transaction_intents").update({ state: "DEBITED" }).eq("id", intent.id);
-    await logEvent("debit.confirmed", "IN_FLIGHT", "DEBITED", {
+    await logEvent("debit.posted", "IN_FLIGHT", "DEBITED", {
       latency_ms: callLatency, bank_reference: bankRef,
     });
 
-    // ── Pattern 3: Hot-account sharding. Pick a shard for the payee account.
+    // ── C3: Hot-account sharding for the credit-side position ledger.
     const shardNo = hashShard(body.idempotency_key);
     const { data: shard } = await supabase
       .from("position_ledger_shards")
@@ -280,12 +305,6 @@ Deno.serve(async (req) => {
     }).eq("id", intent.id);
     await logEvent("credit.confirmed", "DEBITED", "COMPLETED", { shard: shardNo });
 
-    // Update velocity counter
-    await supabase.from("velocity_counters").upsert({
-      subject: body.payer_identifier, bucket: "1m",
-      window_start: windowStart, count: velCount, total_amount: velAmt,
-    }, { onConflict: "subject,bucket,window_start" });
-
     // Bank connector latency stats + close half-open circuit
     if (bankConn) {
       await supabase.from("bank_connectors").update({
@@ -294,17 +313,17 @@ Deno.serve(async (req) => {
       }).eq("id", bankConn.id);
     }
 
-    // ── Pattern 8: Root trace span
     const total = Date.now() - startedAt;
     await supabase.from("trace_spans").insert({
       trace_id, span_id: newId(), service: "switch", operation: "process_intent",
       status: "ok", duration_ms: total,
-      attributes: { amount: body.amount, rail: body.rail, bank: body.payee_bank, shard: shardNo },
+      attributes: { amount: body.amount, rail: body.rail, bank: body.payee_bank, shard: shardNo, protocol: "daraja-rest" },
     });
 
     return new Response(JSON.stringify({
       ok: true, trace_id, intent_id: intent.id, state: "COMPLETED",
-      latency_ms: total, shard: shardNo,
+      ResultCode: 0, ResultDesc: "Success",
+      bank_reference: bankRef, latency_ms: total, shard: shardNo,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
