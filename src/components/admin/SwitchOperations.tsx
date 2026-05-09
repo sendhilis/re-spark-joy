@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -55,6 +57,14 @@ export function SwitchOperations() {
   };
   const [simRows, setSimRows] = useState<SimRow[]>([]);
   const [simBusy, setSimBusy] = useState(false);
+  const [simForm, setSimForm] = useState({
+    amount: 1500,
+    payee_identifier: "400200",
+    payee_bank: "COOP",
+    rail: "daraja",
+    currency: "KES" as "KES" | "XOF" | "USD",
+    payer_identifier: "fastify-sim-wallet",
+  });
 
   const load = async () => {
     const [iRes, bRes, rRes, sRes] = await Promise.all([
@@ -136,6 +146,14 @@ export function SwitchOperations() {
   // switch-process-intent edge fn. Demonstrates cold OAuth handshake, warm
   // token reuse, and idempotent replay (same key => identical bank_reference).
   const runFastifySim = async () => {
+    if (!simForm.amount || simForm.amount <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
+    if (!simForm.payee_identifier.trim()) {
+      toast.error("Payee identifier is required");
+      return;
+    }
     setSimBusy(true);
     setSimRows([]);
     const idem = `fastify-sim-${Date.now()}`;
@@ -143,12 +161,12 @@ export function SwitchOperations() {
     const body = {
       idempotency_key: idem,
       trace_id: trace,
-      payer_identifier: "fastify-sim-wallet",
-      payee_identifier: "400200",
-      payee_bank: "COOP",
-      amount: 1500,
-      currency: "KES",
-      rail: "daraja",
+      payer_identifier: simForm.payer_identifier.trim() || "fastify-sim-wallet",
+      payee_identifier: simForm.payee_identifier.trim(),
+      payee_bank: simForm.payee_bank,
+      amount: Number(simForm.amount),
+      currency: simForm.currency,
+      rail: simForm.rail,
     };
     const fire = async (label: string, payload: typeof body) => {
       const t0 = performance.now();
@@ -479,7 +497,67 @@ export function SwitchOperations() {
                 token reuse, and idempotent replay (same key → identical bank reference, no double debit).
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="sim-amount" className="text-xs">Amount</Label>
+                  <Input id="sim-amount" type="number" min={1} value={simForm.amount}
+                    onChange={(e) => setSimForm((f) => ({ ...f, amount: Number(e.target.value) }))}
+                    disabled={simBusy} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-currency" className="text-xs">Currency</Label>
+                  <Select value={simForm.currency} disabled={simBusy}
+                    onValueChange={(v) => setSimForm((f) => ({ ...f, currency: v as any }))}>
+                    <SelectTrigger id="sim-currency"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="KES">KES</SelectItem>
+                      <SelectItem value="XOF">XOF</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-payee" className="text-xs">Payee identifier</Label>
+                  <Input id="sim-payee" value={simForm.payee_identifier}
+                    onChange={(e) => setSimForm((f) => ({ ...f, payee_identifier: e.target.value }))}
+                    disabled={simBusy} placeholder="e.g. 400200" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-bank" className="text-xs">Payee bank</Label>
+                  <Select value={simForm.payee_bank} disabled={simBusy}
+                    onValueChange={(v) => setSimForm((f) => ({ ...f, payee_bank: v }))}>
+                    <SelectTrigger id="sim-bank"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(banks.length > 0
+                        ? banks.map((b) => b.bank_code)
+                        : ["KCB", "COOP", "EQUITY", "ABSA", "DTB", "NCBA"]
+                      ).map((code) => (
+                        <SelectItem key={code} value={code}>{code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-rail" className="text-xs">Rail</Label>
+                  <Select value={simForm.rail} disabled={simBusy}
+                    onValueChange={(v) => setSimForm((f) => ({ ...f, rail: v }))}>
+                    <SelectTrigger id="sim-rail"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daraja">daraja</SelectItem>
+                      <SelectItem value="bank_rail">bank_rail</SelectItem>
+                      <SelectItem value="pesalink">pesalink</SelectItem>
+                      <SelectItem value="rtgs">rtgs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sim-payer" className="text-xs">Payer identifier</Label>
+                  <Input id="sim-payer" value={simForm.payer_identifier}
+                    onChange={(e) => setSimForm((f) => ({ ...f, payer_identifier: e.target.value }))}
+                    disabled={simBusy} placeholder="wallet id / msisdn" />
+                </div>
+              </div>
               <div className="flex gap-2 flex-wrap items-center">
                 <Button onClick={runFastifySim} disabled={simBusy} className="button-3d" size="sm">
                   {simBusy ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-2" />}
