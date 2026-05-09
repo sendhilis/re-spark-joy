@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   Clock, PlayCircle, Mail, Banknote, CheckCircle2, Building2,
   ArrowDown, ArrowUp, MoonStar, Send, Landmark, Sparkles, RefreshCw,
+  Activity, ArrowRight, AlertTriangle, ShieldCheck,
 } from "lucide-react";
 
 type Advice = {
@@ -39,11 +40,78 @@ const fmtKES = (n: number) =>
 const STAGE_ORDER = ["sent", "acknowledged", "rtgs_completed", "squared_off"] as const;
 const stageIndex = (s: string) => STAGE_ORDER.indexOf(s as typeof STAGE_ORDER[number]);
 
+// Daraja-pattern lifecycle stages we project switch_events into.
+// Maps to FTS v3.0 §5 event names: intent.received → intent.authorized →
+// debit.posted → credit.confirmed (with intent.failed as a terminal branch).
+type DarajaStage = "received" | "authorized" | "debited" | "credited" | "failed";
+const DARAJA_FLOW: DarajaStage[] = ["received", "authorized", "debited", "credited"];
+
+type SwitchEvent = {
+  id: number;
+  intent_id: string | null;
+  event_type: string;
+  from_state: string | null;
+  to_state: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type IntentRow = {
+  id: string;
+  idempotency_key: string;
+  payer_identifier: string;
+  payee_identifier: string;
+  payee_bank: string | null;
+  amount: number;
+  currency: string;
+  state: string;
+  trace_id: string;
+  created_at: string;
+  completed_at: string | null;
+  last_error: string | null;
+};
+
+type IntentTimeline = {
+  intent: IntentRow;
+  events: SwitchEvent[];
+  reachedStages: Set<DarajaStage>;
+  finalResultCode: number | null;
+  finalResultDesc: string | null;
+  totalLatencyMs: number | null;
+};
+
+const EVENT_TO_STAGE: Record<string, DarajaStage> = {
+  "intent.received": "received",
+  "intent.authorized": "authorized",
+  "debit.posted": "debited",
+  "credit.confirmed": "credited",
+  "intent.failed": "failed",
+  // legacy event names (pre-v3.0) still seen in old rows
+  "intent.created": "received",
+  "debit.requested": "authorized",
+  "debit.confirmed": "debited",
+  "bank.rejected": "failed",
+};
+
+const stageColor = (s: DarajaStage) =>
+  s === "credited" ? "bg-emerald-500" :
+  s === "debited" ? "bg-blue-500" :
+  s === "authorized" ? "bg-amber-500" :
+  s === "received" ? "bg-primary" :
+  "bg-destructive";
+
+const resultCodeTone = (code: number | null) =>
+  code === null ? "secondary" :
+  code === 0 ? "default" :
+  code >= 500 ? "destructive" : "outline";
+
 export function SettlementCycleVisualizer() {
   const [advice, setAdvice] = useState<Advice[]>([]);
   const [loading, setLoading] = useState(false);
   const [cycleFilter, setCycleFilter] = useState<string>("");
   const [openEmail, setOpenEmail] = useState<Advice | null>(null);
+  const [timelines, setTimelines] = useState<IntentTimeline[]>([]);
+  const [openTimeline, setOpenTimeline] = useState<IntentTimeline | null>(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -58,7 +126,69 @@ export function SettlementCycleVisualizer() {
     }
   };
 
+  // Fetch the Daraja intent timelines that contributed to the active cycle.
+  const loadTimelines = async (cycleDate: string) => {
+    if (!cycleDate) { setTimelines([]); return; }
+    // Window = cycle date 00:00 EAT through next day 00:00 EAT.
+    const start = `${cycleDate}T00:00:00+03:00`;
+    const next = new Date(`${cycleDate}T00:00:00+03:00`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const end = next.toISOString();
+
+    const { data: intents } = await supabase
+      .from("transaction_intents")
+      .select("id,idempotency_key,payer_identifier,payee_identifier,payee_bank,amount,currency,state,trace_id,created_at,completed_at,last_error")
+      .gte("created_at", start)
+      .lt("created_at", end)
+      .order("created_at", { ascending: false })
+      .limit(150);
+
+    if (!intents || intents.length === 0) { setTimelines([]); return; }
+    const ids = intents.map((i) => i.id);
+    const { data: events } = await supabase
+      .from("switch_events")
+      .select("id,intent_id,event_type,from_state,to_state,payload,created_at")
+      .in("intent_id", ids)
+      .order("id", { ascending: true });
+
+    const eventsByIntent = new Map<string, SwitchEvent[]>();
+    (events ?? []).forEach((e) => {
+      if (!e.intent_id) return;
+      const list = eventsByIntent.get(e.intent_id) ?? [];
+      list.push(e as SwitchEvent);
+      eventsByIntent.set(e.intent_id, list);
+    });
+
+    const built: IntentTimeline[] = (intents as IntentRow[]).map((intent) => {
+      const evs = eventsByIntent.get(intent.id) ?? [];
+      const reachedStages = new Set<DarajaStage>();
+      let finalResultCode: number | null = null;
+      let finalResultDesc: string | null = null;
+      let totalLatencyMs: number | null = null;
+      evs.forEach((e) => {
+        const stg = EVENT_TO_STAGE[e.event_type];
+        if (stg) reachedStages.add(stg);
+        const p = e.payload ?? {};
+        if ("ResultCode" in p) {
+          finalResultCode = Number((p as any).ResultCode);
+          finalResultDesc = String((p as any).ResultDesc ?? "");
+        }
+        if ("latency_ms" in p && typeof (p as any).latency_ms === "number") {
+          totalLatencyMs = (totalLatencyMs ?? 0) + (p as any).latency_ms;
+        }
+      });
+      // Infer ResultCode from terminal state if not explicitly logged.
+      if (finalResultCode === null) {
+        if (intent.state === "COMPLETED") { finalResultCode = 0; finalResultDesc = "Success"; }
+        else if (intent.state === "FAILED") { finalResultCode = 1; finalResultDesc = intent.last_error ?? "bank_error"; }
+      }
+      return { intent, events: evs, reachedStages, finalResultCode, finalResultDesc, totalLatencyMs };
+    });
+    setTimelines(built);
+  };
+
   useEffect(() => { load(); }, []);
+  useEffect(() => { loadTimelines(cycleFilter); }, [cycleFilter]);
 
   const cycles = Array.from(new Set(advice.map((a) => a.cycle_date)));
   const current = advice.filter((a) => a.cycle_date === cycleFilter);
@@ -219,6 +349,7 @@ export function SettlementCycleVisualizer() {
         <TabsList className="glass-card">
           <TabsTrigger value="advice"><Mail className="h-4 w-4 mr-2" />Bank Advice Emails</TabsTrigger>
           <TabsTrigger value="rtgs"><Banknote className="h-4 w-4 mr-2" />RTGS & Square-Off Tracker</TabsTrigger>
+          <TabsTrigger value="daraja"><Activity className="h-4 w-4 mr-2" />Daraja Flow ({timelines.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="advice">
@@ -325,6 +456,152 @@ export function SettlementCycleVisualizer() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="daraja">
+          {/* Daraja-pattern intent lifecycle for the active cycle: initiate → debit → credit → confirmed.
+              Each row collapses the switch_events stream into the FTS v3.0 stages and surfaces the
+              terminal Daraja ResultCode/ResultDesc returned by the bank connector. */}
+          <Card className="glass-card mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Daraja Lifecycle — {cycleFilter || "select a cycle"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Per-intent walk through the v3.0 REST flow:
+                <span className="font-mono"> /lipafo/payment/initiate → debit.posted → /lipafo/payment/credit → credit.confirmed</span>.
+                Terminal <span className="font-mono">ResultCode 0</span> = Success.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const ok = timelines.filter((t) => t.finalResultCode === 0).length;
+                const fail = timelines.filter((t) => t.finalResultCode !== null && t.finalResultCode !== 0).length;
+                const inflight = timelines.length - ok - fail;
+                const reach = (s: DarajaStage) => timelines.filter((t) => t.reachedStages.has(s)).length;
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+                    {DARAJA_FLOW.map((s, i) => (
+                      <div key={s} className="rounded-lg border bg-card/40 p-2">
+                        <div className={`h-1.5 w-full rounded ${stageColor(s)}`} />
+                        <div className="mt-2 text-[11px] uppercase font-semibold text-foreground">{s}</div>
+                        <div className="text-lg font-bold text-foreground">{reach(s)}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {i === 0 ? "POST /payment/initiate" :
+                           i === 1 ? "bank ResultCode 0" :
+                           i === 2 ? "debit posted" :
+                           "credit.confirmed"}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="rounded-lg border bg-card/40 p-2">
+                      <div className="flex items-center justify-center gap-1 text-[11px] uppercase font-semibold text-foreground">
+                        <ShieldCheck className="h-3 w-3 text-emerald-400" /> Outcome
+                      </div>
+                      <div className="text-xs mt-1">
+                        <Badge variant="default" className="mr-1">RC 0 · {ok}</Badge>
+                        <Badge variant="destructive" className="mr-1">≠0 · {fail}</Badge>
+                        {inflight > 0 && <Badge variant="secondary">in-flight · {inflight}</Badge>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Intent</TableHead>
+                    <TableHead>Payer → Paybill/Till</TableHead>
+                    <TableHead>Bank</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Daraja Flow</TableHead>
+                    <TableHead>ResultCode</TableHead>
+                    <TableHead className="text-right">Latency</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {timelines.map((t) => {
+                    const code = t.finalResultCode;
+                    return (
+                      <TableRow key={t.intent.id}>
+                        <TableCell className="font-mono text-[10px] text-muted-foreground" title={t.intent.idempotency_key}>
+                          {t.intent.idempotency_key.slice(0, 10)}…
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {t.intent.payer_identifier}
+                          <ArrowRight className="inline h-3 w-3 mx-1 text-muted-foreground" />
+                          <span className="font-mono">{t.intent.payee_identifier}</span>
+                        </TableCell>
+                        <TableCell className="text-xs">{t.intent.payee_bank ?? "—"}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold">
+                          {fmtKES(Number(t.intent.amount))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {DARAJA_FLOW.map((s, i) => {
+                              const reached = t.reachedStages.has(s);
+                              const failedHere = t.reachedStages.has("failed") && !reached;
+                              return (
+                                <div key={s} className="flex items-center gap-1">
+                                  <div
+                                    className={`h-2 w-6 rounded-full ${
+                                      reached ? stageColor(s) :
+                                      failedHere ? "bg-destructive/40" : "bg-muted"
+                                    }`}
+                                    title={s}
+                                  />
+                                  {i < DARAJA_FLOW.length - 1 && (
+                                    <span className="text-muted-foreground text-[8px]">→</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground capitalize mt-0.5">
+                            {t.intent.state.toLowerCase()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {code === null ? (
+                            <Badge variant="secondary">pending</Badge>
+                          ) : (
+                            <Badge variant={resultCodeTone(code) as any} className="font-mono">
+                              {code === 0 ? "0 · OK" : `${code}`}
+                            </Badge>
+                          )}
+                          <div className="text-[10px] text-muted-foreground truncate max-w-[140px]" title={t.finalResultDesc ?? ""}>
+                            {t.finalResultDesc ?? ""}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-[11px] font-mono">
+                          {t.totalLatencyMs ? `${t.totalLatencyMs} ms` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="ghost" onClick={() => setOpenTimeline(t)}>
+                            View Events
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {timelines.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        No Daraja intents recorded for this cycle date.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Email preview dialog */}
@@ -346,6 +623,83 @@ export function SettlementCycleVisualizer() {
               <pre className="whitespace-pre-wrap text-xs font-mono bg-muted/30 p-4 rounded-md max-h-[50vh] overflow-y-auto">
 {openEmail.body}
               </pre>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Daraja per-intent event stream */}
+      <Dialog open={!!openTimeline} onOpenChange={(o) => !o && setOpenTimeline(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Daraja Event Stream
+            </DialogTitle>
+          </DialogHeader>
+          {openTimeline && (
+            <div className="space-y-3">
+              <div className="text-xs grid grid-cols-2 gap-2 border-b pb-2">
+                <div><span className="text-muted-foreground">Intent ID:</span> <span className="font-mono">{openTimeline.intent.id.slice(0, 8)}…</span></div>
+                <div><span className="text-muted-foreground">Trace:</span> <span className="font-mono">{openTimeline.intent.trace_id}</span></div>
+                <div><span className="text-muted-foreground">Idempotency Key:</span> <span className="font-mono">{openTimeline.intent.idempotency_key}</span></div>
+                <div><span className="text-muted-foreground">Bank:</span> {openTimeline.intent.payee_bank ?? "—"}</div>
+                <div><span className="text-muted-foreground">Payer:</span> {openTimeline.intent.payer_identifier}</div>
+                <div><span className="text-muted-foreground">Paybill/Till:</span> <span className="font-mono">{openTimeline.intent.payee_identifier}</span></div>
+                <div><span className="text-muted-foreground">Amount:</span> {fmtKES(Number(openTimeline.intent.amount))}</div>
+                <div>
+                  <span className="text-muted-foreground">Final ResultCode:</span>{" "}
+                  <Badge variant={resultCodeTone(openTimeline.finalResultCode) as any} className="font-mono">
+                    {openTimeline.finalResultCode === null ? "pending" : openTimeline.finalResultCode}
+                  </Badge>
+                </div>
+              </div>
+              <div className="max-h-[55vh] overflow-y-auto space-y-2">
+                {openTimeline.events.length === 0 && (
+                  <div className="text-center text-muted-foreground text-sm py-4">No events recorded.</div>
+                )}
+                {openTimeline.events.map((e, i) => {
+                  const stage = EVENT_TO_STAGE[e.event_type];
+                  const p = (e.payload ?? {}) as Record<string, unknown>;
+                  const rc = "ResultCode" in p ? Number((p as any).ResultCode) : null;
+                  const desc = "ResultDesc" in p ? String((p as any).ResultDesc) : null;
+                  const lat = "latency_ms" in p ? Number((p as any).latency_ms) : null;
+                  const isFail = e.event_type === "intent.failed" || e.event_type === "bank.rejected";
+                  return (
+                    <div key={e.id} className="border rounded-md p-2 text-xs bg-card/40">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${stage ? stageColor(stage) : "bg-muted"}`}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <div className="font-mono font-semibold text-foreground">{e.event_type}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {e.from_state ?? "—"} → {e.to_state ?? "—"} · {new Date(e.created_at).toLocaleTimeString("en-KE")}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {rc !== null && (
+                            <Badge variant={resultCodeTone(rc) as any} className="font-mono">
+                              RC {rc}
+                            </Badge>
+                          )}
+                          {lat !== null && (
+                            <Badge variant="outline" className="font-mono">{lat} ms</Badge>
+                          )}
+                          {isFail && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                        </div>
+                      </div>
+                      {(desc || Object.keys(p).length > 0) && (
+                        <pre className="mt-1.5 text-[10px] font-mono bg-muted/40 p-1.5 rounded max-h-24 overflow-y-auto">
+{JSON.stringify(p, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </DialogContent>
