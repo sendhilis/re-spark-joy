@@ -1,10 +1,14 @@
 import { kcbConnector } from "./kcb.js";
+import { kcbBuniConnector } from "./kcb-buni.js";
 import { config } from "../config.js";
 
 // Connector registry. One file per bank in production; each exports
 // { send(ctx) -> { status, bank_reference, reason? } }.
+// KCB        → generic Daraja-pattern stub (talks to bank-simulator)
+// KCB_BUNI   → real KCB BUNI sandbox/production gateway
 const REGISTRY = {
   KCB: kcbConnector,
+  KCB_BUNI: kcbBuniConnector,
   // EQUITY: equityConnector,
   // COOP:   coopConnector,
 };
