@@ -390,38 +390,65 @@ export type Database = {
       bank_merchants: {
         Row: {
           bank_id: string
+          boost_expires_at: string | null
+          boost_started_at: string | null
           category: string
           created_at: string
           id: string
+          listing_tier: Database["public"]["Enums"]["merchant_listing_tier"]
           merchant_name: string
+          monthly_listing_fee: number
+          paid_boost_amount: number
           paybill_number: string
+          preference_score: number
+          proximity_lat: number | null
+          proximity_lng: number | null
           status: string
           synced_at: string
           till_number: string | null
+          txn_velocity_30d: number
           updated_at: string
         }
         Insert: {
           bank_id: string
+          boost_expires_at?: string | null
+          boost_started_at?: string | null
           category?: string
           created_at?: string
           id?: string
+          listing_tier?: Database["public"]["Enums"]["merchant_listing_tier"]
           merchant_name: string
+          monthly_listing_fee?: number
+          paid_boost_amount?: number
           paybill_number: string
+          preference_score?: number
+          proximity_lat?: number | null
+          proximity_lng?: number | null
           status?: string
           synced_at?: string
           till_number?: string | null
+          txn_velocity_30d?: number
           updated_at?: string
         }
         Update: {
           bank_id?: string
+          boost_expires_at?: string | null
+          boost_started_at?: string | null
           category?: string
           created_at?: string
           id?: string
+          listing_tier?: Database["public"]["Enums"]["merchant_listing_tier"]
           merchant_name?: string
+          monthly_listing_fee?: number
+          paid_boost_amount?: number
           paybill_number?: string
+          preference_score?: number
+          proximity_lat?: number | null
+          proximity_lng?: number | null
           status?: string
           synced_at?: string
           till_number?: string | null
+          txn_velocity_30d?: number
           updated_at?: string
         }
         Relationships: [
@@ -821,6 +848,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      merchant_listing_revenue: {
+        Row: {
+          amount: number
+          bank_id: string
+          created_at: string
+          id: string
+          merchant_id: string
+          notes: string | null
+          period_month: string
+          status: string
+          tier: Database["public"]["Enums"]["merchant_listing_tier"]
+        }
+        Insert: {
+          amount?: number
+          bank_id: string
+          created_at?: string
+          id?: string
+          merchant_id: string
+          notes?: string | null
+          period_month: string
+          status?: string
+          tier: Database["public"]["Enums"]["merchant_listing_tier"]
+        }
+        Update: {
+          amount?: number
+          bank_id?: string
+          created_at?: string
+          id?: string
+          merchant_id?: string
+          notes?: string | null
+          period_month?: string
+          status?: string
+          tier?: Database["public"]["Enums"]["merchant_listing_tier"]
+        }
+        Relationships: []
       }
       merchant_settlements: {
         Row: {
@@ -1817,6 +1880,11 @@ export type Database = {
         | "production_live"
         | "suspended"
         | "rejected"
+      merchant_listing_tier:
+        | "standard"
+        | "category_boost"
+        | "discovery_prime"
+        | "anchor_partner"
       transaction_status: "completed" | "pending" | "failed"
       transaction_type:
         | "sent"
@@ -1973,6 +2041,12 @@ export const Constants = {
         "production_live",
         "suspended",
         "rejected",
+      ],
+      merchant_listing_tier: [
+        "standard",
+        "category_boost",
+        "discovery_prime",
+        "anchor_partner",
       ],
       transaction_status: ["completed", "pending", "failed"],
       transaction_type: [
