@@ -26,14 +26,17 @@ import { config } from "../config.js";
 
 const env = (k, d) => process.env[k] ?? d;
 
+// Confirmed real KCB BUNI endpoints (verified live 2026-05-11):
+//   Token:    POST  https://accounts.buni.kcbgroup.com/oauth2/token  (Basic auth + form body)
+//   STK Push: POST  https://uat.buni.kcbgroup.com/mm/api/request/1.0.0/stkpush
+//   Bearer access_token from token endpoint is accepted by uat.buni.kcbgroup.com.
 const BUNI = {
-  baseUrl:     () => env("KCB_BUNI_BASE_URL", "https://sandbox.buni.kcbgroup.com").replace(/\/$/, ""),
+  tokenUrl:    () => env("KCB_BUNI_TOKEN_URL", "https://accounts.buni.kcbgroup.com/oauth2/token"),
+  baseUrl:     () => env("KCB_BUNI_BASE_URL", "https://uat.buni.kcbgroup.com").replace(/\/$/, ""),
   clientId:    () => env("KCB_BUNI_CLIENT_ID", ""),
   clientSecret:() => env("KCB_BUNI_CLIENT_SECRET", ""),
-  tokenPath:   () => env("KCB_BUNI_TOKEN_PATH", "/token/v1/generate?grant_type=client_credentials"),
-  stkPath:     () => env("KCB_BUNI_STK_PATH", "/mpesa-express/v1/stkpush"),
-  sendPath:    () => env("KCB_BUNI_SEND_PATH", "/send-money/v1/transfer"),
-  shortcode:   () => env("KCB_BUNI_SHORTCODE", "174379"),
+  stkPath:     () => env("KCB_BUNI_STK_PATH", "/mm/api/request/1.0.0/stkpush"),
+  sendPath:    () => env("KCB_BUNI_SEND_PATH", "/sendmoney/api/request/1.0.0/sendmoney"),
   callbackUrl: () => env("KCB_BUNI_CALLBACK_URL", "https://example.invalid/webhooks/kcb-buni"),
   rail:        () => env("KCB_BUNI_RAIL", "stk"),
 };
@@ -45,11 +48,15 @@ async function getAccessToken() {
   const id = BUNI.clientId(), secret = BUNI.clientSecret();
   if (!id || !secret) throw new Error("kcb_buni_missing_credentials");
 
-  const url = `${BUNI.baseUrl()}${BUNI.tokenPath()}`;
   const basic = Buffer.from(`${id}:${secret}`).toString("base64");
-  const { statusCode, body } = await request(url, {
-    method: "GET",   // BUNI token endpoint accepts GET with Basic auth
-    headers: { authorization: `Basic ${basic}`, accept: "application/json" },
+  const { statusCode, body } = await request(BUNI.tokenUrl(), {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${basic}`,
+      "content-type": "application/x-www-form-urlencoded",
+      accept: "application/json",
+    },
+    body: "grant_type=client_credentials",
   });
   const j = await body.json().catch(() => ({}));
   if (statusCode !== 200 || !j.access_token) {
@@ -62,27 +69,20 @@ async function getAccessToken() {
   return cachedToken.token;
 }
 
-// ── STK Push (debit a payer's M-PESA wallet held at KCB)
+// ── STK Push — KCB BUNI shape (verified against uat.buni.kcbgroup.com)
+//   Required fields: phoneNumber, amount, invoiceNumber, callBackUrl,
+//                    accountReference, transactionDesc, billRefNumber.
+//   callBackUrl MUST be pre-registered in the BUNI developer portal for the app.
 async function stkPush({ token, body, traceId }) {
-  const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14); // yyyymmddHHMMSS
-  const password = Buffer.from(
-    `${BUNI.shortcode()}${BUNI.clientSecret()}${ts}`
-  ).toString("base64");
-
   const payload = {
-    BusinessShortCode: BUNI.shortcode(),
-    Password: password,
-    Timestamp: ts,
-    TransactionType: "CustomerPayBillOnline",
-    Amount: Number(body.amount),
-    PartyA: body.payer_identifier,           // payer MSISDN 2547XXXXXXXX
-    PartyB: BUNI.shortcode(),
-    PhoneNumber: body.payer_identifier,
-    CallBackURL: BUNI.callbackUrl(),
-    AccountReference: body.payee_identifier, // paybill account ref
-    TransactionDesc: `Lipafo ${body.idempotency_key.slice(0, 12)}`,
+    phoneNumber: String(body.payer_identifier),
+    amount: String(body.amount),
+    invoiceNumber: body.idempotency_key.slice(0, 20),
+    callBackUrl: BUNI.callbackUrl(),
+    accountReference: body.payee_identifier,
+    transactionDesc: `Lipafo ${body.idempotency_key.slice(0, 12)}`,
+    billRefNumber: body.payee_identifier,
   };
-
   return await postJson(`${BUNI.baseUrl()}${BUNI.stkPath()}`, payload, token, body.idempotency_key, traceId);
 }
 
@@ -118,22 +118,23 @@ async function postJson(url, payload, token, intentKey, traceId) {
     });
     const j = await respBody.json().catch(() => ({}));
 
-    // BUNI success conventions (vary by API):
-    //  - MpesaExpress:  ResponseCode "0" + CheckoutRequestID
-    //  - SendMoney:     status "SUCCESS" / responseCode "0000"
+    // BUNI wraps responses as { header: { statusCode, statusDescription }, response: {...} }
+    // statusCode "0" == success; non-zero (e.g. "1") == business rejection.
+    const hdr = j.header ?? {};
+    const resp = j.response ?? {};
     const ok =
-      String(j.ResponseCode ?? j.responseCode ?? j.ResultCode ?? "").match(/^0+$/) ||
-      String(j.status ?? "").toUpperCase() === "SUCCESS" ||
-      (statusCode >= 200 && statusCode < 300 && (j.CheckoutRequestID || j.transactionId));
+      String(hdr.statusCode ?? "").match(/^0+$/) ||
+      String(j.ResponseCode ?? j.responseCode ?? "").match(/^0+$/) ||
+      (statusCode >= 200 && statusCode < 300 && (resp.CheckoutRequestID || resp.transactionId));
 
     return {
       status: ok ? "ACSC" : "RJCT",
       http_status: statusCode,
-      result_code: j.ResponseCode ?? j.responseCode ?? j.ResultCode ?? null,
-      result_desc: j.ResponseDescription ?? j.responseDescription ?? j.ResultDesc ?? j.message ?? null,
-      bank_reference: j.CheckoutRequestID ?? j.transactionId ?? j.MerchantRequestID ?? null,
+      result_code: hdr.statusCode ?? j.ResponseCode ?? null,
+      result_desc: hdr.statusDescription ?? j.ResponseDescription ?? j.message ?? null,
+      bank_reference: resp.CheckoutRequestID ?? resp.transactionId ?? resp.MerchantRequestID ?? null,
       raw: j,
-      reason: ok ? null : (j.errorMessage ?? j.ResponseDescription ?? `http_${statusCode}`),
+      reason: ok ? null : (hdr.statusDescription ?? j.message ?? `http_${statusCode}`),
     };
   } finally {
     clearTimeout(t);
