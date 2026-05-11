@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Store, Landmark, Webhook, RefreshCw, Copy, Hash, Building2 } from "lucide-react";
+import { Plus, Store, Landmark, Webhook, RefreshCw, Copy, Hash, Building2, Trophy } from "lucide-react";
+import { MerchantDiscoveryEngine } from "./MerchantDiscoveryEngine";
 
 type Bank = {
   id: string;
@@ -172,9 +173,12 @@ export function MerchantPortal() {
       <Tabs defaultValue="merchants" className="space-y-4">
         <TabsList className="glass-card">
           <TabsTrigger value="merchants"><Store className="h-4 w-4 mr-2" />Bank-Synced Merchants</TabsTrigger>
+          <TabsTrigger value="discovery"><Trophy className="h-4 w-4 mr-2" />Discovery Engine</TabsTrigger>
           <TabsTrigger value="banks"><Landmark className="h-4 w-4 mr-2" />Banks & Sync Endpoints</TabsTrigger>
           <TabsTrigger value="logs"><Webhook className="h-4 w-4 mr-2" />Sync Logs</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="discovery"><MerchantDiscoveryEngine /></TabsContent>
 
         <TabsContent value="merchants" className="space-y-3">
           <div className="flex flex-wrap gap-2">
