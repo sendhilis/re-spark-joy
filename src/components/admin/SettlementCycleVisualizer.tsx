@@ -435,62 +435,117 @@ export function SettlementCycleVisualizer() {
         </TabsContent>
 
         <TabsContent value="rtgs">
-          <Card className="glass-card">
-            <CardContent className="p-0">
+          {(() => {
+            const outbound = current.filter((a) => a.direction === "LIPAFO_PAYS_BANK");
+            const inbound = current.filter((a) => a.direction === "BANK_PAYS_LIPAFO");
+            const flat = current.filter((a) => a.direction === "FLAT");
+
+            const renderRow = (a: Advice, mode: "outbound" | "inbound") => {
+              const idx = stageIndex(a.status);
+              return (
+                <TableRow key={a.id}>
+                  <TableCell className="font-medium">{a.bank_name}</TableCell>
+                  <TableCell className={`text-right text-xs font-semibold ${mode === "outbound" ? "text-warning" : "text-success"}`}>
+                    {fmtKES(Math.abs(Number(a.net_amount)))}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {STAGE_ORDER.map((s, i) => (
+                        <div key={s} className={`h-1.5 w-8 rounded-full ${i <= idx ? "bg-primary" : "bg-muted"}`} title={s} />
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground capitalize mt-0.5">{a.status.replace(/_/g, " ")}</div>
+                  </TableCell>
+                  <TableCell className="font-mono text-[11px]">{a.rtgs_reference ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{a.rtgs_completed_at ? new Date(a.rtgs_completed_at).toLocaleString("en-KE") : "—"}</TableCell>
+                  <TableCell className="text-xs">{a.squared_off_at ? new Date(a.squared_off_at).toLocaleString("en-KE") : "—"}</TableCell>
+                  <TableCell>
+                    {a.status === "sent" && (
+                      <Button size="sm" variant="outline" onClick={() => advance(a, "acknowledged")}>
+                        {mode === "outbound" ? "Mark Ack" : "Confirm MT910"}
+                      </Button>
+                    )}
+                    {a.status === "acknowledged" && (
+                      <Button size="sm" variant="outline" onClick={() => advance(a, "rtgs_completed")}>
+                        <Banknote className="h-3 w-3 mr-1" />
+                        {mode === "outbound" ? "RTGS Sent" : "Credit Received"}
+                      </Button>
+                    )}
+                    {a.status === "rtgs_completed" && (
+                      <Button size="sm" onClick={() => advance(a, "squared_off")}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" />Square Off
+                      </Button>
+                    )}
+                    {a.status === "squared_off" && <span className="text-xs text-emerald-400">✓ Closed</span>}
+                  </TableCell>
+                </TableRow>
+              );
+            };
+
+            const renderTable = (rows: Advice[], mode: "outbound" | "inbound", emptyMsg: string) => (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Bank</TableHead>
-                    <TableHead className="text-right">Net</TableHead>
+                    <TableHead className="text-right">
+                      {mode === "outbound" ? "Amount Payable" : "Amount Receivable"}
+                    </TableHead>
                     <TableHead>Stage</TableHead>
-                    <TableHead>RTGS Ref</TableHead>
-                    <TableHead>RTGS At</TableHead>
+                    <TableHead>{mode === "outbound" ? "RTGS Ref (out)" : "MT910 Ref (in)"}</TableHead>
+                    <TableHead>{mode === "outbound" ? "Sent At" : "Credited At"}</TableHead>
                     <TableHead>Squared Off</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {current.map((a) => {
-                    const idx = stageIndex(a.status);
-                    return (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-medium">{a.bank_name}</TableCell>
-                        <TableCell className="text-right text-xs font-semibold">{fmtKES(Math.abs(Number(a.net_amount)))}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {STAGE_ORDER.map((s, i) => (
-                              <div key={s} className={`h-1.5 w-8 rounded-full ${i <= idx ? "bg-primary" : "bg-muted"}`} title={s} />
-                            ))}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground capitalize mt-0.5">{a.status.replace(/_/g, " ")}</div>
-                        </TableCell>
-                        <TableCell className="font-mono text-[11px]">{a.rtgs_reference ?? "—"}</TableCell>
-                        <TableCell className="text-xs">{a.rtgs_completed_at ? new Date(a.rtgs_completed_at).toLocaleString("en-KE") : "—"}</TableCell>
-                        <TableCell className="text-xs">{a.squared_off_at ? new Date(a.squared_off_at).toLocaleString("en-KE") : "—"}</TableCell>
-                        <TableCell>
-                          {a.status === "sent" && a.direction !== "FLAT" && (
-                            <Button size="sm" variant="outline" onClick={() => advance(a, "acknowledged")}>Mark Ack</Button>
-                          )}
-                          {a.status === "acknowledged" && (
-                            <Button size="sm" variant="outline" onClick={() => advance(a, "rtgs_completed")}>
-                              <Banknote className="h-3 w-3 mr-1" />RTGS Done
-                            </Button>
-                          )}
-                          {a.status === "rtgs_completed" && (
-                            <Button size="sm" onClick={() => advance(a, "squared_off")}>
-                              <CheckCircle2 className="h-3 w-3 mr-1" />Square Off
-                            </Button>
-                          )}
-                          {a.status === "squared_off" && <span className="text-xs text-emerald-400">✓ Closed</span>}
-                          {a.direction === "FLAT" && <span className="text-xs text-muted-foreground">No movement</span>}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {rows.map((a) => renderRow(a, mode))}
+                  {rows.length === 0 && (
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6 text-xs">{emptyMsg}</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+            );
+
+            return (
+              <div className="space-y-4">
+                <Card className="glass-card border-warning/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ArrowUp className="h-4 w-4 text-warning" />
+                      Outbound RTGS Queue — Lipafo pays Bank ({outbound.length})
+                    </CardTitle>
+                    <p className="text-[11px] text-muted-foreground">
+                      Lipafo's treasury initiates RTGS / PesaLink to credit each beneficiary bank's nostro for the day's net obligation.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {renderTable(outbound, "outbound", "No outbound legs — Lipafo owes nothing this cycle.")}
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-card border-success/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ArrowDown className="h-4 w-4 text-success" />
+                      Inbound RTGS Expected — Bank pays Lipafo ({inbound.length})
+                    </CardTitle>
+                    <p className="text-[11px] text-muted-foreground">
+                      Lipafo waits for the member bank's RTGS credit + SWIFT MT910 advice. Reconcile each landing into Lipafo's settlement nostro and square off.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {renderTable(inbound, "inbound", "No inbound legs — no bank owes Lipafo this cycle.")}
+                  </CardContent>
+                </Card>
+
+                {flat.length > 0 && (
+                  <div className="text-[11px] text-muted-foreground px-1">
+                    {flat.length} bank{flat.length > 1 ? "s" : ""} flat this cycle (no RTGS movement): {flat.map((f) => f.bank_name).join(", ")}.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="daraja">
