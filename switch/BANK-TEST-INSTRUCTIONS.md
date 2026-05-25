@@ -108,6 +108,153 @@ curl -sS -X POST http://localhost:3000/v1/intents \
 
 ---
 
+## Annex A — Worked example: KCB customer → Co-operative Bank merchant
+
+**Scenario:** A KCB mobile-app customer (MSISDN `+254700123456`) pays
+KES 2,500 to a Co-operative Bank merchant on Paybill `400200` /
+account `NAIVAS-LAVINGTON`.
+
+- **Originating bank** (debits customer): `KCB` — acts as an HTTP client of the switch.
+- **Switch** (Lipafo): validates, claims idempotency, routes to terminating bank.
+- **Terminating bank** (credits merchant): `COOP_KENYA` — Lipafo calls its Daraja-pattern endpoint.
+
+### A.1 Request — originating bank → switch
+
+```http
+POST /v1/intents HTTP/1.1
+Host: lipafo-switch.test.local:3000
+Content-Type: application/json
+Accept: application/json
+X-Originating-Bank: KCB
+X-Channel: MOBILE_APP
+X-Request-Time: 2026-05-25T09:14:22Z
+```
+
+```json
+{
+  "idempotency_key": "KCB-TXN-20260525-0001-7c2a1f9e",
+  "payer_identifier": "MSISDN+254700123456",
+  "payee_identifier": "PAYBILL-400200/NAIVAS-LAVINGTON",
+  "payee_bank": "COOP_KENYA",
+  "amount": 2500,
+  "currency": "KES",
+  "rail": "bank_rail"
+}
+```
+
+`idempotency_key` convention: `{ORIG_BANK}-TXN-{YYYYMMDD}-{SEQ}-{UUID8}`.
+The originating bank MUST persist this key against its own debit record so
+any retry reuses the exact same value.
+
+### A.2 Downstream call — switch → terminating bank (Co-op)
+
+```http
+POST /lipafo/payment/initiate HTTP/1.1
+Host: <BANK_BASE_URL host>
+Authorization: Bearer <oauth2-token cached for 1h>
+Content-Type: application/json
+X-Lipafo-Intent-Key: KCB-TXN-20260525-0001-7c2a1f9e
+X-Lipafo-Trace-Id: 01J5XK8H2M0VQ6A9P3W7YDN4ZB
+X-Lipafo-Bank-Code: COOP_KENYA
+X-Lipafo-Timestamp: 2026-05-25T09:14:22.184Z
+```
+
+### A.3 Success response — switch → originating bank (HTTP 200)
+
+```json
+{
+  "ok": true,
+  "replayed": false,
+  "trace_id": "01J5XK8H2M0VQ6A9P3W7YDN4ZB",
+  "intent_id": "intent_8f3a91c4b27e",
+  "state": "COMPLETED",
+  "bank_status": "OK",
+  "bank_reference": "COOP-RX-20260525-998877",
+  "latency_ms": 412.55
+}
+```
+
+### A.4 Idempotent replay (same key resubmitted)
+
+HTTP 200 — **no second call is made to Co-op**:
+
+```json
+{
+  "ok": true,
+  "replayed": true,
+  "trace_id": "01J5XK8H2M0VQ6A9P3W7YDN4ZB",
+  "intent_id": "intent_8f3a91c4b27e",
+  "state": "COMPLETED",
+  "bank_status": "OK",
+  "bank_reference": "COOP-RX-20260525-998877",
+  "latency_ms": 3.21
+}
+```
+
+### A.5 Error responses
+
+**Schema rejection** (e.g. missing `amount`) — HTTP 400, bank never contacted:
+
+```json
+{ "ok": false, "error": "body must have required property 'amount'", "trace_id": "..." }
+```
+
+**In-flight collision** (same key, original still processing) — HTTP 409:
+
+```json
+{ "ok": false, "error": "in_flight", "trace_id": "..." }
+```
+
+**Network structural cap exceeded** — HTTP 422:
+
+```json
+{ "ok": false, "error": "amount_above_network_cap", "trace_id": "..." }
+```
+
+**Terminating bank business decline** — HTTP 422, bank reason preserved verbatim:
+
+```json
+{
+  "ok": false,
+  "trace_id": "01J5XK8H2M0VQ6A9P3W7YDN4ZB",
+  "state": "FAILED",
+  "bank_status": "DECLINED",
+  "ResultCode": 2001,
+  "ResultDesc": "Insufficient funds on payer account",
+  "latency_ms": 287.04
+}
+```
+
+**Terminating bank timeout (>8s)** — HTTP 422:
+
+```json
+{ "ok": false, "state": "FAILED", "bank_status": "TIMEOUT", "latency_ms": 8003.11, "trace_id": "..." }
+```
+
+**Circuit breaker open** (after 5 consecutive failures for `COOP_KENYA`) — HTTP 503:
+
+```json
+{ "ok": false, "error": "CIRCUIT_OPEN", "bank": "COOP_KENYA", "retry_after_ms": 30000 }
+```
+
+### A.6 One-liner to reproduce
+
+```bash
+curl -sS -X POST http://localhost:3000/v1/intents \
+  -H 'content-type: application/json' \
+  -d '{
+    "idempotency_key":"KCB-TXN-20260525-0001-7c2a1f9e",
+    "payer_identifier":"MSISDN+254700123456",
+    "payee_identifier":"PAYBILL-400200/NAIVAS-LAVINGTON",
+    "payee_bank":"COOP_KENYA",
+    "amount":2500,
+    "currency":"KES",
+    "rail":"bank_rail"
+  }' | jq
+```
+
+---
+
 ## 5. What to capture and return to Lipafo
 
 For each scenario, please share:
