@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "Lipafo Switch — Gap Tests (V3, V4, R2, R3)",
+    "description": "Add-on Postman collection covering the four acceptance cases missing from QA drop 1: currency whitelist (V3), zero/negative amount (V4), concurrent duplicate idempotency (R2), and 8s hard timeout on the bank credit leg (R3). Import into the same workspace as the main collection and run with the existing environment (baseUrl, payer, payee, payeeBank).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "lipafo"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "payer", "value": "MSISDN+254700000001" },
+    { "key": "payee", "value": "PAYBILL-522522" },
+    { "key": "payeeBank", "value": "KCB_BUNI" },
+    { "key": "timeoutPayee", "value": "PAYBILL-SLOW-STUB", "description": "Payee identifier wired in the bank sandbox / stub to sleep >8s. Configure with bank QA." }
+  ],
+  "item": [
+    {
+      "name": "V3 — Currency whitelist (GBP must be rejected)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "content-type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/v1/intents", "host": ["{{baseUrl}}"], "path": ["v1", "intents"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idempotency_key\": \"qa-V3-gbp-{{$timestamp}}\",\n  \"payer_identifier\": \"{{payer}}\",\n  \"payee_identifier\": \"{{payee}}\",\n  \"payee_bank\": \"{{payeeBank}}\",\n  \"amount\": 1500,\n  \"currency\": \"GBP\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('V3: GBP rejected at edge with HTTP 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('V3: bank was never contacted (no bank_reference, no latency)', () => {",
+              "  const b = pm.response.json();",
+              "  pm.expect(b.bank_reference, 'bank_reference').to.be.oneOf([undefined, null]);",
+              "  pm.expect(b.bank_status, 'bank_status').to.be.oneOf([undefined, null]);",
+              "});",
+              "pm.test('V3: error mentions currency', () => {",
+              "  pm.expect(JSON.stringify(pm.response.json()).toLowerCase()).to.match(/currency|enum/);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "V4a — Zero amount (must be rejected)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "content-type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/v1/intents", "host": ["{{baseUrl}}"], "path": ["v1", "intents"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idempotency_key\": \"qa-V4a-zero-{{$timestamp}}\",\n  \"payer_identifier\": \"{{payer}}\",\n  \"payee_identifier\": \"{{payee}}\",\n  \"payee_bank\": \"{{payeeBank}}\",\n  \"amount\": 0,\n  \"currency\": \"KES\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('V4a: amount=0 rejected with HTTP 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('V4a: bank not contacted', () => {",
+              "  const b = pm.response.json();",
+              "  pm.expect(b.bank_reference, 'bank_reference').to.be.oneOf([undefined, null]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "V4b — Negative amount (must be rejected)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "content-type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/v1/intents", "host": ["{{baseUrl}}"], "path": ["v1", "intents"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idempotency_key\": \"qa-V4b-neg-{{$timestamp}}\",\n  \"payer_identifier\": \"{{payer}}\",\n  \"payee_identifier\": \"{{payee}}\",\n  \"payee_bank\": \"{{payeeBank}}\",\n  \"amount\": -1,\n  \"currency\": \"KES\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('V4b: amount=-1 rejected with HTTP 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('V4b: bank not contacted', () => {",
+              "  const b = pm.response.json();",
+              "  pm.expect(b.bank_reference, 'bank_reference').to.be.oneOf([undefined, null]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "R2 — Concurrent duplicates (one wins, one gets 409 in_flight)",
+      "description": "Fires two POSTs with the SAME idempotency_key in parallel from the pre-request script, then asserts results on the trigger request.",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/healthz", "host": ["{{baseUrl}}"], "path": ["healthz"] }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const key = 'qa-R2-concurrent-' + Date.now();",
+              "const body = {",
+              "  idempotency_key: key,",
+              "  payer_identifier: pm.variables.get('payer'),",
+              "  payee_identifier: pm.variables.get('payee'),",
+              "  payee_bank: pm.variables.get('payeeBank'),",
+              "  amount: 1500,",
+              "  currency: 'KES'",
+              "};",
+              "const req = {",
+              "  url: pm.variables.get('baseUrl') + '/v1/intents',",
+              "  method: 'POST',",
+              "  header: { 'content-type': 'application/json' },",
+              "  body: { mode: 'raw', raw: JSON.stringify(body) }",
+              "};",
+              "let done = 0; const results = [];",
+              "const finish = () => { if (done === 2) { pm.variables.set('r2_results', JSON.stringify(results)); } };",
+              "pm.sendRequest(req, (e, r) => { results.push({ status: r && r.code, body: r && r.json() }); done++; finish(); });",
+              "pm.sendRequest(req, (e, r) => { results.push({ status: r && r.code, body: r && r.json() }); done++; finish(); });",
+              "// crude wait so both calls settle before tests run",
+              "const t0 = Date.now(); while (done < 2 && Date.now() - t0 < 5000) { /* spin */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const results = JSON.parse(pm.variables.get('r2_results') || '[]');",
+              "pm.test('R2: both parallel calls returned', () => pm.expect(results.length).to.eql(2));",
+              "const codes = results.map(r => r.status).sort();",
+              "pm.test('R2: exactly one 200 and one 409', () => {",
+              "  pm.expect(codes).to.eql([200, 409]);",
+              "});",
+              "const conflict = results.find(r => r.status === 409);",
+              "pm.test('R2: 409 body says in_flight', () => {",
+              "  pm.expect(JSON.stringify(conflict.body)).to.match(/in_flight/);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "R3 — Hard 8s timeout on bank credit leg",
+      "description": "Requires the bank sandbox / stub to be configured to sleep > 8s for {{timeoutPayee}}. The switch must abandon the call at 8000±200ms.",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "content-type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/v1/intents", "host": ["{{baseUrl}}"], "path": ["v1", "intents"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idempotency_key\": \"qa-R3-timeout-{{$timestamp}}\",\n  \"payer_identifier\": \"{{payer}}\",\n  \"payee_identifier\": \"{{timeoutPayee}}\",\n  \"payee_bank\": \"{{payeeBank}}\",\n  \"amount\": 1500,\n  \"currency\": \"KES\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R3: response received (not hung)', () => pm.expect(pm.response.code).to.be.oneOf([422, 504]));",
+              "const b = pm.response.json();",
+              "pm.test('R3: state FAILED, bank_status TIMEOUT', () => {",
+              "  pm.expect(b.state).to.eql('FAILED');",
+              "  pm.expect(b.bank_status).to.eql('TIMEOUT');",
+              "});",
+              "pm.test('R3: latency within 8000 ± 200 ms', () => {",
+              "  pm.expect(b.latency_ms).to.be.above(7800);",
+              "  pm.expect(b.latency_ms).to.be.below(8200);",
+              "});",
+              "pm.test('R3: postman roundtrip also ~8s', () => {",
+              "  pm.expect(pm.response.responseTime).to.be.above(7800);",
+              "  pm.expect(pm.response.responseTime).to.be.below(8500);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
