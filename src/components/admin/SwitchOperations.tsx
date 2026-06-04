@@ -51,6 +51,8 @@ export function SwitchOperations() {
   const [banks, setBanks] = useState<BankConn[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [spans, setSpans] = useState<Span[]>([]);
+  const [events, setEvents] = useState<SwitchEvent[]>([]);
+  const [eventFilter, setEventFilter] = useState("");
   const [traceQuery, setTraceQuery] = useState("");
   const [busy, setBusy] = useState(false);
 
