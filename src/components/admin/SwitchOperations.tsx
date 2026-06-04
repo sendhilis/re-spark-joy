@@ -282,6 +282,7 @@ export function SwitchOperations() {
           <TabsTrigger value="trace"><Search className="h-4 w-4 mr-2" />Trace search</TabsTrigger>
           <TabsTrigger value="patterns"><Cpu className="h-4 w-4 mr-2" />8 patterns map</TabsTrigger>
           <TabsTrigger value="fastify-sim"><Rocket className="h-4 w-4 mr-2" />Fastify sim</TabsTrigger>
+          <TabsTrigger value="events"><ScrollText className="h-4 w-4 mr-2" />Events log</TabsTrigger>
         </TabsList>
 
         <TabsContent value="intents">
