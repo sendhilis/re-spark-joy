@@ -639,6 +639,100 @@ export function SwitchOperations() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="events">
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ScrollText className="h-4 w-4 text-primary" /> Switch events log — append-only proof of credit
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Every state transition the switch writes to <code className="font-mono">switch_events</code> appears here in
+                real time. A <Badge variant="default" className="mx-1">credit.confirmed</Badge> row with
+                <code className="font-mono"> to_state=COMPLETED</code> and a bank reference in the payload is the receipt
+                that the merchant was paid. Includes intents from LipafoPay, Fastify sim, and the demo seeder — persisted
+                forever.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2 flex-wrap items-center">
+                <Input placeholder="Filter by trace_id, intent_id, or event_type (e.g. credit.confirmed)"
+                  value={eventFilter}
+                  onChange={(e) => setEventFilter(e.target.value)}
+                  className="font-mono text-xs max-w-[420px]" />
+                <Button onClick={load} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" /> Reload
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {events.length} event{events.length === 1 ? "" : "s"} (live · auto-updates on every transaction)
+                </span>
+              </div>
+              <div className="max-h-[560px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Transition</TableHead>
+                      <TableHead>Intent</TableHead>
+                      <TableHead>Trace</TableHead>
+                      <TableHead>Payload</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events
+                      .filter((e) => {
+                        const q = eventFilter.trim().toLowerCase();
+                        if (!q) return true;
+                        return (
+                          e.trace_id?.toLowerCase().includes(q) ||
+                          (e.intent_id ?? "").toLowerCase().includes(q) ||
+                          e.event_type.toLowerCase().includes(q) ||
+                          (e.to_state ?? "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((e) => {
+                        const isCredit = e.event_type === "credit.confirmed" || e.to_state === "COMPLETED";
+                        return (
+                          <TableRow key={e.id} className={isCredit ? "bg-success/5" : ""}>
+                            <TableCell className="text-xs whitespace-nowrap">
+                              {new Date(e.created_at).toLocaleTimeString("en-KE")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={isCredit ? "default" : "secondary"} className="font-mono text-[10px]">
+                                {e.event_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs font-mono">
+                              {e.from_state ?? "∅"} → <span className={isCredit ? "text-success font-semibold" : ""}>{e.to_state ?? "∅"}</span>
+                            </TableCell>
+                            <TableCell className="font-mono text-[10px] text-muted-foreground">
+                              {e.intent_id ? e.intent_id.slice(0, 8) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <button className="font-mono text-[10px] text-primary underline"
+                                onClick={() => setTraceQuery(e.trace_id)}>
+                                {e.trace_id.slice(0, 8)}
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-[10px] font-mono text-muted-foreground max-w-[320px] truncate"
+                              title={JSON.stringify(e.payload)}>
+                              {JSON.stringify(e.payload)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    {events.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No events yet — run a LipafoPay transaction, the Fastify sim, or "Generate 20 txns".
+                      </TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
