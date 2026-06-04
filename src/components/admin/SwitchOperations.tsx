@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Activity, AlertTriangle, CircuitBoard, Database, GitBranch,
-  PlayCircle, Search, ShieldAlert, Zap, RefreshCw, Cpu, Rocket,
+  PlayCircle, Search, ShieldAlert, Zap, RefreshCw, Cpu, Rocket, ScrollText,
 } from "lucide-react";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-KE").format(n);
@@ -39,6 +39,11 @@ type Span = {
   status: string; duration_ms: number | null; started_at: string;
   attributes: Record<string, any>;
 };
+type SwitchEvent = {
+  id: number; intent_id: string | null; trace_id: string; span_id: string;
+  event_type: string; from_state: string | null; to_state: string | null;
+  payload: Record<string, any>; created_at: string;
+};
 
 export function SwitchOperations() {
   const [intents, setIntents] = useState<Intent[]>([]);
@@ -46,6 +51,8 @@ export function SwitchOperations() {
   const [banks, setBanks] = useState<BankConn[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [spans, setSpans] = useState<Span[]>([]);
+  const [events, setEvents] = useState<SwitchEvent[]>([]);
+  const [eventFilter, setEventFilter] = useState("");
   const [traceQuery, setTraceQuery] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -67,11 +74,12 @@ export function SwitchOperations() {
   });
 
   const load = async () => {
-    const [iRes, bRes, rRes, sRes] = await Promise.all([
+    const [iRes, bRes, rRes, sRes, eRes] = await Promise.all([
       supabase.from("transaction_intents").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("bank_connectors").select("*").order("bank_code"),
       supabase.from("settlement_runs").select("*").order("run_date", { ascending: false }).limit(10),
       supabase.from("trace_spans").select("*").order("started_at", { ascending: false }).limit(50),
+      supabase.from("switch_events").select("*").order("id", { ascending: false }).limit(200),
     ]);
     if (iRes.data) {
       setIntents(iRes.data as Intent[]);
@@ -82,9 +90,22 @@ export function SwitchOperations() {
     if (bRes.data) setBanks(bRes.data as BankConn[]);
     if (rRes.data) setRuns(rRes.data as Run[]);
     if (sRes.data) setSpans(sRes.data as Span[]);
+    if (eRes.data) setEvents(eRes.data as SwitchEvent[]);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Realtime: any new switch_event (from LipafoPay flow, Fastify sim, seeder)
+    // gets prepended so the demo log is always live.
+    const channel = supabase
+      .channel("switch_events_admin")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "switch_events" },
+        (payload) => {
+          setEvents((prev) => [payload.new as SwitchEvent, ...prev].slice(0, 300));
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const seedLoad = async (count: number) => {
     setBusy(true);
@@ -261,6 +282,7 @@ export function SwitchOperations() {
           <TabsTrigger value="trace"><Search className="h-4 w-4 mr-2" />Trace search</TabsTrigger>
           <TabsTrigger value="patterns"><Cpu className="h-4 w-4 mr-2" />8 patterns map</TabsTrigger>
           <TabsTrigger value="fastify-sim"><Rocket className="h-4 w-4 mr-2" />Fastify sim</TabsTrigger>
+          <TabsTrigger value="events"><ScrollText className="h-4 w-4 mr-2" />Events log</TabsTrigger>
         </TabsList>
 
         <TabsContent value="intents">
@@ -614,6 +636,100 @@ export function SwitchOperations() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="events">
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ScrollText className="h-4 w-4 text-primary" /> Switch events log — append-only proof of credit
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Every state transition the switch writes to <code className="font-mono">switch_events</code> appears here in
+                real time. A <Badge variant="default" className="mx-1">credit.confirmed</Badge> row with
+                <code className="font-mono"> to_state=COMPLETED</code> and a bank reference in the payload is the receipt
+                that the merchant was paid. Includes intents from LipafoPay, Fastify sim, and the demo seeder — persisted
+                forever.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2 flex-wrap items-center">
+                <Input placeholder="Filter by trace_id, intent_id, or event_type (e.g. credit.confirmed)"
+                  value={eventFilter}
+                  onChange={(e) => setEventFilter(e.target.value)}
+                  className="font-mono text-xs max-w-[420px]" />
+                <Button onClick={load} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" /> Reload
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {events.length} event{events.length === 1 ? "" : "s"} (live · auto-updates on every transaction)
+                </span>
+              </div>
+              <div className="max-h-[560px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Transition</TableHead>
+                      <TableHead>Intent</TableHead>
+                      <TableHead>Trace</TableHead>
+                      <TableHead>Payload</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events
+                      .filter((e) => {
+                        const q = eventFilter.trim().toLowerCase();
+                        if (!q) return true;
+                        return (
+                          e.trace_id?.toLowerCase().includes(q) ||
+                          (e.intent_id ?? "").toLowerCase().includes(q) ||
+                          e.event_type.toLowerCase().includes(q) ||
+                          (e.to_state ?? "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((e) => {
+                        const isCredit = e.event_type === "credit.confirmed" || e.to_state === "COMPLETED";
+                        return (
+                          <TableRow key={e.id} className={isCredit ? "bg-success/5" : ""}>
+                            <TableCell className="text-xs whitespace-nowrap">
+                              {new Date(e.created_at).toLocaleTimeString("en-KE")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={isCredit ? "default" : "secondary"} className="font-mono text-[10px]">
+                                {e.event_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs font-mono">
+                              {e.from_state ?? "∅"} → <span className={isCredit ? "text-success font-semibold" : ""}>{e.to_state ?? "∅"}</span>
+                            </TableCell>
+                            <TableCell className="font-mono text-[10px] text-muted-foreground">
+                              {e.intent_id ? e.intent_id.slice(0, 8) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <button className="font-mono text-[10px] text-primary underline"
+                                onClick={() => setTraceQuery(e.trace_id)}>
+                                {e.trace_id.slice(0, 8)}
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-[10px] font-mono text-muted-foreground max-w-[320px] truncate"
+                              title={JSON.stringify(e.payload)}>
+                              {JSON.stringify(e.payload)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    {events.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No events yet — run a LipafoPay transaction, the Fastify sim, or "Generate 20 txns".
+                      </TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
