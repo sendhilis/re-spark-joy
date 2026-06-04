@@ -39,6 +39,11 @@ type Span = {
   status: string; duration_ms: number | null; started_at: string;
   attributes: Record<string, any>;
 };
+type SwitchEvent = {
+  id: number; intent_id: string | null; trace_id: string; span_id: string;
+  event_type: string; from_state: string | null; to_state: string | null;
+  payload: Record<string, any>; created_at: string;
+};
 
 export function SwitchOperations() {
   const [intents, setIntents] = useState<Intent[]>([]);
