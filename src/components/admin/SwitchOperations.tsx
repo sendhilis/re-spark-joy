@@ -74,11 +74,12 @@ export function SwitchOperations() {
   });
 
   const load = async () => {
-    const [iRes, bRes, rRes, sRes] = await Promise.all([
+    const [iRes, bRes, rRes, sRes, eRes] = await Promise.all([
       supabase.from("transaction_intents").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("bank_connectors").select("*").order("bank_code"),
       supabase.from("settlement_runs").select("*").order("run_date", { ascending: false }).limit(10),
       supabase.from("trace_spans").select("*").order("started_at", { ascending: false }).limit(50),
+      supabase.from("switch_events").select("*").order("id", { ascending: false }).limit(200),
     ]);
     if (iRes.data) {
       setIntents(iRes.data as Intent[]);
@@ -89,9 +90,22 @@ export function SwitchOperations() {
     if (bRes.data) setBanks(bRes.data as BankConn[]);
     if (rRes.data) setRuns(rRes.data as Run[]);
     if (sRes.data) setSpans(sRes.data as Span[]);
+    if (eRes.data) setEvents(eRes.data as SwitchEvent[]);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Realtime: any new switch_event (from LipafoPay flow, Fastify sim, seeder)
+    // gets prepended so the demo log is always live.
+    const channel = supabase
+      .channel("switch_events_admin")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "switch_events" },
+        (payload) => {
+          setEvents((prev) => [payload.new as SwitchEvent, ...prev].slice(0, 300));
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const seedLoad = async (count: number) => {
     setBusy(true);
