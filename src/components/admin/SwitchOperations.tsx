@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Activity, AlertTriangle, CircuitBoard, Database, GitBranch,
-  PlayCircle, Search, ShieldAlert, Zap, RefreshCw, Cpu, Rocket,
+  PlayCircle, Search, ShieldAlert, Zap, RefreshCw, Cpu, Rocket, ScrollText,
 } from "lucide-react";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-KE").format(n);
