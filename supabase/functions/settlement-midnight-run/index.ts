@@ -47,11 +47,16 @@ Deno.serve(async (req) => {
 
     const cutoff = new Date(`${cycleDate}T23:59:59Z`);
 
-    // 1. Build synthetic positions per bank (in real life this would aggregate switch_events)
+    // 1. Build positions per bank.
+    // LipafoPay reality: customers DR Lipafo, merchants @ bank are CR'd -> Lipafo
+    // ALWAYS owes the terminating bank. Outbound (from Lipafo to bank) must
+    // dominate inbound, so net_position = inbound - outbound is negative
+    // -> direction "LIPAFO_PAYS_BANK". Inbound represents the smaller reverse
+    // flow (refunds, reversals, bank-originated credits to Lipafo wallets).
     const positions = PARTICIPATING_BANKS.map((b) => {
-      const inbound = Math.round(8_000_000 + Math.random() * 40_000_000);
-      const outbound = Math.round(8_000_000 + Math.random() * 40_000_000);
-      const net = inbound - outbound;
+      const outbound = Math.round(5_000_000 + Math.random() * 30_000_000);
+      const inbound = Math.round(outbound * (0.05 + Math.random() * 0.10));
+      const net = inbound - outbound; // always negative -> Lipafo pays bank
       return {
         position_date: cycleDate,
         participating_bank: b.name,
