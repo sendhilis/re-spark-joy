@@ -34,6 +34,7 @@ type Dispatch = {
 
 type LipafoPayTx = {
   id: string;
+  type: string;
   amount: number;
   description: string;
   recipient: string | null;
@@ -52,6 +53,7 @@ const fmtKES = (n: number) =>
 // Resolve the bank rail from a LipafoPay transaction description / recipient
 const resolveBank = (tx: LipafoPayTx): string => {
   const blob = `${tx.description ?? ""} ${tx.recipient ?? ""}`;
+  if (/Deposit via Bank Transfer/i.test(blob)) return "KCB Bank Kenya";
   if (/LMID/i.test(blob)) return "LIPAFO_WALLET";
   for (const b of PARTICIPATING_BANKS) {
     const short = b.split(" ")[0];
@@ -59,6 +61,22 @@ const resolveBank = (tx: LipafoPayTx): string => {
   }
   if (/Co-op/i.test(blob)) return "Co-operative Bank";
   return "Unrouted";
+};
+
+const classifySettlementDirection = (tx: LipafoPayTx): "inbound" | "outbound" | null => {
+  if (tx.status !== "completed") return null;
+
+  if (tx.type === "qr_payment") return "outbound";
+
+  if (tx.type === "sent" && /Bank Transfer to/i.test(tx.description ?? "")) {
+    return "outbound";
+  }
+
+  if (tx.type === "received" && /Deposit via Bank Transfer/i.test(tx.description ?? "")) {
+    return "inbound";
+  }
+
+  return null;
 };
 
 export function SettlementEngine() {
@@ -71,7 +89,7 @@ export function SettlementEngine() {
     const [pRes, dRes, tRes] = await Promise.all([
       supabase.from("settlement_positions").select("*").order("position_date", { ascending: false }).limit(100),
       supabase.from("settlement_dispatches").select("*").order("scheduled_at", { ascending: false }).limit(100),
-      supabase.from("transactions").select("id,amount,description,recipient,created_at,status")
+      supabase.from("transactions").select("id,type,amount,description,recipient,created_at,status")
         .eq("type", "qr_payment").order("created_at", { ascending: false }).limit(50),
     ]);
     if (pRes.data) setPositions(pRes.data as Position[]);
@@ -88,53 +106,53 @@ export function SettlementEngine() {
       const cutoff = new Date();
       cutoff.setHours(13, 0, 0, 0);
 
-      // Pull real LipafoPay transactions for today and aggregate per terminating bank.
-      // A customer LipafoPay txn = money LEAVES the Lipafo settlement wallet and Lipafo
-      // owes the terminating bank (which will credit the merchant). So every such txn is
-      // OUTBOUND from Lipafo → net_position < 0 → "Lipafo owes Bank".
+      // Build today's real interbank settlement movements from wallet transactions.
+      // - qr_payment / bank transfer out => outbound from Lipafo
+      // - bank deposit into wallet => inbound to Lipafo
+      // net_position = inbound - outbound
       const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
       const { data: todaysTxs } = await supabase
         .from("transactions")
-        .select("id,amount,description,recipient,created_at,status")
-        .eq("type", "qr_payment")
+        .select("id,type,amount,description,recipient,created_at,status")
         .gte("created_at", startOfDay.toISOString());
 
-      const realAgg: Record<string, { outbound: number; count: number }> = {};
+      const realAgg: Record<string, { inbound: number; outbound: number; count: number }> = {};
       (todaysTxs ?? []).forEach((t: any) => {
         const bank = resolveBank(t as LipafoPayTx);
-        if (bank === "LIPAFO_WALLET" || bank === "Unrouted") return; // internal rail, no inter-bank position
+        const direction = classifySettlementDirection(t as LipafoPayTx);
+        if (!direction || bank === "LIPAFO_WALLET" || bank === "Unrouted") return;
         const amt = Math.abs(Number(t.amount));
-        if (!realAgg[bank]) realAgg[bank] = { outbound: 0, count: 0 };
-        realAgg[bank].outbound += amt;
+        if (!realAgg[bank]) realAgg[bank] = { inbound: 0, outbound: 0, count: 0 };
+        realAgg[bank][direction] += amt;
         realAgg[bank].count += 1;
       });
 
-      const newPositions = PARTICIPATING_BANKS.map((bank) => {
+      const newPositions = PARTICIPATING_BANKS.map((bank, index) => {
         const real = realAgg[bank];
         if (real) {
-          // Real LipafoPay flow today → Lipafo owes Bank (outbound > 0, inbound = 0)
           return {
             position_date: today,
             participating_bank: bank,
-            inbound_volume: 0,
+            inbound_volume: real.inbound,
             outbound_volume: real.outbound,
-            net_position: -real.outbound, // negative = Lipafo owes Bank
+            net_position: real.inbound - real.outbound,
             transaction_count: real.count,
             cutoff_at: cutoff.toISOString(),
             status: "pending",
           };
         }
-        // Synthetic baseline for banks with no real demo txns today.
-        // Bias OUTBOUND > inbound so the direction reads correctly as "Lipafo owes Bank"
-        // (customers pay merchants far more than banks owe Lipafo via refunds/reversals).
-        const outbound = Math.round(5_000_000 + Math.random() * 30_000_000);
-        const inbound = Math.round(outbound * (0.05 + Math.random() * 0.15));
+        // Mixed demo baseline for banks with no real movements today.
+        // A live switch has both bank→Lipafo and Lipafo→bank legs, so keep both directions visible.
+        const dominant = Math.round(4_000_000 + Math.random() * 18_000_000);
+        const minor = Math.round(dominant * (0.35 + Math.random() * 0.4));
+        const inbound = index % 2 === 0 ? dominant : minor;
+        const outbound = index % 2 === 0 ? minor : dominant;
         return {
           position_date: today,
           participating_bank: bank,
           inbound_volume: inbound,
           outbound_volume: outbound,
-          net_position: inbound - outbound, // negative → Lipafo owes Bank
+          net_position: inbound - outbound,
           transaction_count: Math.round(500 + Math.random() * 5000),
           cutoff_at: cutoff.toISOString(),
           status: "pending",
