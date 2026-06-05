@@ -308,7 +308,6 @@ export function SettlementEngine() {
                   </Table>
                 );
               })()}
-              </Table>
             </CardContent>
           </Card>
         </TabsContent>
