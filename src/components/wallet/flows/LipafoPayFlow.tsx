@@ -165,17 +165,17 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
         .from("settlement_positions").select("*")
         .eq("position_date", today).eq("participating_bank", sourceBank).maybeSingle();
       if (existing) {
-        const newInbound = Number(existing.inbound_volume) + amt;
+        const newOutbound = Number(existing.outbound_volume) + amt;
         await supabase.from("settlement_positions").update({
-          inbound_volume: newInbound,
+          outbound_volume: newOutbound,
           transaction_count: (existing.transaction_count || 0) + 1,
-          net_position: newInbound - Number(existing.outbound_volume),
+          net_position: Number(existing.inbound_volume) - newOutbound,
         }).eq("id", existing.id);
         positionId = existing.id;
       } else {
         const { data: ins } = await supabase.from("settlement_positions").insert({
           position_date: today, participating_bank: sourceBank,
-          inbound_volume: amt, outbound_volume: 0, net_position: amt,
+          inbound_volume: 0, outbound_volume: amt, net_position: -amt,
           transaction_count: 1, cutoff_at: cutoff.toISOString(), status: "pending",
         }).select().single();
         positionId = ins?.id;
