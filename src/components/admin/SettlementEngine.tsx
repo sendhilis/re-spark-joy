@@ -88,16 +88,53 @@ export function SettlementEngine() {
       const cutoff = new Date();
       cutoff.setHours(13, 0, 0, 0);
 
-      // Synthetic baseline volumes per bank (Lipafo ↔ Bank) + overlay any real LipafoPay txs from today
+      // Pull real LipafoPay transactions for today and aggregate per terminating bank.
+      // A customer LipafoPay txn = money LEAVES the Lipafo settlement wallet and Lipafo
+      // owes the terminating bank (which will credit the merchant). So every such txn is
+      // OUTBOUND from Lipafo → net_position < 0 → "Lipafo owes Bank".
+      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+      const { data: todaysTxs } = await supabase
+        .from("transactions")
+        .select("id,amount,description,recipient,created_at,status")
+        .eq("type", "qr_payment")
+        .gte("created_at", startOfDay.toISOString());
+
+      const realAgg: Record<string, { outbound: number; count: number }> = {};
+      (todaysTxs ?? []).forEach((t: any) => {
+        const bank = resolveBank(t as LipafoPayTx);
+        if (bank === "LIPAFO_WALLET" || bank === "Unrouted") return; // internal rail, no inter-bank position
+        const amt = Math.abs(Number(t.amount));
+        if (!realAgg[bank]) realAgg[bank] = { outbound: 0, count: 0 };
+        realAgg[bank].outbound += amt;
+        realAgg[bank].count += 1;
+      });
+
       const newPositions = PARTICIPATING_BANKS.map((bank) => {
-        const inbound = Math.round(5_000_000 + Math.random() * 30_000_000);
+        const real = realAgg[bank];
+        if (real) {
+          // Real LipafoPay flow today → Lipafo owes Bank (outbound > 0, inbound = 0)
+          return {
+            position_date: today,
+            participating_bank: bank,
+            inbound_volume: 0,
+            outbound_volume: real.outbound,
+            net_position: -real.outbound, // negative = Lipafo owes Bank
+            transaction_count: real.count,
+            cutoff_at: cutoff.toISOString(),
+            status: "pending",
+          };
+        }
+        // Synthetic baseline for banks with no real demo txns today.
+        // Bias OUTBOUND > inbound so the direction reads correctly as "Lipafo owes Bank"
+        // (customers pay merchants far more than banks owe Lipafo via refunds/reversals).
         const outbound = Math.round(5_000_000 + Math.random() * 30_000_000);
+        const inbound = Math.round(outbound * (0.05 + Math.random() * 0.15));
         return {
           position_date: today,
           participating_bank: bank,
           inbound_volume: inbound,
           outbound_volume: outbound,
-          net_position: inbound - outbound,
+          net_position: inbound - outbound, // negative → Lipafo owes Bank
           transaction_count: Math.round(500 + Math.random() * 5000),
           cutoff_at: cutoff.toISOString(),
           status: "pending",
@@ -111,7 +148,7 @@ export function SettlementEngine() {
 
       if (error) throw error;
 
-      // T+1 dispatches: Lipafo settles to banks where Lipafo owes (net_position < 0 from bank's view)
+      // T+1 dispatches: Lipafo settles to banks where Lipafo owes (net_position < 0)
       const dispatchRows = (inserted || [])
         .filter((p) => p.net_position < 0)
         .map((p) => {
@@ -133,7 +170,8 @@ export function SettlementEngine() {
         await supabase.from("settlement_dispatches").insert(dispatchRows);
       }
 
-      toast.success(`EOD cut-off complete — ${inserted?.length} bank positions, ${dispatchRows.length} T+1 dispatches scheduled by Lipafo`);
+      const realCount = Object.keys(realAgg).length;
+      toast.success(`EOD cut-off complete — ${inserted?.length} bank positions (${realCount} from real LipafoPay txns), ${dispatchRows.length} T+1 dispatches scheduled`);
       await load();
     } catch (e) {
       toast.error(`Cut-off failed: ${(e as Error).message}`);
