@@ -61,12 +61,12 @@ Deno.serve(async (req) => {
     const { data: intents } = await supabase.from("transaction_intents")
       .select("id,payee_bank,amount").in("id", intentIds);
 
-    const perBank = new Map<string, { volume: number; count: number }>();
+    const perBank = new Map<string, { inbound: number; outbound: number; count: number }>();
     let totalVol = 0;
     for (const i of intents ?? []) {
       const bank = i.payee_bank ?? "INTERNAL";
-      const cur = perBank.get(bank) ?? { volume: 0, count: 0 };
-      cur.volume += Number(i.amount);
+      const cur = perBank.get(bank) ?? { inbound: 0, outbound: 0, count: 0 };
+      cur.outbound += Number(i.amount);
       cur.count += 1;
       perBank.set(bank, cur);
       totalVol += Number(i.amount);
@@ -76,9 +76,9 @@ Deno.serve(async (req) => {
     const positions = Array.from(perBank.entries()).map(([bank, v]) => ({
       position_date: today,
       participating_bank: bank,
-      inbound_volume: v.volume,
-      outbound_volume: 0,
-      net_position: -v.volume, // Lipafo owes the bank for credits
+      inbound_volume: v.inbound,
+      outbound_volume: v.outbound,
+      net_position: v.inbound - v.outbound,
       transaction_count: v.count,
       cutoff_at: new Date().toISOString(),
       status: "pending",
