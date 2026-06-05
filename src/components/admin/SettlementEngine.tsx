@@ -217,71 +217,96 @@ export function SettlementEngine() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Network className="h-4 w-4 text-primary" />
-                Customer LipafoPay Transactions → Settlement Trace
+                Customer LipafoPay Transactions → Settlement Journal (DR / CR)
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Each customer payment debits the Lipafo wallet and posts a leg into the Lipafo Settlement Engine.
-                Bank-linked merchants (MSISDN) settle T+1 to the merchant's bank; LMID merchants settle instantly on the Lipafo internal rail.
+                Double-entry view of every customer payment. Each LipafoPay txn posts two legs:
+                <span className="font-semibold text-destructive"> DR Lipafo Settlement Wallet</span> and
+                <span className="font-semibold text-success"> CR Merchant a/c at terminating bank</span>
+                {" "}(e.g. <em>Naivas @ Equity Bank</em>). Bank-linked (MSISDN) settles T+1; LMID merchants settle instantly on the Lipafo internal rail.
               </p>
+              <div className="flex flex-wrap gap-2 pt-2 text-[11px]">
+                <Badge variant="outline" className="border-destructive/40 text-destructive">DR = Debit (money out of Lipafo)</Badge>
+                <Badge variant="outline" className="border-success/40 text-success">CR = Credit (money posted at terminating bank)</Badge>
+                <Badge variant="secondary">Bank Position = cumulative "Lipafo owes Bank" pending T+1 settlement</Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {(() => {
-                // Compute running per-bank position in chronological order so each row shows
-                // the terminating bank's prev → new "Lipafo owes Bank" position after the credit posts.
                 const asc = [...lipafoTxs].sort(
                   (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 );
-                const running: Record<string, number> = {};
+                const runningBank: Record<string, number> = {};
+                let runningLipafoDR = 0;
                 const enriched = asc.map((tx) => {
                   const bank = resolveBank(tx);
                   const amt = Math.abs(Number(tx.amount));
                   const isInternal = bank === "LIPAFO_WALLET" || bank === "Unrouted";
-                  const before = running[bank] ?? 0;
-                  const after = isInternal ? before : before + amt;
-                  if (!isInternal) running[bank] = after;
-                  return { tx, bank, amt, isInternal, before, after };
-                }).reverse(); // newest first
+                  const bankBefore = runningBank[bank] ?? 0;
+                  const bankAfter = isInternal ? bankBefore : bankBefore + amt;
+                  if (!isInternal) runningBank[bank] = bankAfter;
+                  runningLipafoDR += amt;
+                  const lipafoAfter = runningLipafoDR;
+                  const merchant = (tx.description ?? "").split(/ - | to | – /i)[0].trim() || "Merchant";
+                  return { tx, bank, amt, isInternal, bankBefore, bankAfter, lipafoAfter, merchant };
+                }).reverse();
 
                 return (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Time</TableHead>
-                        <TableHead>Merchant / Description</TableHead>
-                        <TableHead>Identifier</TableHead>
+                        <TableHead>Narration</TableHead>
+                        <TableHead className="bg-destructive/10">DR Account</TableHead>
+                        <TableHead className="bg-success/10">CR Account</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>Terminating Bank</TableHead>
                         <TableHead className="text-right bg-muted/40">
-                          Position BEFORE
+                          Bank Position BEFORE
                           <div className="text-[10px] font-normal text-muted-foreground">Lipafo owes Bank</div>
                         </TableHead>
                         <TableHead className="text-center bg-primary/10">Δ Credit posted</TableHead>
                         <TableHead className="text-right bg-warning/10">
-                          Position AFTER
+                          Bank Position AFTER
                           <div className="text-[10px] font-normal text-muted-foreground">Lipafo owes Bank</div>
                         </TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {enriched.map(({ tx, bank, amt, isInternal, before, after }) => {
+                      {enriched.map(({ tx, bank, amt, isInternal, bankBefore, bankAfter, lipafoAfter, merchant }) => {
                         const idMatch = (tx.recipient ?? "").match(/(MSISDN\s*\+?\d+|LMID-\d+|LPF-[A-Z0-9-]+)/i);
-                        const identifier = idMatch?.[0] ?? "—";
+                        const identifier = idMatch?.[0] ?? "";
+                        const crAccountLabel = isInternal
+                          ? `Lipafo Merchant Float — ${merchant}`
+                          : `${merchant} a/c @ ${bank}`;
                         return (
                           <TableRow key={tx.id}>
                             <TableCell className="text-xs whitespace-nowrap">
                               {new Date(tx.created_at).toLocaleString("en-KE", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </TableCell>
-                            <TableCell className="text-xs max-w-[220px] truncate" title={tx.description}>{tx.description}</TableCell>
-                            <TableCell className="font-mono text-[11px]">{identifier}</TableCell>
-                            <TableCell className="text-right text-xs font-semibold text-warning">{fmtKES(amt)}</TableCell>
-                            <TableCell className="text-xs">
-                              <Badge variant={isInternal ? "secondary" : "outline"}>
-                                {isInternal ? "Lipafo Internal" : `${bank} (T+1)`}
-                              </Badge>
+                            <TableCell className="text-xs max-w-[200px]">
+                              <div className="truncate" title={tx.description}>{tx.description}</div>
+                              {identifier && <div className="font-mono text-[10px] text-muted-foreground">{identifier}</div>}
                             </TableCell>
+                            <TableCell className="text-xs bg-destructive/5">
+                              <div className="font-semibold text-destructive flex items-center gap-1">
+                                <TrendingDown className="h-3 w-3" /> DR Lipafo Settlement Wallet
+                              </div>
+                              <div className="text-[10px] text-muted-foreground font-mono">
+                                cum. DR: {fmtKES(lipafoAfter)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs bg-success/5">
+                              <div className="font-semibold text-success flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" /> CR {crAccountLabel}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {isInternal ? "internal rail · instant" : `via ${bank} · T+1`}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right text-xs font-mono font-semibold">{fmtKES(amt)}</TableCell>
                             <TableCell className="text-right text-xs font-mono bg-muted/40">
-                              {isInternal ? <span className="text-muted-foreground">n/a</span> : fmtKES(before)}
+                              {isInternal ? <span className="text-muted-foreground">n/a</span> : fmtKES(bankBefore)}
                             </TableCell>
                             <TableCell className="text-center bg-primary/10">
                               {isInternal ? (
@@ -293,7 +318,7 @@ export function SettlementEngine() {
                               )}
                             </TableCell>
                             <TableCell className="text-right text-xs font-mono font-bold text-warning bg-warning/10">
-                              {isInternal ? <span className="text-muted-foreground">n/a</span> : fmtKES(after)}
+                              {isInternal ? <span className="text-muted-foreground">n/a</span> : fmtKES(bankAfter)}
                             </TableCell>
                             <TableCell>
                               <Badge variant="default" className="capitalize">{tx.status}</Badge>
@@ -311,6 +336,7 @@ export function SettlementEngine() {
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="positions">
           <Card className="glass-card">
