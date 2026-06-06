@@ -386,6 +386,42 @@ Deno.serve(async (req) => {
       attributes: { amount: body.amount, rail: body.rail, bank: body.payee_bank, shard: shardNo, protocol: "daraja-rest" },
     });
 
+    // ── Cross-bank payload audit (proof artefact for masking compliance).
+    //    Captures: what the originating bank sent, what Lipafo stored,
+    //    and what the terminating bank actually received.
+    const originatingPayload = {
+      intent_key: body.idempotency_key,
+      payer_msisdn: body.payer_identifier,
+      payer_bank: body.payer_bank ?? null,
+      paybill_or_till: body.payee_identifier,
+      amount: body.amount,
+      currency: body.currency ?? "KES",
+    };
+    const switchStoredPayload = {
+      intent_id: intent.id,
+      payer_bank: body.payer_bank ?? null,
+      payer_token: payerToken,
+      payer_msisdn_visible: payerVisible,
+      payer_msisdn_encrypted: payerCipher,
+      masking_secret_ref: maskingSecretRef,
+      payee_bank: body.payee_bank ?? null,
+      payee_identifier: body.payee_identifier,
+      amount: body.amount,
+    };
+    const merchantReceipt = `KES ${Number(body.amount).toLocaleString()} received via LipafoPay. Ref: ${bankRef ?? intent.id}.`;
+    await supabase.from("bank_payload_audit").insert({
+      intent_id: intent.id,
+      trace_id,
+      originating_bank: body.payer_bank ?? "UNKNOWN",
+      terminating_bank: body.payee_bank ?? "UNKNOWN",
+      masking_applied: maskingApplied,
+      originating_payload: originatingPayload,
+      switch_stored_payload: switchStoredPayload,
+      terminating_payload: terminatingPayload,
+      merchant_receipt_text: merchantReceipt,
+    });
+
+
     return new Response(JSON.stringify({
       ok: true, trace_id, intent_id: intent.id, state: "COMPLETED",
       ResultCode: 0, ResultDesc: "Success",
