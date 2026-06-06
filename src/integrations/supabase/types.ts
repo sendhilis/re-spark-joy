@@ -461,6 +461,48 @@ export type Database = {
           },
         ]
       }
+      bank_payload_audit: {
+        Row: {
+          created_at: string
+          id: string
+          intent_id: string | null
+          masking_applied: boolean
+          merchant_receipt_text: string | null
+          originating_bank: string
+          originating_payload: Json
+          switch_stored_payload: Json
+          terminating_bank: string
+          terminating_payload: Json
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intent_id?: string | null
+          masking_applied?: boolean
+          merchant_receipt_text?: string | null
+          originating_bank: string
+          originating_payload: Json
+          switch_stored_payload: Json
+          terminating_bank: string
+          terminating_payload: Json
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intent_id?: string | null
+          masking_applied?: boolean
+          merchant_receipt_text?: string | null
+          originating_bank?: string
+          originating_payload?: Json
+          switch_stored_payload?: Json
+          terminating_bank?: string
+          terminating_payload?: Json
+          trace_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -1087,6 +1129,8 @@ export type Database = {
           last_sync_at: string | null
           legal_entity_name: string | null
           lifecycle_stage: Database["public"]["Enums"]["bank_lifecycle_stage"]
+          masking_secret_ref: string | null
+          msisdn_masking_enabled: boolean
           notes: string | null
           paybill_prefix: string | null
           registration_number: string | null
@@ -1112,6 +1156,8 @@ export type Database = {
           last_sync_at?: string | null
           legal_entity_name?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
+          masking_secret_ref?: string | null
+          msisdn_masking_enabled?: boolean
           notes?: string | null
           paybill_prefix?: string | null
           registration_number?: string | null
@@ -1137,6 +1183,8 @@ export type Database = {
           last_sync_at?: string | null
           legal_entity_name?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["bank_lifecycle_stage"]
+          masking_secret_ref?: string | null
+          msisdn_masking_enabled?: boolean
           notes?: string | null
           paybill_prefix?: string | null
           registration_number?: string | null
@@ -1652,7 +1700,11 @@ export type Database = {
           last_error: string | null
           payee_bank: string | null
           payee_identifier: string
+          payer_bank: string | null
           payer_identifier: string
+          payer_msisdn_encrypted: string | null
+          payer_msisdn_visible: string | null
+          payer_token: string | null
           rail: string
           state: string
           trace_id: string
@@ -1670,7 +1722,11 @@ export type Database = {
           last_error?: string | null
           payee_bank?: string | null
           payee_identifier: string
+          payer_bank?: string | null
           payer_identifier: string
+          payer_msisdn_encrypted?: string | null
+          payer_msisdn_visible?: string | null
+          payer_token?: string | null
           rail?: string
           state?: string
           trace_id: string
@@ -1688,7 +1744,11 @@ export type Database = {
           last_error?: string | null
           payee_bank?: string | null
           payee_identifier?: string
+          payer_bank?: string | null
           payer_identifier?: string
+          payer_msisdn_encrypted?: string | null
+          payer_msisdn_visible?: string | null
+          payer_token?: string | null
           rail?: string
           state?: string
           trace_id?: string
