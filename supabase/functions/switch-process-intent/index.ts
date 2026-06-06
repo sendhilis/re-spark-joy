@@ -23,12 +23,40 @@ const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 interface IntentReq {
   idempotency_key: string;     // == X-Lipafo-Intent-Key (UUID v4)
   payer_identifier: string;    // payer MSISDN or account
+  payer_bank?: string;         // originating bank code (e.g. GAB)
   payee_identifier: string;    // Paybill or Till number
   payee_bank?: string;
   amount: number;
   currency?: string;
   rail?: string;
   trace_id?: string;
+}
+
+// ── MSISDN masking helpers (FTS v3.0 §2.5 — minimum-necessary-data).
+//    HMAC-SHA256(secret, msisdn|date) → stable token used for idempotency / velocity.
+//    The raw MSISDN is wrapped in an HSM cipher_ref (decryptable only by the
+//    originating bank); only a masked-visible form is exposed in cross-bank views.
+async function hmacToken(secret: string, msisdn: string): Promise<string> {
+  const enc = new TextEncoder();
+  const date = new Date().toISOString().slice(0, 10);
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${msisdn}|${date}`));
+  const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return `tok_${hex.slice(0, 24)}`;
+}
+function maskMsisdn(msisdn: string): string {
+  if (!msisdn || msisdn.length < 4) return "XXXX";
+  return msisdn.slice(0, 4) + "X".repeat(Math.max(0, msisdn.length - 6)) + msisdn.slice(-2);
+}
+async function cipherRef(secret: string, msisdn: string): Promise<string> {
+  // Demo placeholder: SHA-256(secret|msisdn) → opaque cipher reference.
+  // Real deployment hands msisdn to an HSM and stores the returned ciphertext blob.
+  const enc = new TextEncoder();
+  const digest = await crypto.subtle.digest("SHA-256", enc.encode(`${secret}|${msisdn}`));
+  const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return `enc:aes256gcm:${hex.slice(0, 32)}`;
 }
 
 // Per-bank OAuth2 token cache. Tokens TTL ~1h; we refresh slightly early.
