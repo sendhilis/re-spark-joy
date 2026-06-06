@@ -159,13 +159,41 @@ Deno.serve(async (req) => {
       }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── Resolve originating-bank masking policy. GAB-style banks demand the
+    //    payer MSISDN never crosses to the terminating bank. We compute the
+    //    HMAC token + masked + cipher-ref ONCE, here, before persistence.
+    let maskingApplied = false;
+    let maskingSecretRef: string | null = null;
+    let payerToken: string | null = null;
+    let payerVisible: string | null = null;
+    let payerCipher: string | null = null;
+    if (body.payer_bank) {
+      const { data: payerBankRow } = await supabase
+        .from("participating_banks")
+        .select("msisdn_masking_enabled,masking_secret_ref")
+        .eq("bank_code", body.payer_bank).maybeSingle();
+      if (payerBankRow?.msisdn_masking_enabled) {
+        maskingApplied = true;
+        maskingSecretRef = payerBankRow.masking_secret_ref ?? `hsm:${body.payer_bank}:msisdn:v1`;
+        const secret = `${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "lipafo"}::${maskingSecretRef}`;
+        payerToken = await hmacToken(secret, body.payer_identifier);
+        payerVisible = maskMsisdn(body.payer_identifier);
+        payerCipher = await cipherRef(secret, body.payer_identifier);
+      }
+    }
+
     // ── Insert intent in NEW state, then drive FSM and append events.
     //    UNIQUE(idempotency_key) makes this race-safe.
     const { data: intent, error: insErr } = await supabase
       .from("transaction_intents").insert({
         idempotency_key: body.idempotency_key,
         trace_id,
-        payer_identifier: body.payer_identifier,
+        // Persist the masked-visible form when masking is on; otherwise raw.
+        payer_identifier: maskingApplied ? (payerVisible ?? body.payer_identifier) : body.payer_identifier,
+        payer_bank: body.payer_bank ?? null,
+        payer_token: payerToken,
+        payer_msisdn_encrypted: payerCipher,
+        payer_msisdn_visible: payerVisible,
         payee_identifier: body.payee_identifier,
         payee_bank: body.payee_bank ?? null,
         amount: body.amount,
@@ -194,7 +222,7 @@ Deno.serve(async (req) => {
       });
     };
 
-    await logEvent("intent.received", null, "NEW", { amount: body.amount });
+    await logEvent("intent.received", null, "NEW", { amount: body.amount, masking_applied: maskingApplied });
 
     // Move to IN_FLIGHT
     await supabase.from("transaction_intents").update({ state: "IN_FLIGHT" }).eq("id", intent.id);
@@ -211,14 +239,12 @@ Deno.serve(async (req) => {
       if (bankRow?.id) {
         const { data: profile } = await supabase
           .from("bank_integration_profiles")
-          // pacs008_endpoint column re-purposed as the bank's Daraja base URL during pilot.
           .select("pacs008_endpoint,timeout_ms,hmac_key_ref,is_active,environment")
           .eq("bank_id", bankRow.id).eq("is_active", true).maybeSingle();
         if (profile?.pacs008_endpoint) baseUrl = profile.pacs008_endpoint;
         if (profile?.timeout_ms) timeoutMs = profile.timeout_ms;
       }
     }
-    // Default to bank simulator if no endpoint configured (pilot behaviour).
     if (!baseUrl) {
       baseUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bank-simulator`;
     }
@@ -226,15 +252,27 @@ Deno.serve(async (req) => {
     // ── OAuth2 token (Daraja-pattern). Cached per-bank with TTL.
     const accessToken = await getBankToken(body.payee_bank ?? "DEFAULT", baseUrl, clientId, clientSecret);
 
-    // ── Daraja-style payment initiate (debit leg).
-    const initiateBody = JSON.stringify({
+    // ── Daraja-style payment initiate (debit leg) — payload sent to TERMINATING bank.
+    //    When masking is on, payer_msisdn is STRIPPED. The terminating bank only
+    //    sees a payer_token + the originating bank code. They can credit the
+    //    merchant without ever learning the payer's number.
+    const terminatingPayload: Record<string, unknown> = {
       intent_key: body.idempotency_key,
-      payer_msisdn: body.payer_identifier,
       paybill_or_till: body.payee_identifier,
       amount: body.amount,
       currency: body.currency ?? "KES",
       intent_id: intent.id,
-    });
+      payer_bank: body.payer_bank ?? null,
+    };
+    if (maskingApplied) {
+      terminatingPayload.payer_token = payerToken;
+      terminatingPayload.payer_msisdn = null; // explicit absence for auditability
+      terminatingPayload.masking_policy = "FTS-v3.0-MSISDN-MASK";
+    } else {
+      terminatingPayload.payer_msisdn = body.payer_identifier;
+    }
+    const initiateBody = JSON.stringify(terminatingPayload);
+
 
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs);
