@@ -1,0 +1,1 @@
+DELETE FROM public.bank_payload_audit WHERE originating_bank = 'UNKNOWN' OR terminating_bank = 'UNKNOWN' OR (switch_stored_payload->>'payer_token') IS NULL;

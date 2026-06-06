@@ -409,17 +409,27 @@ Deno.serve(async (req) => {
       amount: body.amount,
     };
     const merchantReceipt = `KES ${Number(body.amount).toLocaleString()} received via LipafoPay. Ref: ${bankRef ?? intent.id}.`;
-    await supabase.from("bank_payload_audit").insert({
-      intent_id: intent.id,
-      trace_id,
-      originating_bank: body.payer_bank ?? "UNKNOWN",
-      terminating_bank: body.payee_bank ?? "UNKNOWN",
-      masking_applied: maskingApplied,
-      originating_payload: originatingPayload,
-      switch_stored_payload: switchStoredPayload,
-      terminating_payload: terminatingPayload,
-      merchant_receipt_text: merchantReceipt,
-    });
+    // Only audit true cross-bank intents (both originating and terminating bank present,
+    // and not a Lipafo-wallet-origin payment). Intra-wallet payments do not belong in
+    // the MSISDN masking proof console.
+    const isCrossBank =
+      !!body.payer_bank &&
+      !!body.payee_bank &&
+      body.payer_bank !== body.payee_bank &&
+      body.payer_identifier !== "lipafopay-wallet";
+    if (isCrossBank) {
+      await supabase.from("bank_payload_audit").insert({
+        intent_id: intent.id,
+        trace_id,
+        originating_bank: body.payer_bank!,
+        terminating_bank: body.payee_bank!,
+        masking_applied: maskingApplied,
+        originating_payload: originatingPayload,
+        switch_stored_payload: switchStoredPayload,
+        terminating_payload: terminatingPayload,
+        merchant_receipt_text: merchantReceipt,
+      });
+    }
 
 
     return new Response(JSON.stringify({

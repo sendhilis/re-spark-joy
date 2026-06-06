@@ -35,6 +35,8 @@ export function MSISDNMaskingProof() {
     const { data, error } = await supabase
       .from("bank_payload_audit")
       .select("*")
+      .neq("originating_bank", "UNKNOWN")
+      .neq("terminating_bank", "UNKNOWN")
       .order("created_at", { ascending: false })
       .limit(25);
     setLoading(false);
