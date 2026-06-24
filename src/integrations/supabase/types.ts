@@ -655,6 +655,51 @@ export type Database = {
         }
         Relationships: []
       }
+      kcb_buni_settings: {
+        Row: {
+          base_url: string
+          callback_url: string
+          client_id: string
+          client_secret: string
+          created_at: string
+          egress_ips: string[]
+          environment: string
+          id: string
+          notes: string
+          technical_contact: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_url?: string
+          callback_url?: string
+          client_id?: string
+          client_secret?: string
+          created_at?: string
+          egress_ips?: string[]
+          environment: string
+          id?: string
+          notes?: string
+          technical_contact?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_url?: string
+          callback_url?: string
+          client_id?: string
+          client_secret?: string
+          created_at?: string
+          egress_ips?: string[]
+          environment?: string
+          id?: string
+          notes?: string
+          technical_contact?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       lipafo_alias_registry: {
         Row: {
           account_name: string
