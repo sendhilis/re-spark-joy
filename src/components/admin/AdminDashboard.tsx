@@ -155,6 +155,7 @@ export function AdminDashboard() {
           <TabsList className="glass-card flex flex-wrap h-auto w-full justify-start gap-1 p-1.5">
             <TabsTrigger value="switch-ops" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Cpu className="h-3.5 w-3.5" />Switch Ops</TabsTrigger>
             <TabsTrigger value="bank-onboarding" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Building2 className="h-3.5 w-3.5" />Bank Onboarding</TabsTrigger>
+            <TabsTrigger value="kcb-buni-settings" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><KeyRound className="h-3.5 w-3.5" />KCB BUNI Settings</TabsTrigger>
             <TabsTrigger value="msisdn-masking" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><EyeOff className="h-3.5 w-3.5" />MSISDN Masking</TabsTrigger>
             <TabsTrigger value="load-test" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Zap className="h-3.5 w-3.5" />Load Test</TabsTrigger>
             <TabsTrigger value="agents" className="flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"><Store className="h-3.5 w-3.5" />{t('admin.agents')}</TabsTrigger>
