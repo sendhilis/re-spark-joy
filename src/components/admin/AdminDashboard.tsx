@@ -7,6 +7,7 @@ import { MSISDNMaskingProof } from "./MSISDNMaskingProof";
 import { SwitchOperations } from "./SwitchOperations";
 import { BankOnboardingDashboard } from "./BankOnboardingDashboard";
 import { StrategicGapsDashboard } from "./StrategicGapsDashboard";
+import { KCBBuniSettings } from "./KCBBuniSettings";
 import { TariffsPanel } from "./TariffsPanel";
 import { SwitchFeeExplainer } from "./SwitchFeeExplainer";
 import { SettlementEngine } from "./SettlementEngine";
