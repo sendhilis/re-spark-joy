@@ -69,7 +69,7 @@ export function WalletHeader() {
               Rukisha
             </h2>
             <p className="text-sm font-semibold text-primary">Equity Bank</p>
-            <p className="text-xs text-muted-foreground font-medium">{t('wallet.equityDiaspora')}</p>
+            <p className="text-xs text-muted-foreground font-medium">Diaspora Connect</p>
           </div>
         </div>
 
