@@ -50,7 +50,7 @@ const fmtKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }).format(n);
 
 /**
- * Lipafo switch fee schedule (KES). Designed to undercut the legacy
+ * Rukisha switch fee schedule (KES). Designed to undercut the legacy
  * "Bank → M-PESA → Paybill" double-fee path by 60-80%.
  * Legacy = Safaricom Bank-to-MPESA + MPESA Pay Bill (customer-to-business), 2024 published tariffs.
  */
@@ -154,7 +154,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
       await addTransaction({
         type: "qr_payment",
         amount: -totalDebit,
-        description: `LipafoPay → ${selected.merchant_name} (Paybill ${selected.paybill_number}${selected.till_number ? ` · Till ${selected.till_number}` : ""}) · ${sourceBank} · fee ${fmtKES(fee)} · saved ${fmtKES(savings)} vs M-PESA · No M-PESA`,
+        description: `Rukisha Pay → ${selected.merchant_name} (Paybill ${selected.paybill_number}${selected.till_number ? ` · Till ${selected.till_number}` : ""}) · ${sourceBank} · fee ${fmtKES(fee)} · saved ${fmtKES(savings)} vs M-PESA · No M-PESA`,
         recipient: selected.merchant_name,
         status: "completed",
         walletType: "main",
@@ -218,7 +218,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
 
       setTrace({ ref, positionId, dispatchId: disp?.id, intentId, traceId, resultCode, resultDesc });
       setStep("done");
-      toast.success(`Paid via Lipafo switch → ${sourceBank} · settles T+1 · No M-PESA`);
+      toast.success(`Paid via Rukisha switch → ${sourceBank} · settles T+1 · No M-PESA`);
     } catch (e) {
       toast.error(`Payment failed: ${(e as Error).message}`);
       setStep("confirm");
@@ -230,10 +230,10 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
       <DialogContent className="glass-card max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Network className="h-5 w-5 text-primary" /> LipafoPay
+            <Network className="h-5 w-5 text-primary" /> Rukisha Pay
           </DialogTitle>
           <DialogDescription>
-            Pay any participating-bank merchant using their existing <strong>Paybill / Till</strong>. Routed via the Lipafo switch — <strong>zero M-PESA involvement</strong>.
+            Pay any participating-bank merchant using their existing <strong>Paybill / Till</strong>. Routed via the Rukisha switch — <strong>zero M-PESA involvement</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -348,7 +348,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
               return (
                 <Card className="glass-card p-3 space-y-1.5 bg-primary/5 border-primary/20">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Lipafo switch fee</span>
+                    <span className="text-muted-foreground">Rukisha switch fee</span>
                     <span className="font-semibold text-foreground">{amt === 0 ? "—" : fee === 0 ? "Free" : fmtKES(fee)}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
@@ -372,7 +372,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             {/* Fee schedule (collapsible) */}
             <details className="glass-card rounded-lg p-3 text-xs">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
-                View full Lipafo fee schedule (vs M-PESA double-fee)
+                View full Rukisha fee schedule (vs M-PESA double-fee)
               </summary>
               <div className="mt-2 space-y-1">
                 {LIPAFO_FEE_BANDS.map((b, i) => {
@@ -407,7 +407,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Source bank</span><span>{bankMap[selected.bank_id]?.bank_name}</span></div>
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Paybill</span><span className="font-mono text-primary">{selected.paybill_number}</span></div>
               {selected.till_number && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Till</span><span className="font-mono">{selected.till_number}</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Lipafo switch · T+1 net</Badge></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Rukisha switch · T+1 net</Badge></div>
               <Separator />
               <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-lg text-primary">{fmtKES(Number(amount))}</span></div>
               {(() => {
@@ -418,7 +418,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
                 const pct = legacy > 0 ? Math.round((savings / legacy) * 100) : 0;
                 return (
                   <>
-                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lipafo switch fee</span><span className="font-semibold text-foreground">{fee === 0 ? "Free" : fmtKES(fee)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">Rukisha switch fee</span><span className="font-semibold text-foreground">{fee === 0 ? "Free" : fmtKES(fee)}</span></div>
                     <div className="flex justify-between text-xs"><span className="text-muted-foreground line-through opacity-70">M-PESA route (Bank→MPESA + Paybill)</span><span className="line-through opacity-70">{fmtKES(legacy)}</span></div>
                     <div className="flex justify-between text-xs"><span className="text-success">You save</span><span className="text-success font-semibold">{fmtKES(savings)} ({pct}%)</span></div>
                     <div className="flex justify-between text-sm pt-1 border-t border-border/40"><span className="text-muted-foreground">Total debit</span><span className="font-bold text-foreground">{fmtKES(amt + fee)}</span></div>
@@ -429,7 +429,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
             </Card>
             <Card className="glass-card p-3 bg-primary/5">
               <p className="text-xs text-muted-foreground">
-                Trace: Lipafo wallet → Switch (paybill {selected.paybill_number} lookup) → {bankMap[selected.bank_id]?.bank_name} pool → T+1 net dispatch directly to merchant. No Safaricom/M-PESA in the loop.
+                Trace: Rukisha wallet → Switch (paybill {selected.paybill_number} lookup) → {bankMap[selected.bank_id]?.bank_name} pool → T+1 net dispatch directly to merchant. No Safaricom/M-PESA in the loop.
               </p>
             </Card>
             <div className="flex gap-2">
@@ -442,7 +442,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
         {step === "processing" && (
           <div className="py-10 flex flex-col items-center gap-3">
             <Loader2 className="h-10 w-10 text-primary animate-spin" />
-            <p className="text-sm text-muted-foreground">Routing through Lipafo switch…</p>
+            <p className="text-sm text-muted-foreground">Routing through Rukisha switch…</p>
           </div>
         )}
 
@@ -460,7 +460,7 @@ export function LipafoPayFlow({ open, onOpenChange }: Props) {
               <div className="flex justify-between"><span className="text-muted-foreground">Paybill</span><span className="font-mono text-primary">{selected.paybill_number}</span></div>
               {selected.till_number && <div className="flex justify-between"><span className="text-muted-foreground">Till</span><span className="font-mono">{selected.till_number}</span></div>}
               <div className="flex justify-between"><span className="text-muted-foreground">Source bank</span><span>{bankMap[selected.bank_id]?.bank_name}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Lipafo switch · T+1</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><Badge variant="outline" className="text-[10px]">Rukisha switch · T+1</Badge></div>
               <div className="flex justify-between"><span className="text-muted-foreground">M-PESA</span><span className="text-success font-semibold">Bypassed</span></div>
               {trace.traceId && <div className="flex justify-between"><span className="text-muted-foreground">Trace ID</span><span className="font-mono text-[10px]">{trace.traceId}</span></div>}
               {trace.intentId && <div className="flex justify-between"><span className="text-muted-foreground">Intent ID</span><span className="font-mono text-[10px]">{trace.intentId.slice(0, 12)}…</span></div>}

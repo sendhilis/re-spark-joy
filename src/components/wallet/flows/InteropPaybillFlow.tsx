@@ -22,14 +22,14 @@ interface InteropPaybillFlowProps {
 interface Biller {
   id: string;
   name: string;
-  lipafoPaybill: string; // NEW Lipafo (KCB-issued) paybill
+  lipafoPaybill: string; // NEW Rukisha (Equity-issued) paybill
   category: string;
   popular?: boolean;
   settlementWindow: string; // e.g. "T+1"
 }
 
-// All paybills are NEW Lipafo numbers — issued by KCB, NO M-PESA connection.
-// Format: LPF-XXXXXX (6-digit Lipafo short code, KCB-orchestrated)
+// All paybills are NEW Rukisha numbers — issued by Equity, NO M-PESA connection.
+// Format: LPF-XXXXXX (6-digit Rukisha short code, Equity-orchestrated)
 const BILLER_DIRECTORY: Biller[] = [
   // Utilities
   { id: "kplc-prepaid",   name: "KPLC Prepaid (Token)",        lipafoPaybill: "LPF-100101", category: "Utilities", popular: true,  settlementWindow: "T+0" },
@@ -50,8 +50,8 @@ const BILLER_DIRECTORY: Biller[] = [
   { id: "startimes",      name: "StarTimes",                    lipafoPaybill: "LPF-300103", category: "Entertainment",                settlementWindow: "T+0" },
   { id: "showmax",        name: "Showmax",                      lipafoPaybill: "LPF-300104", category: "Entertainment",                settlementWindow: "T+0" },
 
-  // Banks — Lipafo settles directly to bank GL via KCB core
-  { id: "kcb-loan",       name: "KCB Bank — Loan Repayment",   lipafoPaybill: "LPF-400101", category: "Banks",                        settlementWindow: "Instant" },
+  // Banks — Rukisha settles directly to bank GL via Equity core
+  { id: "kcb-loan",       name: "Equity Bank — Loan Repayment",   lipafoPaybill: "LPF-400101", category: "Banks",                        settlementWindow: "Instant" },
   { id: "equity-loan",    name: "Equity Bank — Loan/Account",  lipafoPaybill: "LPF-400102", category: "Banks", popular: true,         settlementWindow: "T+0" },
   { id: "coop-bank",      name: "Co-operative Bank",            lipafoPaybill: "LPF-400103", category: "Banks",                        settlementWindow: "T+0" },
   { id: "absa-bank",      name: "Absa Bank Kenya",              lipafoPaybill: "LPF-400104", category: "Banks",                        settlementWindow: "T+0" },
@@ -79,7 +79,7 @@ const BILLER_DIRECTORY: Biller[] = [
   { id: "ecitizen",       name: "eCitizen Services",            lipafoPaybill: "LPF-700103", category: "Government",                   settlementWindow: "Instant" },
 ];
 
-// Flat KCB-orchestrated Lipafo fee tiers (in KES) — NO M-PESA charges ever
+// Flat Equity-orchestrated Rukisha fee tiers (in KES) — NO M-PESA charges ever
 const computeLipafoFee = (amount: number): number => {
   if (amount <= 0) return 0;
   if (amount <= 1000) return 10;
@@ -97,7 +97,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
   const [category, setCategory] = useState<string>("All");
   const [selectedBiller, setSelectedBiller] = useState<Biller | null>(null);
 
-  // Manual entry — Lipafo paybill only
+  // Manual entry — Rukisha paybill only
   const [manualPaybill, setManualPaybill] = useState("");
   const [manualName, setManualName] = useState("");
 
@@ -127,7 +127,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
       : `LPF-${manualPaybill.replace(/\D/g, "")}`;
     return {
       id: "manual",
-      name: manualName || `Lipafo Biller ${formatted}`,
+      name: manualName || `Rukisha Biller ${formatted}`,
       lipafoPaybill: formatted,
       category: "Custom",
       settlementWindow: "T+1",
@@ -166,7 +166,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
     await addTransaction({
       type: "bill",
       amount: -total,
-      description: `${activeBiller.name} • Lipafo (KCB) • Acc ${accountNumber}`,
+      description: `${activeBiller.name} • Rukisha (Equity) • Acc ${accountNumber}`,
       recipient: activeBiller.lipafoPaybill,
       status: "completed",
       walletType: "main",
@@ -181,10 +181,10 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Network className="h-5 w-5 text-primary" />
-            Lipafo Paybill — Powered by KCB
+            Rukisha Paybill — Powered by Equity
           </DialogTitle>
           <DialogDescription>
-            Direct bank-orchestrated bill payments. Flat fee, KCB-held float, zero mobile-money charges.
+            Direct bank-orchestrated bill payments. Flat fee, Equity-held float, zero mobile-money charges.
           </DialogDescription>
         </DialogHeader>
 
@@ -194,15 +194,15 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
             <div className="glass-card p-3 rounded-xl border border-primary/30 bg-primary/5 flex items-start gap-3">
               <Landmark className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground space-y-1">
-                <div><span className="text-foreground font-semibold">Lipafo is the primary rail.</span> Every paybill below is a KCB-issued Lipafo short code (LPF-XXXXXX).</div>
-                <div className="flex items-center gap-1 text-success"><Zap className="h-3 w-3" /> No M-PESA fees. No mobile-money intermediary. Flat KCB charge only.</div>
+                <div><span className="text-foreground font-semibold">Rukisha is the primary rail.</span> Every paybill below is a Equity-issued Rukisha short code (LPF-XXXXXX).</div>
+                <div className="flex items-center gap-1 text-success"><Zap className="h-3 w-3" /> No M-PESA fees. No mobile-money intermediary. Flat Equity charge only.</div>
               </div>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="directory">Lipafo Directory</TabsTrigger>
-                <TabsTrigger value="manual">Enter Lipafo Code</TabsTrigger>
+                <TabsTrigger value="directory">Rukisha Directory</TabsTrigger>
+                <TabsTrigger value="manual">Enter Rukisha Code</TabsTrigger>
               </TabsList>
 
               <TabsContent value="directory" className="flex-1 overflow-hidden flex flex-col space-y-3 mt-3">
@@ -253,7 +253,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                             </div>
                             <div className="flex flex-col items-end gap-1">
                               <Landmark className="h-4 w-4 text-primary" />
-                              <span className="text-[10px] text-muted-foreground">KCB rail</span>
+                              <span className="text-[10px] text-muted-foreground">Equity rail</span>
                             </div>
                           </div>
                         </button>
@@ -261,7 +261,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                     })}
                     {filtered.length === 0 && (
                       <div className="text-center text-sm text-muted-foreground py-8">
-                        No biller found. Try the "Enter Lipafo Code" tab.
+                        No biller found. Try the "Enter Rukisha Code" tab.
                       </div>
                     )}
                   </div>
@@ -271,10 +271,10 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
               <TabsContent value="manual" className="space-y-3 mt-3">
                 <div className="glass-card p-3 rounded-lg border border-primary/20 bg-primary/5 text-xs text-muted-foreground">
                   <Landmark className="h-3 w-3 inline mr-1 text-primary" />
-                  Enter any KCB-issued Lipafo paybill code (format: <span className="font-mono text-foreground">LPF-XXXXXX</span>).
+                  Enter any Equity-issued Rukisha paybill code (format: <span className="font-mono text-foreground">LPF-XXXXXX</span>).
                 </div>
                 <div>
-                  <Label>Lipafo Paybill Code</Label>
+                  <Label>Rukisha Paybill Code</Label>
                   <Input
                     placeholder="e.g. LPF-400102"
                     value={manualPaybill}
@@ -293,7 +293,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 </div>
                 <div className="glass-card p-3 rounded-lg bg-muted/20 text-xs text-muted-foreground">
                   <Zap className="h-3 w-3 inline mr-1 text-primary" />
-                  Lipafo validates the code in real-time against the KCB biller registry.
+                  Rukisha validates the code in real-time against the Equity biller registry.
                 </div>
               </TabsContent>
             </Tabs>
@@ -318,7 +318,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 <Hash className="h-3 w-3" />
                 <span className="font-mono text-primary">{activeBiller.lipafoPaybill}</span>
                 <span>•</span>
-                <span className="flex items-center gap-1"><Landmark className="h-3 w-3" /> KCB-orchestrated</span>
+                <span className="flex items-center gap-1"><Landmark className="h-3 w-3" /> Equity-orchestrated</span>
                 <span>•</span>
                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {activeBiller.settlementWindow}</span>
               </div>
@@ -368,12 +368,12 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
               </div>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Biller</span><span className="text-foreground">{activeBiller.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Lipafo Code</span><span className="text-foreground font-mono">{activeBiller.lipafoPaybill}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Rukisha Code</span><span className="text-foreground font-mono">{activeBiller.lipafoPaybill}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Account</span><span className="text-foreground">{accountNumber}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><span className="text-foreground">Lipafo (KCB direct)</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Rail</span><span className="text-foreground">Rukisha (Equity direct)</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="text-foreground">KES {amt.toLocaleString()}</span></div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">KCB Lipafo fee (flat)</span>
+                  <span className="text-muted-foreground">Equity Rukisha fee (flat)</span>
                   <span className="text-foreground">KES {lipafoFee}</span>
                 </div>
                 <div className="flex justify-between text-success">
@@ -386,21 +386,21 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 </div>
               </div>
 
-              {/* Float economics — KCB holds float till settlement */}
+              {/* Float economics — Equity holds float till settlement */}
               <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1.5">
                 <div className="flex items-center gap-2 text-xs font-semibold text-primary">
                   <TrendingUp className="h-3 w-3" /> Float & Settlement
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground flex items-center gap-1"><Wallet className="h-3 w-3" /> Float held by</span>
-                  <span className="text-foreground font-medium">KCB Lipafo Pool</span>
+                  <span className="text-foreground font-medium">Equity Rukisha Pool</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Biller settlement</span>
                   <span className="text-foreground font-medium">{activeBiller.settlementWindow}</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground italic pt-1">
-                  KCB earns float yield until backend settlement to the biller.
+                  Equity earns float yield until backend settlement to the biller.
                 </p>
               </div>
 
@@ -416,7 +416,7 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
                 onClick={handleConfirm}
                 disabled={processing || insufficient || amt <= 0}
               >
-                {processing ? (<><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Routing via KCB…</>) : "Pay Now"}
+                {processing ? (<><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Routing via Equity…</>) : "Pay Now"}
               </Button>
             </div>
           </div>
@@ -431,12 +431,12 @@ export function InteropPaybillFlow({ open, onOpenChange }: InteropPaybillFlowPro
             <div>
               <h3 className="font-bold text-lg text-foreground">Payment Successful</h3>
               <p className="text-sm text-muted-foreground">
-                KES {amt.toLocaleString()} routed to {activeBiller.name} via Lipafo (KCB).
+                KES {amt.toLocaleString()} routed to {activeBiller.name} via Rukisha (Equity).
               </p>
             </div>
             <div className="glass-card p-3 rounded-lg space-y-1 text-xs text-left">
-              <div className="flex justify-between"><span className="text-muted-foreground">Lipafo Ref</span><span className="font-mono text-foreground">LPF-TXN-{Date.now().toString().slice(-8)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Float status</span><span className="text-primary font-medium">Held by KCB</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Rukisha Ref</span><span className="font-mono text-foreground">LPF-TXN-{Date.now().toString().slice(-8)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Float status</span><span className="text-primary font-medium">Held by Equity</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Biller settlement</span><span className="text-foreground">{activeBiller.settlementWindow}</span></div>
               <div className="flex justify-between text-success"><span>M-PESA fee paid</span><span className="font-semibold">KES 0</span></div>
             </div>

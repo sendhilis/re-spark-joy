@@ -172,7 +172,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
     addTransaction({
       type: "sent",
       amount: -settle,
-      description: `Lipafo BNPL auto-repayment from inflow`,
+      description: `Rukisha BNPL auto-repayment from inflow`,
       status: "completed",
       walletType: "main",
     }).finally(() => {
@@ -201,11 +201,11 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
   const handleConfirmPurchase = async () => {
     if (!merchant) return;
 
-    // Credit wallet (simulating merchant being paid by Lipafo on customer's behalf)
+    // Credit wallet (simulating merchant being paid by Rukisha on customer's behalf)
     await addTransaction({
       type: "received",
       amount: numericAmount,
-      description: `Lipafo BNPL credit — ${merchant.name}`,
+      description: `Rukisha BNPL credit — ${merchant.name}`,
       recipient: merchant.name,
       status: "completed",
       walletType: "main",
@@ -253,7 +253,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Lipafo BNPL — Buy Now, Pay on Next Inflow
+            Rukisha BNPL — Buy Now, Pay on Next Inflow
           </DialogTitle>
         </DialogHeader>
 
@@ -270,7 +270,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
             <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Your Lipafo Trust Score</p>
+                  <p className="text-sm text-muted-foreground">Your Rukisha Trust Score</p>
                   <p className="text-4xl font-bold text-primary">{eligibility.score}</p>
                 </div>
                 <Badge variant="secondary" className="text-base px-3 py-1">
@@ -308,7 +308,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
                   <div className="space-y-1">
                     <p className="font-medium text-foreground">Not yet eligible</p>
                     <p className="text-sm text-muted-foreground">
-                      Build transaction history with Lipafo to unlock BNPL. Make a few deposits or
+                      Build transaction history with Rukisha to unlock BNPL. Make a few deposits or
                       payments and try again.
                     </p>
                   </div>
@@ -321,7 +321,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
                   <div>
                     <p className="font-medium text-foreground">You're approved!</p>
                     <p className="text-sm text-muted-foreground">
-                      Shop at any partner merchant now and Lipafo settles your bill — auto-repaid
+                      Shop at any partner merchant now and Rukisha settles your bill — auto-repaid
                       from your next wallet inflow.
                     </p>
                   </div>
@@ -485,7 +485,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
                 <div className="text-sm space-y-1">
                   <p className="font-medium text-foreground">How repayment works</p>
                   <ul className="text-muted-foreground space-y-1 list-disc pl-4">
-                    <li>Lipafo settles the merchant on your behalf instantly.</li>
+                    <li>Rukisha settles the merchant on your behalf instantly.</li>
                     <li>The next deposit, salary, or transfer into your wallet is automatically debited until the BNPL balance is cleared.</li>
                     <li>No late fees if your inflow covers it. Partial inflows trigger partial repayments.</li>
                   </ul>
@@ -501,7 +501,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
                 className="mt-1"
               />
               <span className="text-muted-foreground">
-                I authorize Lipafo to auto-debit my next wallet inflow until this BNPL balance is fully repaid.
+                I authorize Rukisha to auto-debit my next wallet inflow until this BNPL balance is fully repaid.
               </span>
             </label>
 
@@ -523,7 +523,7 @@ export function LipafoBNPLFlow({ open, onOpenChange }: LipafoBNPLFlowProps) {
             <div>
               <h3 className="text-xl font-semibold text-foreground">BNPL Approved!</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Lipafo has settled {merchant?.name} for you.
+                Rukisha has settled {merchant?.name} for you.
               </p>
             </div>
             <Card className="p-4 text-left space-y-2">

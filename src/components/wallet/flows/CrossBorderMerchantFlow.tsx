@@ -30,11 +30,11 @@ interface CrossBorderMerchantFlowProps {
 }
 
 /* ============================================================
- * Source banks — Lipafo is the SWITCH. Customer can be on ANY
- * participating Kenyan bank. KCB orchestrates routing.
+ * Source banks — Rukisha is the SWITCH. Customer can be on ANY
+ * participating Kenyan bank. Equity orchestrates routing.
  * ============================================================ */
 const SOURCE_BANKS = [
-  { id: "kcb",     name: "KCB Bank",            channel: "Mobile App / USSD" },
+  { id: "kcb",     name: "Equity Bank",            channel: "Mobile App / USSD" },
   { id: "equity",  name: "Equity Bank",         channel: "Equitel / Mobile App" },
   { id: "coop",    name: "Co-operative Bank",   channel: "MCo-op Cash" },
   { id: "family",  name: "Family Bank",         channel: "PesaPap" },
@@ -48,14 +48,14 @@ const SOURCE_BANKS = [
 const SOURCE_CHANNELS = [
   { id: "wire",   label: "International Wire Transfer", icon: Banknote,        kcbBps: 35 },
   { id: "eft",    label: "Electronic Fund Transfer",    icon: ArrowDownToLine, kcbBps: 20 },
-  { id: "wallet", label: "Lipafo Wallet Balance",       icon: Wallet,          kcbBps: 15 },
+  { id: "wallet", label: "Rukisha Wallet Balance",       icon: Wallet,          kcbBps: 15 },
   { id: "card",   label: "Debit / Credit Card",         icon: CreditCard,      kcbBps: 30 },
   { id: "crypto", label: "Digital Currency (USDC/cNGN)", icon: Coins,          kcbBps: 25 },
   { id: "moneyorder", label: "Money Order / Cheque",    icon: FileText,        kcbBps: 40 },
 ];
 
-/* Destination corridors via KCB Group subsidiaries.
- * Per spec page 4: KCB Bank Kenya → KCB Subsidiary → Country.
+/* Destination corridors via Equity Group subsidiaries.
+ * Per spec page 4: Equity Bank Kenya → Equity Subsidiary → Country.
  * Indicative FX rates (KES → local currency). Mock for demo only.   */
 interface Corridor {
   code: string;
@@ -63,23 +63,23 @@ interface Corridor {
   flag: string;
   currency: string;
   rate: number;       // 1 KES = rate * local
-  subsidiary: string; // KCB subsidiary handling settlement
+  subsidiary: string; // Equity subsidiary handling settlement
   regulator: string;
 }
 const CORRIDORS: Corridor[] = [
-  { code: "UG",  country: "Uganda",       flag: "🇺🇬", currency: "UGX", rate: 28.5,  subsidiary: "KCB Bank Uganda",      regulator: "Bank of Uganda (BoU)" },
-  { code: "TZ",  country: "Tanzania",     flag: "🇹🇿", currency: "TZS", rate: 19.6,  subsidiary: "KCB Bank Tanzania",    regulator: "Bank of Tanzania (BoT)" },
-  { code: "RW",  country: "Rwanda",       flag: "🇷🇼", currency: "RWF", rate: 10.2,  subsidiary: "KCB Bank Rwanda",      regulator: "National Bank of Rwanda (BNR)" },
-  { code: "BI",  country: "Burundi",      flag: "🇧🇮", currency: "BIF", rate: 22.4,  subsidiary: "KCB Bank Burundi",     regulator: "Banque de la République du Burundi" },
-  { code: "SS",  country: "South Sudan",  flag: "🇸🇸", currency: "SSP", rate: 9.8,   subsidiary: "KCB Bank South Sudan", regulator: "Bank of South Sudan" },
-  { code: "CD",  country: "DRC",          flag: "🇨🇩", currency: "CDF", rate: 21.3,  subsidiary: "KCB Bank DRC",         regulator: "Banque Centrale du Congo" },
-  { code: "ET",  country: "Ethiopia",     flag: "🇪🇹", currency: "ETB", rate: 0.43,  subsidiary: "KCB Rep Office Addis", regulator: "National Bank of Ethiopia" },
-  { code: "ZA",  country: "South Africa", flag: "🇿🇦", currency: "ZAR", rate: 0.14,  subsidiary: "KCB Correspondent (Standard Bank)", regulator: "SARB" },
-  { code: "NG",  country: "Nigeria",      flag: "🇳🇬", currency: "NGN", rate: 12.4,  subsidiary: "KCB Correspondent (GTBank)", regulator: "Central Bank of Nigeria" },
-  { code: "GH",  country: "Ghana",        flag: "🇬🇭", currency: "GHS", rate: 0.11,  subsidiary: "KCB Correspondent (Ecobank)", regulator: "Bank of Ghana" },
+  { code: "UG",  country: "Uganda",       flag: "🇺🇬", currency: "UGX", rate: 28.5,  subsidiary: "Equity Bank Uganda",      regulator: "Bank of Uganda (BoU)" },
+  { code: "TZ",  country: "Tanzania",     flag: "🇹🇿", currency: "TZS", rate: 19.6,  subsidiary: "Equity Bank Tanzania",    regulator: "Bank of Tanzania (BoT)" },
+  { code: "RW",  country: "Rwanda",       flag: "🇷🇼", currency: "RWF", rate: 10.2,  subsidiary: "Equity Bank Rwanda",      regulator: "National Bank of Rwanda (BNR)" },
+  { code: "BI",  country: "Burundi",      flag: "🇧🇮", currency: "BIF", rate: 22.4,  subsidiary: "Equity Bank Burundi",     regulator: "Banque de la République du Burundi" },
+  { code: "SS",  country: "South Sudan",  flag: "🇸🇸", currency: "SSP", rate: 9.8,   subsidiary: "Equity Bank South Sudan", regulator: "Bank of South Sudan" },
+  { code: "CD",  country: "DRC",          flag: "🇨🇩", currency: "CDF", rate: 21.3,  subsidiary: "Equity Bank DRC",         regulator: "Banque Centrale du Congo" },
+  { code: "ET",  country: "Ethiopia",     flag: "🇪🇹", currency: "ETB", rate: 0.43,  subsidiary: "Equity Rep Office Addis", regulator: "National Bank of Ethiopia" },
+  { code: "ZA",  country: "South Africa", flag: "🇿🇦", currency: "ZAR", rate: 0.14,  subsidiary: "Equity Correspondent (Standard Bank)", regulator: "SARB" },
+  { code: "NG",  country: "Nigeria",      flag: "🇳🇬", currency: "NGN", rate: 12.4,  subsidiary: "Equity Correspondent (GTBank)", regulator: "Central Bank of Nigeria" },
+  { code: "GH",  country: "Ghana",        flag: "🇬🇭", currency: "GHS", rate: 0.11,  subsidiary: "Equity Correspondent (Ecobank)", regulator: "Bank of Ghana" },
 ];
 
-/* Sample merchants per corridor — all paid via Lipafo Cross-Border code (LPX-...) */
+/* Sample merchants per corridor — all paid via Rukisha Cross-Border code (LPX-...) */
 interface XMerchant {
   id: string;
   name: string;
@@ -105,7 +105,7 @@ const X_MERCHANTS: XMerchant[] = [
   { id: "gh-melcom",    name: "Melcom Ghana",            category: "Retail",          lipafoXCode: "LPX-GH-9101", country: "GH" },
 ];
 
-/* Flat KCB cross-border fee tier (KES) */
+/* Flat Equity cross-border fee tier (KES) */
 const computeCrossBorderFee = (kesAmount: number): number => {
   if (kesAmount <= 0) return 0;
   if (kesAmount <= 5_000)   return 50;
@@ -207,7 +207,7 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
     await addTransaction({
       type: "bill",
       amount: -totalDebit,
-      description: `X-Border • ${merchant.name} (${corridor.country}) • via ${sourceBank.name} → Lipafo → ${corridor.subsidiary}`,
+      description: `X-Border • ${merchant.name} (${corridor.country}) • via ${sourceBank.name} → Rukisha → ${corridor.subsidiary}`,
       recipient: merchant.lipafoXCode,
       status: "completed",
       walletType: "main",
@@ -222,11 +222,11 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Globe2 className="h-5 w-5 text-primary" />
-            Cross-Border Merchant Pay — Lipafo Switch
+            Cross-Border Merchant Pay — Rukisha Switch
           </DialogTitle>
           <DialogDescription>
-            Pay any merchant across Africa. Lipafo routes through KCB Group subsidiaries.
-            Single integration. Flat fee. KCB earns FX margin & overnight float.
+            Pay any merchant across Africa. Rukisha routes through Equity Group subsidiaries.
+            Single integration. Flat fee. Equity earns FX margin & overnight float.
           </DialogDescription>
         </DialogHeader>
 
@@ -237,8 +237,8 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
               <div className="flex items-start gap-2 text-xs text-muted-foreground">
                 <Network className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-foreground font-semibold">Lipafo is the switch.</span>{" "}
-                  Customers from any Kenyan bank can route through Lipafo. Single integration replaces
+                  <span className="text-foreground font-semibold">Rukisha is the switch.</span>{" "}
+                  Customers from any Kenyan bank can route through Rukisha. Single integration replaces
                   fragmented bilateral M-PESA / bank-to-bank corridors.
                 </div>
               </div>
@@ -278,7 +278,7 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
                         <Icon className="h-4 w-4 text-primary" />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-foreground truncate">{c.label}</div>
-                          <div className="text-[10px] text-muted-foreground">KCB FX margin {c.kcbBps} bps</div>
+                          <div className="text-[10px] text-muted-foreground">Equity FX margin {c.kcbBps} bps</div>
                         </div>
                       </div>
                     </button>
@@ -325,7 +325,7 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
                 <Landmark className="h-3 w-3 text-primary" /> Routing path
               </div>
               <div className="text-muted-foreground">
-                {sourceBank.name} → <span className="text-primary font-semibold">Lipafo Switch</span> → KCB Bank Kenya → {corridor.subsidiary}
+                {sourceBank.name} → <span className="text-primary font-semibold">Rukisha Switch</span> → Equity Bank Kenya → {corridor.subsidiary}
               </div>
               <div className="text-muted-foreground flex items-center gap-1">
                 <Zap className="h-3 w-3 text-success" /> Regulator: {corridor.regulator}
@@ -436,7 +436,7 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
 
             {amt > 0 && (
               <>
-                {/* Lipafo vs Legacy cost comparison */}
+                {/* Rukisha vs Legacy cost comparison */}
                 <div className="glass-card p-3 rounded-xl border border-success/30 bg-success/5 space-y-2">
                   <div className="text-xs font-semibold text-foreground flex items-center justify-between gap-1 flex-wrap">
                     <span className="flex items-center gap-1">
@@ -463,9 +463,9 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
                       </div>
                     </div>
                     <div className="rounded-lg bg-success/10 border border-success/20 p-2">
-                      <div className="text-muted-foreground">Lipafo</div>
+                      <div className="text-muted-foreground">Rukisha</div>
                       <div className="text-success font-bold text-base">KES {kcbFee.toLocaleString()}</div>
-                      <div className="text-[10px] text-muted-foreground">flat KCB fee · no M-PESA</div>
+                      <div className="text-[10px] text-muted-foreground">flat Equity fee · no M-PESA</div>
                     </div>
                   </div>
                   <div className="text-xs text-success font-semibold text-center">
@@ -478,10 +478,10 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
                   )}
                 </div>
 
-                {/* KCB revenue snapshot */}
+                {/* Equity revenue snapshot */}
                 <div className="glass-card p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-1 text-xs">
                   <div className="font-semibold text-foreground flex items-center gap-1">
-                    <Landmark className="h-3 w-3 text-primary" /> KCB earns on this transaction
+                    <Landmark className="h-3 w-3 text-primary" /> Equity earns on this transaction
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Switch fee (NFI)</span><span className="text-foreground">KES {kcbFee.toLocaleString()}</span>
@@ -497,7 +497,7 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
 
                 <div className="glass-card p-3 rounded-xl border border-glass-border/30 space-y-1 text-xs">
                   <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="text-foreground">KES {amt.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">KCB switch fee</span><span className="text-foreground">KES {kcbFee.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Equity switch fee</span><span className="text-foreground">KES {kcbFee.toLocaleString()}</span></div>
                   <div className="flex justify-between border-t border-glass-border/30 pt-1 mt-1">
                     <span className="font-semibold text-foreground">Total debit</span>
                     <span className="font-bold text-primary">KES {totalDebit.toLocaleString()}</span>
@@ -514,7 +514,7 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
               <Button className="flex-1 button-3d" disabled={amt <= 0 || insufficient || processing}
                 onClick={handleConfirm}>
                 {processing
-                  ? (<><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Routing via Lipafo…</>)
+                  ? (<><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Routing via Rukisha…</>)
                   : (<>Pay KES {totalDebit.toLocaleString()}</>)}
               </Button>
             </div>
@@ -539,10 +539,10 @@ export function CrossBorderMerchantFlow({ open, onOpenChange }: CrossBorderMerch
 
             <div className="glass-card p-3 rounded-xl border border-glass-border/30 text-left text-xs space-y-1">
               <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span className="text-foreground">{sourceBank.name} · {channel.label}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Switch</span><span className="text-primary font-semibold">Lipafo (KCB-orchestrated)</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Switch</span><span className="text-primary font-semibold">Rukisha (Equity-orchestrated)</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Subsidiary</span><span className="text-foreground">{corridor.subsidiary}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="text-foreground font-mono">{reference}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Settlement</span><span className="text-foreground">T+1 by 1pm (per Lipafo cycle)</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Settlement</span><span className="text-foreground">T+1 by 1pm (per Rukisha cycle)</span></div>
             </div>
 
             <Button className="w-full button-3d" onClick={() => handleClose(false)}>Done</Button>

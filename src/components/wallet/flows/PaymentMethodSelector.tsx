@@ -31,7 +31,7 @@ export function PaymentMethodSelector({
   const paymentMethods: PaymentMethod[] = [
     {
       id: 'wallet',
-      name: 'Lipafo Wallet',
+      name: 'Rukisha Wallet',
       icon: Wallet,
       description: 'Pay from your main wallet balance',
       available: balances.main,

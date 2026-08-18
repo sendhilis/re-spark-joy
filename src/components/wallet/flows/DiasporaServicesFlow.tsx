@@ -46,14 +46,14 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
 
   const sourceLabel: Record<typeof remitSource, string> = {
     intl_card: "Linked International Card (VISA/MC/AMEX)",
-    kcb_diaspora: "KCB Diaspora Account (ACH/SWIFT)",
-    lipafo_usd: "Lipafo USD Wallet",
+    kcb_diaspora: "Equity Diaspora Account (ACH/SWIFT)",
+    lipafo_usd: "Rukisha USD Wallet",
   };
   const railLabel: Record<typeof remitRail, string> = {
     mpesa: "M-PESA",
-    kcb_account: "KCB Kenya Account (PesaLink)",
+    kcb_account: "Equity Kenya Account (PesaLink)",
     pesalink: "Other Kenyan Bank (PesaLink)",
-    lipafo_wallet: "Recipient's Lipafo Wallet",
+    lipafo_wallet: "Recipient's Rukisha Wallet",
   };
   const railFeeKES: Record<typeof remitRail, number> = {
     mpesa: 0,
@@ -63,7 +63,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
   };
   const railPlaceholder: Record<typeof remitRail, string> = {
     mpesa: "+254 712 345 678",
-    kcb_account: "KCB account number",
+    kcb_account: "Equity account number",
     pesalink: "Bank account number",
     lipafo_wallet: "Recipient phone or email",
   };
@@ -91,7 +91,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
     if (remitSource === 'lipafo_usd') {
       if (balances.main < grossKES) {
         setRemitProcessing(false);
-        toast({ title: "Insufficient Lipafo balance", description: `You need KES ${grossKES.toLocaleString()} in your wallet`, variant: "destructive" });
+        toast({ title: "Insufficient Rukisha balance", description: `You need KES ${grossKES.toLocaleString()} in your wallet`, variant: "destructive" });
         return;
       }
       await addTransaction({
@@ -100,7 +100,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
         recipient: remitRecipientAccount, walletType: 'main',
       });
     } else {
-      // Card / KCB pull — record as informational outbound (no wallet debit since funds come from external source)
+      // Card / Equity pull — record as informational outbound (no wallet debit since funds come from external source)
       await addTransaction({
         type: 'sent', amount: 0, status: 'completed',
         description: `Diaspora remittance from ${sourceLabel[remitSource]} → ${remitRecipientName} via ${railLabel[remitRail]} ($${usdNum} USD)`,
@@ -108,7 +108,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
       });
     }
 
-    // Recipient-side credit simulation: if recipient is the same Lipafo user's wallet
+    // Recipient-side credit simulation: if recipient is the same Rukisha user's wallet
     // (lipafo_wallet rail), credit their main wallet in KES
     if (remitRail === 'lipafo_wallet') {
       await addTransaction({
@@ -129,7 +129,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
     let message = "";
     switch (activeTab) {
       case "remittance": message = `International remittance of $${formData.amount} sent to ${formData.recipient}`; break;
-      case "cards": message = "International card linked successfully to Lipafo wallet"; break;
+      case "cards": message = "International card linked successfully to Rukisha wallet"; break;
       case "savings": message = `Pension contribution setup completed. Saving ${formData.savingsPercentage}% per transaction`; break;
       case "chama": message = `Chama contribution of $${formData.contributionAmount} sent to ${formData.chamaName}`; break;
     }
@@ -144,14 +144,14 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
       return;
     }
     setCardLinked(true);
-    toast({ title: "Card Linked Successfully! 🎉", description: "Your UAE salary card is now connected to your Lipafo wallet" });
+    toast({ title: "Card Linked Successfully! 🎉", description: "Your UAE salary card is now connected to your Rukisha wallet" });
   };
 
   const handleSalaryTransfer = async (): Promise<boolean> => {
     const amount = parseFloat(formData.transferAmount);
     if (!amount || amount <= 0) { toast({ title: "Invalid Amount", description: "Please enter a valid transfer amount", variant: "destructive" }); return false; }
     await addTransaction({ type: 'received', amount, description: 'Salary transfer from UAE card', status: 'completed' });
-    toast({ title: "Transfer Successful! 💰", description: `KES ${amount.toLocaleString()} transferred from your salary card to your Lipafo wallet` });
+    toast({ title: "Transfer Successful! 💰", description: `KES ${amount.toLocaleString()} transferred from your salary card to your Rukisha wallet` });
     setFormData(prev => ({ ...prev, transferAmount: "" }));
     return true;
   };
@@ -160,7 +160,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
     const amount = parseFloat(formData.loanRepaymentAmount);
     if (!amount || amount <= 0) { toast({ title: "Invalid Amount", description: "Please enter a valid repayment amount", variant: "destructive" }); return false; }
     if (balances.main < amount) { toast({ title: "Insufficient Balance", description: "Please transfer salary to your wallet first", variant: "destructive" }); return false; }
-    await addTransaction({ type: 'sent', amount: -amount, description: 'Loan repayment to Lipafo', status: 'completed' });
+    await addTransaction({ type: 'sent', amount: -amount, description: 'Loan repayment to Rukisha', status: 'completed' });
     toast({ title: "Repayment Successful! ✅", description: `KES ${amount.toLocaleString()} paid towards your loan` });
     setFormData(prev => ({ ...prev, loanRepaymentAmount: "" }));
     return true;
@@ -181,7 +181,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
 
   const faqItems = [
     { question: "How do I link my UAE salary card?", answer: "Simply enter your prepaid card details in the 'Link Salary Card' section." },
-    { question: "How does auto-debit work?", answer: "Once enabled, Lipafo will automatically deduct your monthly loan repayment from your wallet on your chosen date." },
+    { question: "How does auto-debit work?", answer: "Once enabled, Rukisha will automatically deduct your monthly loan repayment from your wallet on your chosen date." },
     { question: "Is my salary card information secure?", answer: "Yes! We use bank-level encryption to protect all your card details." },
     { question: "Can I change my auto-debit date?", answer: "Yes, you can modify your auto-debit date anytime in the settings." },
   ];
@@ -190,7 +190,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-card border-glass-border max-w-4xl max-h-[90vh] overflow-hidden p-0 flex flex-col">
         <DialogHeader className="p-6 pb-0 shrink-0">
-          <DialogTitle className="text-foreground flex items-center gap-2"><Plane className="h-5 w-5 text-primary" />Lipafo Diaspora Services</DialogTitle>
+          <DialogTitle className="text-foreground flex items-center gap-2"><Plane className="h-5 w-5 text-primary" />Rukisha Diaspora Services</DialogTitle>
           <div className="text-sm text-muted-foreground">Financial services for Kenyans living abroad</div>
         </DialogHeader>
 
@@ -222,7 +222,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                   })}
                 </div>
                 <div className="glass-card p-6 rounded-xl">
-                  <div className="flex items-center gap-3 mb-4"><Globe className="h-5 w-5 text-primary" /><h3 className="font-semibold text-foreground">Why Choose Lipafo Diaspora?</h3></div>
+                  <div className="flex items-center gap-3 mb-4"><Globe className="h-5 w-5 text-primary" /><h3 className="font-semibold text-foreground">Why Choose Rukisha Diaspora?</h3></div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center"><div className="text-2xl font-bold text-primary">0%</div><div className="text-sm text-muted-foreground">Transfer Fees</div></div>
                     <div className="text-center"><div className="text-2xl font-bold text-primary">24/7</div><div className="text-sm text-muted-foreground">Service Available</div></div>
@@ -298,7 +298,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                           <div className="space-y-4">
                             <div className="glass-card p-4 rounded-lg bg-primary/5">
                               <p className="text-sm font-medium text-foreground mb-2">Step 1: Transfer Salary to Wallet</p>
-                              <p className="text-xs text-muted-foreground">Transfer funds from your UAE salary card to your Lipafo wallet</p>
+                              <p className="text-xs text-muted-foreground">Transfer funds from your UAE salary card to your Rukisha wallet</p>
                             </div>
                             <div><Label>Transfer Amount (KES)</Label><Input type="number" placeholder="Enter amount to transfer" value={formData.transferAmount}
                               onChange={(e) => setFormData({...formData, transferAmount: e.target.value})} /></div>
@@ -478,8 +478,8 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                                   <p className="text-sm font-medium text-foreground">{sourceLabel[key]}</p>
                                   <p className="text-xs text-muted-foreground">
                                     {key === 'intl_card' && 'Charge your linked international card in USD'}
-                                    {key === 'kcb_diaspora' && 'Pull from your KCB diaspora USD account'}
-                                    {key === 'lipafo_usd' && `Use Lipafo wallet • Available KES ${balances.main.toLocaleString()}`}
+                                    {key === 'kcb_diaspora' && 'Pull from your Equity diaspora USD account'}
+                                    {key === 'lipafo_usd' && `Use Rukisha wallet • Available KES ${balances.main.toLocaleString()}`}
                                   </p>
                                 </div>
                                 {remitSource === key && <CheckCircle className="h-5 w-5 text-primary" />}
@@ -504,7 +504,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                             ))}
                           </div>
                           <div><Label>Recipient full name</Label><Input placeholder="Jane Mwangi" value={remitRecipientName} onChange={e => setRemitRecipientName(e.target.value)} /></div>
-                          <div><Label>{remitRail === 'mpesa' ? 'M-PESA phone number' : remitRail === 'lipafo_wallet' ? 'Lipafo phone/email' : 'Account number'}</Label>
+                          <div><Label>{remitRail === 'mpesa' ? 'M-PESA phone number' : remitRail === 'lipafo_wallet' ? 'Rukisha phone/email' : 'Account number'}</Label>
                             <Input placeholder={railPlaceholder[remitRail]} value={remitRecipientAccount} onChange={e => setRemitRecipientAccount(e.target.value)} /></div>
                           {remitRail === 'pesalink' && (
                             <div><Label>Recipient Bank</Label><Input placeholder="Equity, Co-op, Absa, etc." value={remitBankName} onChange={e => setRemitBankName(e.target.value)} /></div>

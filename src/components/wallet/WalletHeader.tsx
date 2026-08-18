@@ -66,7 +66,7 @@ export function WalletHeader() {
           </div>
           <div className="text-center">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-              Lipafo
+              Rukisha
             </h2>
             <p className="text-sm text-muted-foreground font-medium">{t('wallet.equityDiaspora')}</p>
           </div>
