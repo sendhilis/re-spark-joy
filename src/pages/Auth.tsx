@@ -126,7 +126,7 @@ export default function Auth() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
                 Rukisha
               </h1>
-              <p className="text-xs text-muted-foreground">AI powered wallet designed by Kenyans for Kenyans</p>
+              <p className="text-xs font-semibold text-primary">from Equity Bank • Diaspora Connect</p>
             </div>
           </div>
           <p className="text-muted-foreground">Your Digital Wallet, Your Financial Future</p>

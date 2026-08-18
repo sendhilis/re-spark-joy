@@ -20,7 +20,7 @@ export default function Landing() {
             </h1>
             <p className="text-xs text-muted-foreground">
               <span className="relative inline-block text-primary font-semibold">
-                AI powered wallet designed by Kenyans for Kenyans
+                from Equity Bank • Diaspora Connect
                 <span className="absolute -bottom-0.5 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-primary-light rounded-full" />
               </span>
             </p>
@@ -44,7 +44,7 @@ export default function Landing() {
                   </span>
                 </h2>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Rukisha empowers Kenyans with smart financial tools. Save, spend, and grow your money with confidence.
+                  Rukisha, from Equity Bank, empowers the diaspora and their families with smart financial tools. Save, spend, and grow your money with confidence.
                 </p>
               </div>
 
@@ -120,7 +120,7 @@ export default function Landing() {
                 <div className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center mb-6">
                   <Banknote className="h-12 w-12 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-foreground mb-2">Rukisha Wallet</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-2">Rukisha · Equity Bank</h3>
                 <p className="text-muted-foreground">AI powered wallet designed by Kenyans for Kenyans</p>
               </div>
             </div>
