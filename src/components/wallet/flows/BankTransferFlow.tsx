@@ -15,7 +15,7 @@ interface BankTransferFlowProps {
 }
 
 const kenyanBanks = [
-  { id: "kcb", name: "KCB Bank", code: "01" },
+  { id: "kcb", name: "Equity Bank", code: "01" },
   { id: "equity", name: "Equity Bank", code: "68" },
   { id: "cooperative", name: "Co-operative Bank", code: "11" },
   { id: "absa", name: "Absa Bank Kenya", code: "03" },
@@ -146,7 +146,7 @@ export function BankTransferFlow({ open, onOpenChange }: BankTransferFlowProps) 
                 <div className="flex justify-between"><span className="text-muted-foreground">Amount:</span><span className="text-foreground font-semibold text-lg">KES {transferData.amount}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Payment Method:</span>
                   <span className="text-foreground flex items-center gap-1">
-                    {transferData.paymentMethod === 'virtual-card' ? <><CreditCard className="h-3 w-3" />Virtual Card</> : 'Lipafo Wallet'}
+                    {transferData.paymentMethod === 'virtual-card' ? <><CreditCard className="h-3 w-3" />Virtual Card</> : 'Rukisha Wallet'}
                   </span>
                 </div>
               </div>
