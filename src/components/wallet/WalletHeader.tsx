@@ -60,17 +60,19 @@ export function WalletHeader() {
           </div>
         </div>
 
-        <div className="flex items-center justify-center space-x-3 py-4 glass-card rounded-2xl border-2 border-primary/20 bg-gradient-to-r from-primary/10 to-primary-light/10">
+        <div className="flex items-center justify-center space-x-3 py-4 glass-card rounded-2xl border-2 border-primary/30 bg-gradient-to-r from-primary/15 to-primary-light/10">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center button-3d">
-            <Banknote className="h-7 w-7 text-white" />
+            <Banknote className="h-7 w-7 text-primary-foreground" />
           </div>
           <div className="text-center">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
               Rukisha
             </h2>
-            <p className="text-sm text-muted-foreground font-medium">{t('wallet.equityDiaspora')}</p>
+            <p className="text-sm font-semibold text-primary">Equity Bank</p>
+            <p className="text-xs text-muted-foreground font-medium">{t('wallet.equityDiaspora')}</p>
           </div>
         </div>
+
       </div>
     </div>
   );
