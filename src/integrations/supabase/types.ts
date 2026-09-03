@@ -700,6 +700,63 @@ export type Database = {
         }
         Relationships: []
       }
+      linked_cards: {
+        Row: {
+          cardholder_name: string | null
+          expiry_month: number | null
+          expiry_year: number | null
+          id: string
+          issuer_country: string | null
+          linked_at: string
+          masked_pan: string
+          mc_token_ref: string
+          mdes_token_id: string | null
+          mpgs_agreement_id: string | null
+          scheme: string
+          status: string
+          three_ds_status: string | null
+          updated_at: string
+          user_id: string
+          verify_gateway_code: string | null
+        }
+        Insert: {
+          cardholder_name?: string | null
+          expiry_month?: number | null
+          expiry_year?: number | null
+          id?: string
+          issuer_country?: string | null
+          linked_at?: string
+          masked_pan: string
+          mc_token_ref: string
+          mdes_token_id?: string | null
+          mpgs_agreement_id?: string | null
+          scheme?: string
+          status?: string
+          three_ds_status?: string | null
+          updated_at?: string
+          user_id: string
+          verify_gateway_code?: string | null
+        }
+        Update: {
+          cardholder_name?: string | null
+          expiry_month?: number | null
+          expiry_year?: number | null
+          id?: string
+          issuer_country?: string | null
+          linked_at?: string
+          masked_pan?: string
+          mc_token_ref?: string
+          mdes_token_id?: string | null
+          mpgs_agreement_id?: string | null
+          scheme?: string
+          status?: string
+          three_ds_status?: string | null
+          updated_at?: string
+          user_id?: string
+          verify_gateway_code?: string | null
+        }
+        Relationships: []
+      }
       lipafo_alias_registry: {
         Row: {
           account_name: string
@@ -826,6 +883,48 @@ export type Database = {
           sender_phone?: string
           state?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      loan_accounts: {
+        Row: {
+          created_at: string
+          currency: string
+          due_day: number
+          emi_amount: number
+          id: string
+          loan_reference: string
+          outstanding_balance: number
+          principal: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          due_day?: number
+          emi_amount?: number
+          id?: string
+          loan_reference?: string
+          outstanding_balance?: number
+          principal?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          due_day?: number
+          emi_amount?: number
+          id?: string
+          loan_reference?: string
+          outstanding_balance?: number
+          principal?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1157,6 +1256,39 @@ export type Database = {
         }
         Relationships: []
       }
+      nudge_log: {
+        Row: {
+          channel: string
+          event_type: string
+          id: string
+          message: string
+          payload: Json | null
+          read: boolean
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          event_type: string
+          id?: string
+          message: string
+          payload?: Json | null
+          read?: boolean
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          event_type?: string
+          id?: string
+          message?: string
+          payload?: Json | null
+          read?: boolean
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       participating_banks: {
         Row: {
           bank_code: string
@@ -1298,6 +1430,45 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      salary_credit_events: {
+        Row: {
+          amount: number
+          amount_kes: number | null
+          created_at: string
+          currency: string
+          id: string
+          processed: boolean
+          raw_reference: string | null
+          source: string
+          user_id: string
+          value_date: string
+        }
+        Insert: {
+          amount: number
+          amount_kes?: number | null
+          created_at?: string
+          currency?: string
+          id?: string
+          processed?: boolean
+          raw_reference?: string | null
+          source?: string
+          user_id: string
+          value_date?: string
+        }
+        Update: {
+          amount?: number
+          amount_kes?: number | null
+          created_at?: string
+          currency?: string
+          id?: string
+          processed?: boolean
+          raw_reference?: string | null
+          source?: string
+          user_id?: string
+          value_date?: string
         }
         Relationships: []
       }
@@ -1658,6 +1829,147 @@ export type Database = {
         }
         Relationships: []
       }
+      sweep_executions: {
+        Row: {
+          amount: number
+          attempt_number: number
+          currency: string
+          executed_at: string
+          failure_reason: string | null
+          gateway_code: string | null
+          id: string
+          idempotency_key: string
+          loan_debit_txn_id: string | null
+          mandate_id: string
+          mc_response_code: string | null
+          mpgs_order_id: string | null
+          mpgs_transaction_id: string | null
+          salary_credit_event_id: string
+          status: string
+          user_id: string
+          wallet_credit_txn_id: string | null
+        }
+        Insert: {
+          amount: number
+          attempt_number?: number
+          currency?: string
+          executed_at?: string
+          failure_reason?: string | null
+          gateway_code?: string | null
+          id?: string
+          idempotency_key: string
+          loan_debit_txn_id?: string | null
+          mandate_id: string
+          mc_response_code?: string | null
+          mpgs_order_id?: string | null
+          mpgs_transaction_id?: string | null
+          salary_credit_event_id: string
+          status?: string
+          user_id: string
+          wallet_credit_txn_id?: string | null
+        }
+        Update: {
+          amount?: number
+          attempt_number?: number
+          currency?: string
+          executed_at?: string
+          failure_reason?: string | null
+          gateway_code?: string | null
+          id?: string
+          idempotency_key?: string
+          loan_debit_txn_id?: string | null
+          mandate_id?: string
+          mc_response_code?: string | null
+          mpgs_order_id?: string | null
+          mpgs_transaction_id?: string | null
+          salary_credit_event_id?: string
+          status?: string
+          user_id?: string
+          wallet_credit_txn_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sweep_executions_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "sweep_mandates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sweep_executions_salary_credit_event_id_fkey"
+            columns: ["salary_credit_event_id"]
+            isOneToOne: false
+            referencedRelation: "salary_credit_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sweep_mandates: {
+        Row: {
+          cap_amount: number
+          consent_text: string | null
+          consented_at: string | null
+          created_at: string
+          currency: string
+          debit_window: string
+          id: string
+          linked_card_id: string
+          loan_account_id: string | null
+          percentage: number
+          policy: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cap_amount?: number
+          consent_text?: string | null
+          consented_at?: string | null
+          created_at?: string
+          currency?: string
+          debit_window?: string
+          id?: string
+          linked_card_id: string
+          loan_account_id?: string | null
+          percentage?: number
+          policy?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cap_amount?: number
+          consent_text?: string | null
+          consented_at?: string | null
+          created_at?: string
+          currency?: string
+          debit_window?: string
+          id?: string
+          linked_card_id?: string
+          loan_account_id?: string | null
+          percentage?: number
+          policy?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sweep_mandates_linked_card_id_fkey"
+            columns: ["linked_card_id"]
+            isOneToOne: false
+            referencedRelation: "linked_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sweep_mandates_loan_account_id_fkey"
+            columns: ["loan_account_id"]
+            isOneToOne: false
+            referencedRelation: "loan_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       switch_events: {
         Row: {
           created_at: string
@@ -1966,6 +2278,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_sweep_posting: {
+        Args: {
+          _amount: number
+          _description: string
+          _execution_id: string
+          _loan_account_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
