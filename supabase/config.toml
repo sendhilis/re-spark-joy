@@ -14,3 +14,15 @@ verify_jwt = false
 
 [functions.switch-process-intent]
 verify_jwt = false
+
+[functions.mpgs-gateway-sim]
+verify_jwt = false
+
+[functions.mc-card-link]
+verify_jwt = false
+
+[functions.mc-sweep-orchestrator]
+verify_jwt = false
+
+[functions.equity-cbs-salary-webhook]
+verify_jwt = false
