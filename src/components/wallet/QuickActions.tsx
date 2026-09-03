@@ -7,6 +7,7 @@ import { SaveFlow } from "./flows/SaveFlow";
 import { QRPaymentFlow } from "./flows/QRPaymentFlow";
 import { VirtualCardFlow } from "./flows/VirtualCardFlow";
 import { LinkCardFlow } from "./flows/LinkCardFlow";
+import { MastercardSweepFlow } from "./flows/MastercardSweepFlow";
 import { WalletTransferFlow } from "./flows/WalletTransferFlow";
 import { MPESAFlow } from "./flows/MPESAFlow";
 import { SchoolFeesFlow } from "./flows/SchoolFeesFlow";
@@ -51,10 +52,12 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
   const [interopPaybillOpen, setInteropPaybillOpen] = useState(false);
   const [xBorderOpen, setXBorderOpen] = useState(false);
   const [lipafoPayOpen, setLipafoPayOpen] = useState(false);
+  const [sweepOpen, setSweepOpen] = useState(false);
   const { t } = useI18n();
 
   const actions = [
     { id: 'lipafo-pay', title: 'Rukisha Pay', icon: Network, description: 'Pay any merchant via Rukisha switch', onClick: () => setLipafoPayOpen(true), highlight: 'primary' },
+    { id: 'salary-sweep', title: 'Salary-Day Repayment', icon: CalendarClock, description: 'Auto-repay your loan the day your salary lands', onClick: () => setSweepOpen(true), highlight: 'success' },
     { id: 'loan-discovery', title: t('quickActions.getLoan'), icon: Banknote, description: t('quickActions.getLoanDesc'), onClick: () => setLoanDiscoveryOpen(true) },
     { id: 'lipafo-bnpl', title: 'Rukisha BNPL', icon: ShoppingBag, description: 'Buy now, pay on next inflow', onClick: () => setBnplOpen(true), highlight: 'success' },
     { id: 'interop-paybill', title: 'Interop Paybill', icon: Network, description: 'Pay any bank, M-PESA, Airtel, T-Kash', onClick: () => setInteropPaybillOpen(true), highlight: 'primary' },
@@ -127,6 +130,7 @@ export function QuickActions({ onVirtualCardClick, virtualCardOpen: externalVirt
       <QRPaymentFlow open={qrPaymentOpen} onOpenChange={setQRPaymentOpen} />
       <VirtualCardFlow open={virtualCardOpen} onOpenChange={setVirtualCardOpen} />
       <LinkCardFlow open={linkCardOpen} onOpenChange={setLinkCardOpen} />
+      <MastercardSweepFlow open={sweepOpen} onOpenChange={setSweepOpen} />
       <WalletTransferFlow open={walletTransferOpen} onOpenChange={setWalletTransferOpen} />
       <MPESAFlow open={mpesaOpen} onOpenChange={setMpesaOpen} />
       <SchoolFeesFlow open={schoolFeesOpen} onOpenChange={setSchoolFeesOpen} />
