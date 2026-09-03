@@ -76,7 +76,11 @@ Deno.serve(async (req) => {
       case "session.update": {
         // Hosted-field submit. PAN/CVV live only in this scope.
         const { sessionId, pan, expiryMonth, expiryYear, cvv, cardholderName } = body as Record<string, string>;
-        if (!sessionId || !sessions.has(String(sessionId))) return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "unknown session" } }, 400);
+        // Session ids are validated by shape; state is carried in the opaque blob because
+        // edge isolates are not sticky (the real gateway keeps this state on its own side).
+        if (!sessionId || !/^SESSION[0-9A-F]{16,32}$/.test(String(sessionId))) {
+          return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "unknown session" } }, 400);
+        }
         const clean = String(pan ?? "").replace(/\D/g, "");
         if (clean.length < 13 || clean.length > 19 || !luhnOk(clean)) {
           return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "card number failed checksum" } }, 400);
