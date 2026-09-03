@@ -298,7 +298,7 @@ export function DiasporaServicesFlow({ open, onOpenChange }: DiasporaServicesFlo
                           <div className="space-y-4">
                             <div className="glass-card p-4 rounded-lg bg-primary/5">
                               <p className="text-sm font-medium text-foreground mb-2">Step 1: Transfer Salary to Wallet</p>
-                              <p className="text-xs text-muted-foreground">Transfer funds from your UAE salary card to your Rukisha wallet</p>
+                              <p className="text-xs text-muted-foreground">Manual fallback only — with a linked Mastercard salary card, Rukisha sweeps and repays automatically on salary day. Use “Salary-Day Repayment” to set that up.</p>
                             </div>
                             <div><Label>Transfer Amount (KES)</Label><Input type="number" placeholder="Enter amount to transfer" value={formData.transferAmount}
                               onChange={(e) => setFormData({...formData, transferAmount: e.target.value})} /></div>
