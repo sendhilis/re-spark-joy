@@ -2002,6 +2002,9 @@ export type Database = {
         | "card_linking"
         | "mpesa"
         | "pension_contribution"
+        | "mastercard_sweep"
+        | "salary_credit"
+        | "loan_repayment"
       wallet_type:
         | "main"
         | "education"
@@ -2165,6 +2168,9 @@ export const Constants = {
         "card_linking",
         "mpesa",
         "pension_contribution",
+        "mastercard_sweep",
+        "salary_credit",
+        "loan_repayment",
       ],
       wallet_type: [
         "main",
