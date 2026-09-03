@@ -41,6 +41,20 @@ const schemeOf = (pan: string) => {
   return "UNKNOWN";
 };
 
+// Sessions are ephemeral in-memory; because edge isolates may differ between calls,
+// the gateway also returns an opaque `sessionBlob` (base64 of the MASKED summary only —
+// never PAN/CVV) that verify/token.create accept as a fallback. This mirrors the real
+// gateway keeping session state on Mastercard's side, not ours.
+const encodeBlob = (summary: Json) => btoa(JSON.stringify(summary));
+const decodeBlob = (blob?: string): Json | null => {
+  try { return blob ? JSON.parse(atob(blob)) as Json : null; } catch { return null; }
+};
+const loadSummary = (body: Record<string, unknown>): Json | null => {
+  const s = sessions.get(String(body.sessionId ?? ""));
+  if (s?.summary) return s.summary as Json;
+  return decodeBlob(body.sessionBlob as string | undefined);
+};
+
 const ref = (p: string) => `${p}-${crypto.randomUUID().replace(/-/g, "").slice(0, 20).toUpperCase()}`;
 
 Deno.serve(async (req) => {
@@ -80,14 +94,12 @@ Deno.serve(async (req) => {
         };
         // Only the masked summary is retained against the session. PAN/CVV are dropped here.
         sessions.set(String(sessionId), { createdAt: Date.now(), summary });
-        return json({ result: "SUCCESS", session: { id: sessionId, updateStatus: "SUCCESS" }, sourceOfFunds: { provided: { card: summary } } });
+        return json({ result: "SUCCESS", session: { id: sessionId, updateStatus: "SUCCESS", blob: encodeBlob(summary) }, sourceOfFunds: { provided: { card: summary } } });
       }
 
       case "verify": {
-        const { sessionId } = body as Record<string, string>;
-        const s = sessions.get(String(sessionId));
-        if (!s?.summary) return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "session has no card" } }, 400);
-        const summary = s.summary as Json;
+        const summary = loadSummary(body);
+        if (!summary) return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "session has no card" } }, 400);
         const declined = String((summary as { last4: string }).last4).endsWith("00"); // test PAN ending 00 => decline
         return json({
           result: declined ? "FAILURE" : "SUCCESS",
@@ -99,11 +111,9 @@ Deno.serve(async (req) => {
       }
 
       case "token.create": {
-        const { sessionId } = body as Record<string, string>;
-        const s = sessions.get(String(sessionId));
-        if (!s?.summary) return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "session has no card" } }, 400);
-        const summary = s.summary as Json;
-        sessions.delete(String(sessionId)); // single-use session, like MPGS
+        const summary = loadSummary(body);
+        if (!summary) return json({ result: "ERROR", error: { cause: "INVALID_REQUEST", explanation: "session has no card" } }, 400);
+        sessions.delete(String(body.sessionId ?? "")); // single-use session, like MPGS
         return json({
           result: "SUCCESS",
           token: ref("MCTOKEN"),
